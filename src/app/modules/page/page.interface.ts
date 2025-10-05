@@ -1,7 +1,7 @@
-
 export interface IPage {
   name: string;
   path: string;
+  category:string;
   route: string;
   status: 'active' | 'inactive';
 }

@@ -10,6 +10,9 @@ export const pageSchema = new Schema<IPage>(
       unique: true,
       trim: true,
     },
+    category: {
+      type: String,
+    },
     path: {
       type: String,
       required: [true, 'Path is required'],
