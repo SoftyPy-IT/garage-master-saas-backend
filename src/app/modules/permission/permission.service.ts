@@ -22,7 +22,7 @@ export const getUserPermissions = async (
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
   // Check if user exists
-  const user = await User.findById(userId).populate('roleId');
+  const user = await User.findById(userId);
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -46,14 +46,15 @@ export const getUserPermissions = async (
   const allPermissions = [...userPermissions, ...rolePermissions];
 
   // Map permissions by page, skip if pageId missing
-  const permissionMap = new Map<string, any>();
-  allPermissions.forEach((permission) => {
-    if (!permission.pageId) return; // skip null pageId
+const permissionMap = new Map<string, any>();
+allPermissions.forEach((permission) => {
+  if (!permission.pageId || !permission.pageId.length) return; // skip empty array
 
-    const pageId = permission.pageId._id.toString();
+  permission.pageId.forEach((page) => {
+    const pageId = page._id.toString();
     if (!permissionMap.has(pageId)) {
       permissionMap.set(pageId, {
-        page: permission.pageId,
+        page,
         roleId: permission.roleId,
         create: permission.create,
         edit: permission.edit,
@@ -61,7 +62,6 @@ export const getUserPermissions = async (
         delete: permission.delete,
       });
     } else {
-      // merge permissions if same page appears multiple times
       const existing = permissionMap.get(pageId);
       permissionMap.set(pageId, {
         ...existing,
@@ -72,6 +72,8 @@ export const getUserPermissions = async (
       });
     }
   });
+});
+
 
   return Array.from(permissionMap.values());
 };

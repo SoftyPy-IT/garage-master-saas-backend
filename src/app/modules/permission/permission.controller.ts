@@ -29,7 +29,8 @@ const createUserPermission = catchAsync(async (req: Request, res: Response) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
   const permissionData = req.body as IPermissionRequest;
-
+  console.log('permission check', permissionData)
+  console.log('body check', req.body)
   const result = await PermissionService.createUserPermission(tenantDomain, userId, permissionData);
 
   sendResponse(res, {

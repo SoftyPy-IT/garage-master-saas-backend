@@ -13,7 +13,7 @@ router.get(
 );
 
 router.post(
-  '/user/:userId',
+  '/:userId',
   auth('admin', 'superadmin'),
   validateRequest(permissionRequestSchema),
   PermissionController.createUserPermission
