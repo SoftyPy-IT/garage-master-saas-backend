@@ -7,7 +7,7 @@ import { IPermissionRequest } from './permission.interface';
 import sendResponse from '../../utils/sendResponse';
 import AppError from '../../errors/AppError';
 
-const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
+const getUserPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId || (req.user?.userId as string);
 
@@ -25,7 +25,7 @@ const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const createUserPermission = catchAsync(async (req: Request, res: Response) => {
+const createUserPermission = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
   const permissionData = req.body as IPermissionRequest;
@@ -41,7 +41,7 @@ const createUserPermission = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const updateRolePermissions = catchAsync(async (req: Request, res: Response) => {
+const updateRolePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const roleId = req.params.roleId;
   const permissions = req.body as IPermissionRequest[];
@@ -56,7 +56,7 @@ const updateRolePermissions = catchAsync(async (req: Request, res: Response) => 
   });
 });
 
-const checkPermission = catchAsync(async (req: Request, res: Response) => {
+const checkPermission = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const result = await PermissionService.checkPermission(tenantDomain, req.body);
 
@@ -68,7 +68,7 @@ const checkPermission = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getMyPermissions = catchAsync(async (req: Request, res: Response) => {
+const getMyPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   
   if (!req.user?.userId) {
@@ -85,10 +85,25 @@ const getMyPermissions = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getSinglePermission = catchAsync(async(req, res)=>{
+      const { id } = req.params;
+      const tenantDomain = req.query.tenantDomain as string;
+      const result = await PermissionService.getSinglePermission(tenantDomain, id);
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permission checked successfully',
+    data: { hasPermission: result },
+  });
+})
+
+
 export const PermissionController = {
   getUserPermissions,
   createUserPermission,
   updateRolePermissions,
   checkPermission,
   getMyPermissions,
+  getSinglePermission
 };
