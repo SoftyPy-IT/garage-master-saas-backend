@@ -38,13 +38,13 @@ router.put(
   validateRequest(permissionRequestSchema),
   PermissionController.updateRolePermissions
 );
-
-router.post(
-  '/check',
+router.delete('/:id', PermissionController.deleteUserPermission)
+router.patch(
+  '/batch-update',
   auth('admin', 'superadmin'),
-  validateRequest(checkPermissionZodSchema),
-  PermissionController.checkPermission
+  PermissionController.updateMultiplePermissions,
 );
+
 
 
 

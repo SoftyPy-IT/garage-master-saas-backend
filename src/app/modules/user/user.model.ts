@@ -69,7 +69,6 @@ export const userSchema = new Schema<TUser>(
     },
     createdBy: {
       type: String,
-      required: [true, 'Created by is required'],
     },
     status: {
       type: String,
@@ -79,6 +78,7 @@ export const userSchema = new Schema<TUser>(
     role: {
       type: String,
       required: [true, 'Role is required'],
+      default:'user'
     },
     lastLogin: {
       type: Date,

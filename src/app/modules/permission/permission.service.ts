@@ -1,11 +1,6 @@
 // src/modules/permission/permission.service.ts
 import httpStatus from 'http-status';
-import mongoose, { Types } from 'mongoose';
-import {
-  IPermission,
-  IPermissionRequest,
-  IPermissionCheck,
-} from './permission.interface';
+import { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 
@@ -105,49 +100,6 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
   };
 };
 
-
-export const checkPermission = async (
-  tenantDomain: string,
-  permissionCheck: IPermissionCheck,
-): Promise<boolean> => {
-  const { Model: Permission } = await getTenantModel(
-    tenantDomain,
-    'Permission',
-  );
-  const { Model: User } = await getTenantModel(tenantDomain, 'User');
-  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
-
-  const { userId, pageId, action } = permissionCheck;
-
-  // First check user-specific permissions
-  const userPermission = await Permission.findOne({
-    userId: new Types.ObjectId(userId),
-    pageId: new Types.ObjectId(pageId),
-  });
-
-  if (userPermission && userPermission[action as keyof typeof userPermission]) {
-    return true;
-  }
-
-  // If no user permission, check role permissions
-  const user = await User.findById(userId).populate('roleId');
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  const roleIds = user.roleId.map((role: any) => role._id);
-  const rolePermission = await Permission.findOne({
-    roleId: { $in: roleIds },
-    pageId: new Types.ObjectId(pageId),
-  });
-
-  if (rolePermission && rolePermission[action as keyof typeof rolePermission]) {
-    return true;
-  }
-
-  return false;
-};
-
 export const createUserPermission = async (
   tenantDomain: string,
   userId: string,
@@ -206,8 +158,6 @@ export const createUserPermission = async (
 
   return permission;
 };
-
-
 export const updateUserPermission = async (
   tenantDomain: string,
   userId: string,
@@ -266,9 +216,6 @@ export const updateUserPermission = async (
   return updatedPermission;
 };
 
-
-
-
 const getSinglePermission = async (tenantDomain: string, id: string) => {
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
@@ -284,12 +231,92 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
   return result
 
 }
+export const deleteUserPermission = async (
+  tenantDomain: string,
+  userId: string,
+  permissionId: string
+) => {
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+
+  // Validate user existence
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Find and delete permission
+  const deletedPermission = await Permission.findOneAndDelete({
+    _id: permissionId,
+    userId: { $in: [userId] },
+  });
+
+  if (!deletedPermission) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Permission not found or already deleted');
+  }
+
+  return deletedPermission;
+};
+const updateMultiplePermissions = async (
+  tenantDomain: string,
+  permissionUpdates: Array<{
+    permissionId: string;
+    create?: boolean;
+    edit?: boolean;
+    view?: boolean;
+    delete?: boolean;
+  }>
+) => {
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+        const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+            const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  // Debug: Log the incoming data
+  console.log('Service received:', permissionUpdates);
+  
+  const updatedPermissions = [];
+  
+  for (const update of permissionUpdates) {
+    const { permissionId, ...permissionData } = update;
+    
+    // Debug: Log each update
+    console.log('Processing update:', { permissionId, permissionData });
+    
+    const existingPermission = await Permission.findById(permissionId);
+    if (!existingPermission) {
+      throw new AppError(httpStatus.NOT_FOUND, `Permission with ID ${permissionId} not found`);
+    }
+    
+    const updatedPermission = await Permission.findByIdAndUpdate(
+      permissionId,
+      { $set: permissionData },
+      { new: true, runValidators: true }
+    ).populate([
+    { path: 'roleId', model: Role },
+    { path: 'pageId', model: Page },
+    { path: 'userId', model: User },
+
+  ]);
+    
+    updatedPermissions.push(updatedPermission);
+    
+    // Debug: Log the updated permission
+    console.log('Updated permission:', updatedPermission);
+  }
+
+  
+  return updatedPermissions;
+};
+
+
 
 
 export const PermissionService = {
   getUserPermissions,
-  checkPermission,
   createUserPermission,
   updateUserPermission,
-  getSinglePermission
+  getSinglePermission,
+  deleteUserPermission,
+  updateMultiplePermissions
 };

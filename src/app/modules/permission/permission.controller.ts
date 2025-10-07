@@ -66,17 +66,6 @@ export const updateRolePermissions = catchAsync(async (req, res) => {
   });
 });
 
-const checkPermission = catchAsync(async (req, res) => {
-  const tenantDomain = req.query.tenantDomain as string;
-  const result = await PermissionService.checkPermission(tenantDomain, req.body);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Permission checked successfully',
-    data: { hasPermission: result },
-  });
-});
 
 const getMyPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
@@ -107,13 +96,53 @@ const getSinglePermission = catchAsync(async(req, res)=>{
     data: { hasPermission: result },
   });
 })
+const deleteUserPermission = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
 
+  console.log('Delete Request =>', { tenantDomain, userId, permissionId });
+
+  const result = await PermissionService.deleteUserPermission(
+    tenantDomain,
+    userId,
+    permissionId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permission deleted successfully',
+    data: result,
+  });
+});
+
+const updateMultiplePermissions = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { permissionUpdates } = req.body;
+
+  // Debug: Log the incoming request
+  console.log('Batch update request:', { tenantDomain, permissionUpdates });
+
+  const result = await PermissionService.updateMultiplePermissions(tenantDomain, permissionUpdates);
+
+  // Debug: Log the result
+  console.log('Batch update result:', result);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permissions updated successfully',
+    data: result,
+  });
+});
 
 export const PermissionController = {
   getUserPermissions,
   createUserPermission,
   updateRolePermissions,
-  checkPermission,
   getMyPermissions,
-  getSinglePermission
+  getSinglePermission,
+  deleteUserPermission,
+  updateMultiplePermissions
 };
