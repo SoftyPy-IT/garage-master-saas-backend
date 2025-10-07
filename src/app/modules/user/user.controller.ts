@@ -73,6 +73,7 @@ const assignRoleToUser = catchAsync(async (req, res) => {
 const getUserPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const { userId } = req.params;
+  console.log('hit this api', tenantDomain)
 
   const result = await UserServices.getUserPermissions(tenantDomain, userId);
 
