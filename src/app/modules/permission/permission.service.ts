@@ -208,65 +208,64 @@ export const createUserPermission = async (
 };
 
 
-export const updateRolePermissions = async (
+export const updateUserPermission = async (
   tenantDomain: string,
-  roleId: string,
-  permissions: IPermissionRequest[],
+  userId: string,
+  permissionId: string,
+  permissionData: any
 ) => {
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-  // Convert roleId to ObjectId array
-  const roleIds = [new Types.ObjectId(roleId)];
+  // Convert string IDs to ObjectId arrays
+  const userIds = Array.isArray(permissionData.userId)
+    ? permissionData.userId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.userId)];
 
-  // Check if role exists
-  const role = await Role.findById(roleId);
-  if (!role) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+  const roleIds = Array.isArray(permissionData.roleId)
+    ? permissionData.roleId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.roleId)];
+
+  const pageIds = Array.isArray(permissionData.pageId)
+    ? permissionData.pageId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.pageId)];
+
+  // Validate existence
+  const user = await User.findById(userId);
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+
+  const roles = await Role.find({ _id: { $in: roleIds } });
+  if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+
+  const pages = await Page.find({ _id: { $in: pageIds } });
+  if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
+
+  // Update the specific permission by ID
+  const updatedPermission = await Permission.findByIdAndUpdate(
+    permissionId,
+    {
+      userId: userIds,
+      roleId: roleIds,
+      pageId: pageIds,
+      create: permissionData.create ?? false,
+      edit: permissionData.edit ?? false,
+      view: permissionData.view ?? false,
+      delete: permissionData.delete ?? false,
+    },
+    { new: true }
+  )
+    .populate('roleId')
+    .populate('pageId');
+
+  if (!updatedPermission) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Permission not found');
   }
 
-  const results = [];
-
-  for (const permData of permissions) {
-    // Convert pageId to ObjectId array
-    const pageIds = Array.isArray(permData.pageId)
-      ? permData.pageId.map(id => new Types.ObjectId(id))
-      : [new Types.ObjectId(permData.pageId)];
-
-    // Check if page exists
-    const pages = await Page.find({ _id: { $in: pageIds } });
-    if (!pages.length) {
-      throw new AppError(
-        httpStatus.NOT_FOUND,
-        `Page not found: ${permData.pageId}`
-      );
-    }
-
-    // Create or update permission
-    const permission = await Permission.findOneAndUpdate(
-      {
-        roleId: { $all: roleIds },
-        pageId: { $all: pageIds },
-      },
-      {
-        roleId: roleIds,
-        pageId: pageIds,
-        create: permData.create ?? false,
-        edit: permData.edit ?? false,
-        view: permData.view ?? false,
-        delete: permData.delete ?? false,
-      },
-      { upsert: true, new: true }
-    )
-      .populate('roleId')
-      .populate('pageId');
-
-    results.push(permission);
-  }
-
-  return results;
+  return updatedPermission;
 };
+
 
 
 
@@ -291,6 +290,6 @@ export const PermissionService = {
   getUserPermissions,
   checkPermission,
   createUserPermission,
-  updateRolePermissions,
+  updateUserPermission,
   getSinglePermission
 };

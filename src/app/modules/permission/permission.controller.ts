@@ -41,12 +41,22 @@ const createUserPermission = catchAsync(async (req, res) => {
   });
 });
 
-const updateRolePermissions = catchAsync(async (req, res) => {
+export const updateRolePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const roleId = req.params.roleId;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
   const permissions = req.body as IPermissionRequest[];
 
-  const result = await PermissionService.updateRolePermissions(tenantDomain, roleId, permissions);
+  console.log('User ID:', userId);
+  console.log('Permission ID:', permissionId);
+  console.log('Tenant Domain:', tenantDomain);
+
+  const result = await PermissionService.updateUserPermission(
+    tenantDomain,
+    userId,
+    permissionId,
+    permissions
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
