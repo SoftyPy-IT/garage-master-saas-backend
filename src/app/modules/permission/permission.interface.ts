@@ -3,9 +3,9 @@ import { Document, Types } from 'mongoose';
 
 export interface IPermission {
   _id?: Types.ObjectId;
-  userId: Types.ObjectId;
-  roleId: Types.ObjectId;
-  pageId: Types.ObjectId;
+  userId: Types.ObjectId[];
+  roleId: Types.ObjectId[];
+  pageId: Types.ObjectId[];
   create: boolean;
   edit: boolean;
   view: boolean;
@@ -13,6 +13,8 @@ export interface IPermission {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+
 
 export interface IPermissionRequest {
   roleId: string;

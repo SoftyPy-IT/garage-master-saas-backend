@@ -2,28 +2,15 @@
 import { Schema, Types, model } from 'mongoose';
 import { IRole } from './role.interface';
 
-// Sub-schema for embedded permissions
-// const permissionSubSchema = new Schema(
-//   {
-//     name: { type: String, required: true, trim: true },
-//     action: { type: String, required: true, trim: true },
-//     module: { type: String, required: true, trim: true },
-//   },
-//   { _id: false }
-// );
-
 export const roleSchema = new Schema<IRole>(
   {
     name: {
       type: String,
       required: [true, 'Role name is required'],
-      unique: true,
-      trim: true,
     },
     type: {
       type: String,
       enum: ['admin', 'manager', 'employee', 'user'],
-      required: [true, 'Role type is required'],
     },
     description: {
       type: String,
@@ -31,7 +18,6 @@ export const roleSchema = new Schema<IRole>(
     },
     createdBy: {
       type: String,
-      required: [true, 'Created by is required'],
     },
     status: {
       type: String,
@@ -41,7 +27,6 @@ export const roleSchema = new Schema<IRole>(
     permissions: {
       type: Types.ObjectId,
       ref: 'Permission',
-      required: true,
     },
   },
   {

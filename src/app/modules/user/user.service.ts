@@ -82,7 +82,12 @@ export const createUser = async (payload: TUser) => {
 const getAllUser = async (tenantDomain: string) => {
   if (tenantDomain) {
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
-    const result = await User.find().populate('roleId');
+    const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+    const result = await User.find().populate([
+
+      { path: 'permission', model: Permission },
+
+    ]);
     return result;
   } else {
     const result = await User.find().populate('roleId');

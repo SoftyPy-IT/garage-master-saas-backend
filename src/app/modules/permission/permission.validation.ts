@@ -3,12 +3,15 @@ import { z } from 'zod';
 
 export const permissionRequestSchema = z.object({
   body: z.object({
-    roleId: z.string({
+    roleId: z.array(z.string({
       required_error: 'Role ID is required',
-    }),
-    pageId: z.string({
+    })),
+    pageId: z.array(z.string({
       required_error: 'Page ID is required',
-    }),
+    })),
+    userId: z.array(z.string({
+      required_error: 'User ID is required',
+    })),
     create: z.boolean().optional(),
     edit: z.boolean().optional(),
     view: z.boolean().optional(),

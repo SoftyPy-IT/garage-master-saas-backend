@@ -9,9 +9,9 @@ export interface TUser {
   password: string;
   tenantDomain: string;
   tenantId?: ObjectId;
-  roleId: ObjectId[];
-  pageId: ObjectId[];
-  permission: ObjectId[];
+  roleId: ObjectId;
+  pageId: ObjectId;
+  permission: ObjectId;
   tenantInfo?: {
     name: string;
     domain: string;
