@@ -33,7 +33,7 @@ router.post(
 );
 
 router.put(
-  '/role/:roleId',
+  '/:userId/:id',
   auth('admin', 'superadmin'),
   validateRequest(permissionRequestSchema),
   PermissionController.updateRolePermissions
