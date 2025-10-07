@@ -9,9 +9,7 @@ export const permissionRequestSchema = z.object({
     pageId: z.array(z.string({
       required_error: 'Page ID is required',
     })),
-    userId: z.array(z.string({
-      required_error: 'User ID is required',
-    })),
+    userId: z.array(z.string()).optional(),
     create: z.boolean().optional(),
     edit: z.boolean().optional(),
     view: z.boolean().optional(),

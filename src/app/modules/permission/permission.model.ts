@@ -7,7 +7,6 @@ export const permissionSchema = new Schema<IPermission>(
    userId: [{
   type: Schema.Types.ObjectId,
   ref: 'User',
-  required: true,
 }],
 roleId: [{
   type: Schema.Types.ObjectId,
