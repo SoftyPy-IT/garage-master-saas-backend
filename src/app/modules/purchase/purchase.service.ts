@@ -329,6 +329,7 @@ const getSinglePurchase = async (tenantDomain: string, id: string) => {
   return result;
 };
 
+
 export const purchaseServices = {
   createPurchase,
   getAllPurchase,

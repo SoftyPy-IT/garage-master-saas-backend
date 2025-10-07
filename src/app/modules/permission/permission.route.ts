@@ -6,10 +6,23 @@ import validateRequest from '../../middlewares/validateRequest';
 import { checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
 const router = Router();
 
+
+router.get(
+  '/my-permissions',
+  auth('admin', 'superadmin', 'manager', 'user'),
+  PermissionController.getMyPermissions
+);
+
 router.get(
   '/user/:userId',
   auth('admin', 'superadmin'),
   PermissionController.getUserPermissions
+);
+
+router.get(
+  '/single/:id',
+  auth('admin', 'superadmin'),
+  PermissionController.getSinglePermission
 );
 
 router.post(
@@ -33,10 +46,6 @@ router.post(
   PermissionController.checkPermission
 );
 
-router.get(
-  '/my-permissions',
-  auth('admin', 'superadmin', 'manager', 'user'),
-  PermissionController.getMyPermissions
-);
+
 
 export const permissionRouters = router;

@@ -9,74 +9,102 @@ import {
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 
-export const getUserPermissions = async (
-  tenantDomain: string,
-  userId: string,
-) => {
-  const { Model: Permission } = await getTenantModel(
-    tenantDomain,
-    'Permission',
-  );
+export const getUserPermissions = async (tenantDomain: string, userId: string) => {
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-  // Check if user exists
+  //  Check if user exists
   const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-  // Get all permissions for this user
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+
+  // Populate user-specific permissions
   const userPermissions = await Permission.find({
     userId: new Types.ObjectId(userId),
   })
-    .populate('roleId')
-    .populate('pageId');
+    .populate({ path: 'roleId', model: Role })
+    .populate({ path: 'pageId', model: Page })
+    .lean();
 
   // Get role-based permissions
-  const roleIds = user.roleId.map((role: any) => role._id);
+  const roleIds = user.roleId.map((role: any) => role._id || role);
   const rolePermissions = await Permission.find({
     roleId: { $in: roleIds },
     userId: { $ne: new Types.ObjectId(userId) },
   })
-    .populate('roleId')
-    .populate('pageId');
+    .populate({ path: 'roleId', model: Role })
+    .populate({ path: 'pageId', model: Page })
+    .lean();
 
-  // Combine and remove duplicates
+  // Merge both user and role permissions
   const allPermissions = [...userPermissions, ...rolePermissions];
 
-  // Map permissions by page, skip if pageId missing
-const permissionMap = new Map<string, any>();
-allPermissions.forEach((permission) => {
-  if (!permission.pageId || !permission.pageId.length) return; // skip empty array
+  // ✅ Build permission map to merge duplicate pages
+  const permissionMap = new Map<string, any>();
 
-  permission.pageId.forEach((page) => {
-    const pageId = page._id.toString();
-    if (!permissionMap.has(pageId)) {
-      permissionMap.set(pageId, {
-        page,
-        roleId: permission.roleId,
-        create: permission.create,
-        edit: permission.edit,
-        view: permission.view,
-        delete: permission.delete,
-      });
-    } else {
-      const existing = permissionMap.get(pageId);
-      permissionMap.set(pageId, {
-        ...existing,
-        create: existing.create || permission.create,
-        edit: existing.edit || permission.edit,
-        view: existing.view || permission.view,
-        delete: existing.delete || permission.delete,
-      });
-    }
+  allPermissions.forEach((permission) => {
+    if (!permission.pageId || !permission.pageId.length) return;
+
+    permission.pageId.forEach((page: any) => {
+      const pageIdStr = page?._id?.toString?.();
+      if (!pageIdStr) return;
+
+      const existing = permissionMap.get(pageIdStr);
+      if (!existing) {
+        permissionMap.set(pageIdStr, {
+          _id: permission._id,
+          page: {
+            _id: page._id,
+            name: page.name,
+            slug: page.slug,
+            ...page,
+          },
+          roles: permission.roleId.map((r: any) => ({
+            _id: r._id,
+            name: r.name,
+            ...r,
+          })),
+          create: permission.create ?? false,
+          edit: permission.edit ?? false,
+          view: permission.view ?? false,
+          delete: permission.delete ?? false,
+        });
+      } else {
+        // Merge permissions (logical OR)
+        permissionMap.set(pageIdStr, {
+          ...existing,
+          create: existing.create || permission.create,
+          edit: existing.edit || permission.edit,
+          view: existing.view || permission.view,
+          delete: existing.delete || permission.delete,
+        });
+      }
+    });
   });
-});
 
+  const permissionsArray = Array.from(permissionMap.values());
 
-  return Array.from(permissionMap.values());
+  // Fetch total counts
+  const [totalPages, totalRoles, totalUsers, totalPermissions] = await Promise.all([
+    Page.countDocuments(),
+    Role.countDocuments(),
+    User.countDocuments(),
+    Permission.countDocuments(),
+  ]);
+
+  // Return structured response
+  return {
+    summary: {
+      totalPages,
+      totalRoles,
+      totalUsers,
+      totalPermissions,
+    },
+    permissions: permissionsArray,
+  };
 };
+
 
 export const checkPermission = async (
   tenantDomain: string,
@@ -123,48 +151,55 @@ export const checkPermission = async (
 export const createUserPermission = async (
   tenantDomain: string,
   userId: string,
-  permissionData: IPermissionRequest,
+  permissionData: any,
 ) => {
-  const { Model: Permission } = await getTenantModel(
-    tenantDomain,
-    'Permission',
-  );
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
+  // Convert string IDs to ObjectId arrays
+  const userIds = Array.isArray(permissionData.userId)
+    ? permissionData.userId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.userId)];
+
+  const roleIds = Array.isArray(permissionData.roleId)
+    ? permissionData.roleId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.roleId)];
+
+  const pageIds = Array.isArray(permissionData.pageId)
+    ? permissionData.pageId.map((id: any) => new Types.ObjectId(id))
+    : [new Types.ObjectId(permissionData.pageId)];
+
   // Check if user exists
   const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
 
-  // Check if role exists
-  const role = await Role.findById(permissionData.roleId);
-  if (!role) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
-  }
+  // Optional: check roles exist
+  const roles = await Role.find({ _id: { $in: roleIds } });
+  if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
 
-  // Check if page exists
-  const page = await Page.findById(permissionData.pageId);
-  if (!page) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
-  }
+  //  check pages exist
+  const pages = await Page.find({ _id: { $in: pageIds } });
+  if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
-  // Create or update permission
+  // Create or update permissions
   const permission = await Permission.findOneAndUpdate(
     {
-      userId: new Types.ObjectId(userId),
-      roleId: new Types.ObjectId(permissionData.roleId),
-      pageId: new Types.ObjectId(permissionData.pageId),
+      userId: { $all: userIds },
+      roleId: { $all: roleIds },
+      pageId: { $all: pageIds },
     },
     {
+      userId: userIds,
+      roleId: roleIds,
+      pageId: pageIds,
       create: permissionData.create ?? false,
       edit: permissionData.edit ?? false,
       view: permissionData.view ?? false,
       delete: permissionData.delete ?? false,
     },
-    { upsert: true, new: true },
+    { upsert: true, new: true }
   )
     .populate('roleId')
     .populate('pageId');
@@ -172,17 +207,18 @@ export const createUserPermission = async (
   return permission;
 };
 
+
 export const updateRolePermissions = async (
   tenantDomain: string,
   roleId: string,
   permissions: IPermissionRequest[],
 ) => {
-  const { Model: Permission } = await getTenantModel(
-    tenantDomain,
-    'Permission',
-  );
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+
+  // Convert roleId to ObjectId array
+  const roleIds = [new Types.ObjectId(roleId)];
 
   // Check if role exists
   const role = await Role.findById(roleId);
@@ -190,31 +226,38 @@ export const updateRolePermissions = async (
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
   }
 
-  // Process each permission
   const results = [];
+
   for (const permData of permissions) {
+    // Convert pageId to ObjectId array
+    const pageIds = Array.isArray(permData.pageId)
+      ? permData.pageId.map(id => new Types.ObjectId(id))
+      : [new Types.ObjectId(permData.pageId)];
+
     // Check if page exists
-    const page = await Page.findById(permData.pageId);
-    if (!page) {
+    const pages = await Page.find({ _id: { $in: pageIds } });
+    if (!pages.length) {
       throw new AppError(
         httpStatus.NOT_FOUND,
-        `Page not found: ${permData.pageId}`,
+        `Page not found: ${permData.pageId}`
       );
     }
 
     // Create or update permission
     const permission = await Permission.findOneAndUpdate(
       {
-        roleId: new Types.ObjectId(roleId),
-        pageId: new Types.ObjectId(permData.pageId),
+        roleId: { $all: roleIds },
+        pageId: { $all: pageIds },
       },
       {
+        roleId: roleIds,
+        pageId: pageIds,
         create: permData.create ?? false,
         edit: permData.edit ?? false,
         view: permData.view ?? false,
         delete: permData.delete ?? false,
       },
-      { upsert: true, new: true },
+      { upsert: true, new: true }
     )
       .populate('roleId')
       .populate('pageId');
@@ -225,9 +268,29 @@ export const updateRolePermissions = async (
   return results;
 };
 
+
+
+const getSinglePermission = async (tenantDomain: string, id: string) => {
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const result = await Permission.findById(id).populate([
+    { path: 'roleId', model: Role },
+    { path: 'pageId', model: Page },
+    { path: 'userId', model: User },
+
+  ])
+
+  return result
+
+}
+
+
 export const PermissionService = {
   getUserPermissions,
   checkPermission,
   createUserPermission,
   updateRolePermissions,
+  getSinglePermission
 };
