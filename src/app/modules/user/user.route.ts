@@ -26,7 +26,7 @@ router.put('/:id', auth('admin', 'superadmin'), UserController.updateUser);
 
 router.post(
   '/:userId/role',
-  auth('admin', ''),
+  auth('admin', 'superadmin'),
   UserController.assignRoleToUser,
 );
 

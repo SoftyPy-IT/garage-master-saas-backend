@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { PermissionController } from './permission.controller';
 import { auth } from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
+import { batchCreatePermissionSchema, checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
 const router = Router();
 
 
@@ -44,6 +44,13 @@ router.patch(
   auth('admin', 'superadmin'),
   PermissionController.updateMultiplePermissions,
 );
+router.post(
+  '/batch-create',
+  auth('admin', 'superadmin'),
+  validateRequest(batchCreatePermissionSchema),
+  PermissionController.createMultiplePermissions,
+);
+
 
 
 

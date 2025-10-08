@@ -1,4 +1,3 @@
-// src/modules/permission/permission.validation.ts
 import { z } from 'zod';
 
 export const permissionRequestSchema = z.object({
@@ -18,6 +17,23 @@ export const permissionRequestSchema = z.object({
     delete: z.boolean().optional(),
   }),
 });
+
+
+export const batchCreatePermissionSchema = z.object({
+  body: z.array(
+    z.object({
+      userId: z.string({ required_error: 'User ID is required' }),
+      pageId: z.string({ required_error: 'Page ID is required' }),
+      roleId: z.string().optional(),
+      create: z.boolean().optional(),
+      edit: z.boolean().optional(),
+      view: z.boolean().optional(),
+      delete: z.boolean().optional(),
+    })
+  ),
+});
+
+
 
 export const checkPermissionZodSchema = z.object({
   body: z.object({

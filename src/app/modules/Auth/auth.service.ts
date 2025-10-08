@@ -10,6 +10,7 @@ import AppError from '../../errors/AppError';
 import { User, userSchema } from '../user/user.model';
 import { connectToTenantDatabase } from '../../../server';
 import { Tenant } from '../tenant/tenant.model';
+import jwt from "jsonwebtoken";
 
 
 export const loginUser = async (payload: TLoginUser) => {
@@ -113,11 +114,23 @@ export const loginUser = async (payload: TLoginUser) => {
 
 
 
+export const logoutUser = async () => {
+  return { message: 'Logged out successfully!' };
+};
 
-
+export const verifyAccessToken = (token: string) => {
+  if (!config.jwt_access_secret) throw new Error("JWT Access Secret not defined");
+  try {
+    return jwt.verify(token, config.jwt_access_secret);
+  } catch (err) {
+    throw new AppError(401, "Invalid or expired token");
+  }
+};
 
 
 export const AuthServices = {
   loginUser,
+  logoutUser,
+  verifyAccessToken
 
 };
