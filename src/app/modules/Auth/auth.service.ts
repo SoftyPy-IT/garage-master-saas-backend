@@ -5,7 +5,6 @@ import { TLoginUser } from './auth.interface';
 import { createToken } from './auth.utils';
 import config from '../../config';
 import bcrypt from 'bcrypt';
-import { JwtPayload } from 'jsonwebtoken';
 import AppError from '../../errors/AppError';
 import { User, userSchema } from '../user/user.model';
 import { connectToTenantDatabase } from '../../../server';
@@ -111,8 +110,6 @@ export const loginUser = async (payload: TLoginUser) => {
     },
   };
 };
-
-
 
 export const logoutUser = async () => {
   return { message: 'Logged out successfully!' };

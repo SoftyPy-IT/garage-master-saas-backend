@@ -119,10 +119,7 @@ const deleteUserPermission = catchAsync(async (req, res) => {
 
 const updateMultiplePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const permissionUpdates = req.body; // Remove the destructuring
-
-  console.log('Batch update request:', { tenantDomain, permissionUpdates });
-
+  const permissionUpdates = req.body; 
   const result = await PermissionService.updateMultiplePermissions(tenantDomain, permissionUpdates);
 
   sendResponse(res, {
@@ -135,16 +132,15 @@ const updateMultiplePermissions = catchAsync(async (req, res) => {
 
 export const createMultiplePermissions = async (req: Request, res: Response) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const permissionData = req.body; // Remove .body
 
-  console.log('✅ Incoming tenantDomain:', tenantDomain);
-  console.log('✅ Permission data received:', JSON.stringify(permissionData, null, 2));
+  const permissionData = req.body;
+  console.log('req permission this ',permissionData)
 
   if (!Array.isArray(permissionData)) {
     throw new AppError(httpStatus.BAD_REQUEST, 'permissionData must be an array');
   }
   
-  const result = await PermissionService.createMultiplePermissions(tenantDomain, permissionData);
+  const result = await PermissionService.createOrUpdateMultiplePermissions(tenantDomain, permissionData);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -153,6 +149,8 @@ export const createMultiplePermissions = async (req: Request, res: Response) => 
     data: result,
   });
 };
+
+
 export const PermissionController = {
   getUserPermissions,
   createUserPermission,

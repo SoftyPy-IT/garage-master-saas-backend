@@ -12,8 +12,8 @@ export const loginUser = catchAsync(async (req, res) => {
   const isProduction = process.env.NODE_ENV === "production";
   const cookieOptions: any = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+    secure: true,
+    sameSite: 'none',
     path: "/",
   };
   if (isProduction) {
@@ -43,14 +43,14 @@ export const loginUser = catchAsync(async (req, res) => {
  const logoutUser = catchAsync(async (req, res) => {
   const result = await AuthServices.logoutUser();
 
-  const domain =
-    process.env.NODE_ENV === "production"
-      ? ".trustautosolution.com"
-      : ".localhost";
+  // const domain =
+  //   process.env.NODE_ENV === "production"
+  //     ? ".trustautosolution.com"
+  //     : ".localhost";
 
-  // Clear cookies securely
-  res.clearCookie("accessToken", { httpOnly: true, secure: false, domain, path: "/" });
-  res.clearCookie("refreshToken", { httpOnly: true, secure: false, domain, path: "/" });
+  // // Clear cookies securely
+  // res.clearCookie("accessToken", { httpOnly: true, secure: false, domain, path: "/" });
+  // res.clearCookie("refreshToken", { httpOnly: true, secure: false, domain, path: "/" });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -75,17 +75,19 @@ export const loginUser = catchAsync(async (req, res) => {
   }
 
   sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "User info fetched successfully",
-    data: {
-      userId: payload.userId,
-      name: payload.name,
-      role: payload.role,
-      tenantDomain: payload.tenantDomain,
-      tenantId: payload.tenantId,
-    },
-  });
+  statusCode: 200,
+  success: true,
+  message: "User info fetched successfully",
+  data: {
+    userId: payload.userId,
+    name: payload.name,
+    role: payload.role,
+    tenantDomain: payload.tenantDomain,
+    tenantId: payload.tenantId,
+    accessToken: token,
+  },
+});
+
 });
 
 export const AuthController = {

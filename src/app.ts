@@ -36,9 +36,9 @@ app.use(
 );
 
 app.use(express.json());
-app.use(cookieParser()); // ✅ Allow reading cookies
+app.use(cookieParser());
 
-// ✅ CORS Setup (allow credentials + subdomains)
+// CORS Setup (allow credentials + subdomains)
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -47,14 +47,16 @@ app.use(
       const allowedOrigins = [
         'http://localhost:5173',
         'https://trustautosolution.com',
-        "http://trustautosolution.com.localhost:5173",
+        'http://trustautosolution.com.localhost:5173', // ✅ explicitly allow your subdomain
       ];
 
-      // Allow all subdomains of trustautosolution.com and localhost
-      if (
-        origin.match(/^https?:\/\/([a-z0-9-]+\.)*localhost:5173$/) ||
-        origin.match(/^https?:\/\/([a-z0-9-]+\.)*trustautosolution\.com$/)
-      ) {
+      // Allow all subdomains of trustautosolution.com
+      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*trustautosolution\.com$/)) {
+        return callback(null, true);
+      }
+
+      // Allow all localhost-based subdomains, including trustautosolution.com.localhost:5173
+      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*localhost(:[0-9]+)?$/)) {
         return callback(null, true);
       }
 
@@ -62,13 +64,25 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(new Error('Not allowed by CORS'));
+      return callback(new Error('Not allowed by CORS: ' + origin));
     },
-    credentials: true, // ✅ Enable sending cookies
+    credentials: true, // ✅ Must be true for cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+
+// app.use(cors({
+//   origin: [
+//     "http://localhost:5173",
+//     "http://trustautosolution.com.localhost:5173",
+//   ],
+//   credentials: true, // allow cookies
+//   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+// }));
+
 
 app.options('*', cors());
 
@@ -108,7 +122,7 @@ app.post('/api/v1/backup', async (req, res) => {
   }
 });
 
-// ✅ Automatic daily backup
+// Automatic daily backup
 cron.schedule('0 0 * * *', async () => {
   try {
     await backupMongoDB();

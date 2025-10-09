@@ -7,6 +7,18 @@ import { batchCreatePermissionSchema, checkPermissionZodSchema, permissionReques
 const router = Router();
 
 
+router.post(
+  '/batch-create',
+  auth('admin', 'superadmin'),
+  PermissionController.createMultiplePermissions,
+);
+router.post(
+  '/:userId',
+  auth('admin', 'superadmin'),
+  validateRequest(permissionRequestSchema),
+  PermissionController.createUserPermission
+);
+
 router.get(
   '/my-permissions',
   auth('admin', 'superadmin', 'manager', 'user'),
@@ -25,12 +37,6 @@ router.get(
   PermissionController.getSinglePermission
 );
 
-router.post(
-  '/:userId',
-  auth('admin', 'superadmin'),
-  validateRequest(permissionRequestSchema),
-  PermissionController.createUserPermission
-);
 
 router.put(
   '/:userId/:id',
@@ -44,12 +50,7 @@ router.patch(
   auth('admin', 'superadmin'),
   PermissionController.updateMultiplePermissions,
 );
-router.post(
-  '/batch-create',
-  auth('admin', 'superadmin'),
-  validateRequest(batchCreatePermissionSchema),
-  PermissionController.createMultiplePermissions,
-);
+
 
 
 

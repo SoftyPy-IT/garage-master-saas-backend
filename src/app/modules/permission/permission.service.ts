@@ -440,7 +440,7 @@ export const deleteUserPermission = async (
   }
 };
 
-export const createMultiplePermissions = async (
+export const createOrUpdateMultiplePermissions = async (
   tenantDomain: string,
   permissionDataArray: Array<{
     userId: string;
@@ -452,18 +452,16 @@ export const createMultiplePermissions = async (
     delete?: boolean;
   }>
 ) => {
-  // Get Permission model and its connection
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    // Use the same connection for all models
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
     const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-    const createdPermissions = [];
+    const results = [];
 
     for (const permissionData of permissionDataArray) {
       const { userId, pageId, roleId, ...permissionFlags } = permissionData;
@@ -497,79 +495,68 @@ export const createMultiplePermissions = async (
       }).session(session);
 
       if (existingPermission) {
-        // If permission exists, update it instead
+        // UPDATE existing permission
         const updatedPermission = await Permission.findByIdAndUpdate(
           existingPermission._id,
           {
-            create: permissionFlags.create ?? existingPermission.create,
-            edit: permissionFlags.edit ?? existingPermission.edit,
-            view: permissionFlags.view ?? existingPermission.view,
-            delete: permissionFlags.delete ?? existingPermission.delete,
-            ...(roleObjectId && { roleId: [roleObjectId] }),
+            $set: {
+              create: permissionFlags.create ?? existingPermission.create,
+              edit: permissionFlags.edit ?? existingPermission.edit,
+              view: permissionFlags.view ?? existingPermission.view,
+              delete: permissionFlags.delete ?? existingPermission.delete,
+              ...(roleObjectId && { roleId: [roleObjectId] }),
+            }
           },
           { new: true, runValidators: true, session }
-        )
-          .populate('userId')
-          .populate('roleId')
-          .populate('pageId');
+        ).populate('userId').populate('roleId').populate('pageId');
 
-        createdPermissions.push(updatedPermission);
+        results.push({
+          action: 'updated',
+          permission: updatedPermission
+        });
       } else {
-        // Create new permission
+        // CREATE new permission
         const [newPermission] = await Permission.create(
-          [
-            {
-              userId: [new Types.ObjectId(userId)],
-              pageId: [new Types.ObjectId(pageId)],
-              ...(roleObjectId && { roleId: [roleObjectId] }),
-              create: permissionFlags.create ?? false,
-              edit: permissionFlags.edit ?? false,
-              view: permissionFlags.view ?? false,
-              delete: permissionFlags.delete ?? false,
-            },
-          ],
+          [{
+            userId: [new Types.ObjectId(userId)],
+            pageId: [new Types.ObjectId(pageId)],
+            ...(roleObjectId && { roleId: [roleObjectId] }),
+            create: permissionFlags.create ?? false,
+            edit: permissionFlags.edit ?? false,
+            view: permissionFlags.view ?? false,
+            delete: permissionFlags.delete ?? false,
+          }],
           { session }
         );
 
         // Link permission to user
-        await User.updateOne(
-          { _id: new Types.ObjectId(userId) },
-          [
-            {
-              $set: {
-                permission: {
-                  $cond: {
-                    if: { $isArray: '$permission' },
-                    then: { $concatArrays: ['$permission', [newPermission._id]] },
-                    else: [newPermission._id],
-                  },
-                },
-              },
-            },
-          ],
+        await User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { permission: newPermission._id } },
           { session }
         );
 
-        // Get populated permission
         const populatedPermission = await Permission.findById(newPermission._id)
           .populate('userId')
           .populate('roleId')
           .populate('pageId')
           .session(session);
 
-        createdPermissions.push(populatedPermission);
+        results.push({
+          action: 'created',
+          permission: populatedPermission
+        });
       }
     }
 
-    // Commit transaction
     await session.commitTransaction();
     session.endSession();
+    return results;
 
-    return createdPermissions;
-  } catch (error: any) {
+  } catch (error:any) {
     await session.abortTransaction();
     session.endSession();
-    throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to create permissions');
+    throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to process permissions');
   }
 };
 
@@ -581,5 +568,5 @@ export const PermissionService = {
   getSinglePermission,
   deleteUserPermission,
   updateMultiplePermissions,
-  createMultiplePermissions
+  createOrUpdateMultiplePermissions
 };
