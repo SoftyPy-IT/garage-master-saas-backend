@@ -3,9 +3,21 @@ import { Router } from 'express';
 import { PermissionController } from './permission.controller';
 import { auth } from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
+import { batchCreatePermissionSchema, checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
 const router = Router();
 
+
+router.post(
+  '/batch-create',
+  auth('admin', 'superadmin'),
+  PermissionController.createMultiplePermissions,
+);
+router.post(
+  '/:userId',
+  auth('admin', 'superadmin'),
+  validateRequest(permissionRequestSchema),
+  PermissionController.createUserPermission
+);
 
 router.get(
   '/my-permissions',
@@ -25,12 +37,6 @@ router.get(
   PermissionController.getSinglePermission
 );
 
-router.post(
-  '/:userId',
-  auth('admin', 'superadmin'),
-  validateRequest(permissionRequestSchema),
-  PermissionController.createUserPermission
-);
 
 router.put(
   '/:userId/:id',
@@ -38,13 +44,15 @@ router.put(
   validateRequest(permissionRequestSchema),
   PermissionController.updateRolePermissions
 );
-
-router.post(
-  '/check',
+router.delete('/:id', PermissionController.deleteUserPermission)
+router.patch(
+  '/batch-update',
   auth('admin', 'superadmin'),
-  validateRequest(checkPermissionZodSchema),
-  PermissionController.checkPermission
+  PermissionController.updateMultiplePermissions,
 );
+
+
+
 
 
 

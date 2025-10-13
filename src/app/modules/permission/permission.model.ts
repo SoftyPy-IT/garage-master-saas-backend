@@ -4,20 +4,18 @@ import { IPermission } from './permission.interface';
 
 export const permissionSchema = new Schema<IPermission>(
   {
-   userId: [{
-  type: Schema.Types.ObjectId,
-  ref: 'User',
-}],
-roleId: [{
-  type: Schema.Types.ObjectId,
-  ref: 'Role',
-  required: true,
-}],
-pageId: [{
-  type: Schema.Types.ObjectId,
-  ref: 'Page',
-  required: true,
-}],
+    userId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User', 
+    }],
+    roleId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+    }],
+    pageId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Page',
+    }],
     create: {
       type: Boolean,
       default: false,

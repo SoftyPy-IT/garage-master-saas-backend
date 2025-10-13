@@ -8,8 +8,8 @@ import sendResponse from '../../utils/sendResponse';
 import pick from '../../utils/pick';
 
 const createPage = catchAsync(async (req: Request, res: Response) => {
-  console.log(req.query)
    const tenantDomain = req.query.tenantDomain as string;
+   console.log('hit this route', tenantDomain)
   const result = await PageService.createPage(tenantDomain, req.body as IPage);
   
   sendResponse(res, {

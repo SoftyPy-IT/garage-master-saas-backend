@@ -81,14 +81,54 @@ export const createUser = async (payload: TUser) => {
 
 const getAllUser = async (tenantDomain: string) => {
   if (tenantDomain) {
+
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
-    const result = await User.find().populate('roleId');
+    const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+    const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+
+    // Deep populate permission → pageId & roleId
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
+
     return result;
   } else {
-    const result = await User.find().populate('roleId');
+    const { Model: User } = await getTenantModel('default', 'User');
+    const { Model: Role } = await getTenantModel('default', 'Role');
+    const { Model: Page } = await getTenantModel('default', 'Page');
+    const { Model: Permission } = await getTenantModel('default', 'Permission');
+
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
+
     return result;
   }
 };
+
 
 const deleteUser = async (tenantDomain: string, id: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
@@ -139,7 +179,6 @@ const updateUser = async (
   return updatedUser;
 };
 
-// Assign role to user
 const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
@@ -164,7 +203,6 @@ const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: st
   return updatedUser;
 };
 
-// Get user permissions
 const getUserPermissions = async (tenantDomain: string, userId: string) => {
   const permissions = await PermissionService.getUserPermissions(tenantDomain, userId);
   return permissions;

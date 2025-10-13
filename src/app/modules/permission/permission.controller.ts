@@ -66,17 +66,6 @@ export const updateRolePermissions = catchAsync(async (req, res) => {
   });
 });
 
-const checkPermission = catchAsync(async (req, res) => {
-  const tenantDomain = req.query.tenantDomain as string;
-  const result = await PermissionService.checkPermission(tenantDomain, req.body);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Permission checked successfully',
-    data: { hasPermission: result },
-  });
-});
 
 const getMyPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
@@ -107,13 +96,68 @@ const getSinglePermission = catchAsync(async(req, res)=>{
     data: { hasPermission: result },
   });
 })
+const deleteUserPermission = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
+
+  console.log('Delete Request =>', { tenantDomain, userId, permissionId });
+
+  const result = await PermissionService.deleteUserPermission(
+    tenantDomain,
+    userId,
+    permissionId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permission deleted successfully',
+    data: result,
+  });
+});
+
+const updateMultiplePermissions = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const permissionUpdates = req.body; 
+  const result = await PermissionService.updateMultiplePermissions(tenantDomain, permissionUpdates);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permissions updated successfully',
+    data: result,
+  });
+});
+
+export const createMultiplePermissions = async (req: Request, res: Response) => {
+  const tenantDomain = req.query.tenantDomain as string;
+
+  const permissionData = req.body;
+  console.log('req permission this ',permissionData)
+
+  if (!Array.isArray(permissionData)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'permissionData must be an array');
+  }
+  
+  const result = await PermissionService.createOrUpdateMultiplePermissions(tenantDomain, permissionData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'Permissions created successfully',
+    data: result,
+  });
+};
 
 
 export const PermissionController = {
   getUserPermissions,
   createUserPermission,
   updateRolePermissions,
-  checkPermission,
   getMyPermissions,
-  getSinglePermission
+  getSinglePermission,
+  deleteUserPermission,
+  updateMultiplePermissions,
+  createMultiplePermissions
 };
