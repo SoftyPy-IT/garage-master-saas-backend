@@ -204,7 +204,6 @@ const recalculateAllSalaries = catchAsync(async (req, res) => {
   });
 });
 const getSingleSalary = catchAsync(async (req, res) => {
-  console.log(req.query);
   const tenantDomain = req.query.tenantDomain as string;
   const id = req.query.id as string;
   const month = req.query.month as string;
@@ -231,7 +230,6 @@ export const getSalariesByMonth = catchAsync(
   async (req, res) => {
     const tenantDomain = req.query.tenantDomain as string;
     const month = req.query.month as string;
-console.log(req.query)
     const salary = await SalaryServices.getSalariesByMonth(
       tenantDomain,
       month,

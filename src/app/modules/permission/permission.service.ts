@@ -174,8 +174,6 @@ export const createUserPermission = async (
       { session }
     );
 
-    console.log(newPermission)
-
     // Commit transaction
     await session.commitTransaction();
 

@@ -762,8 +762,6 @@ const generateInvoicePDF = async (
     console.warn('Failed to load logo:', error);
   }
 
-  console.log(invoice);
-
   const filePath = join(__dirname, '../../templates/invoice.ejs');
 
   const html = await new Promise<string>((resolve, reject) => {

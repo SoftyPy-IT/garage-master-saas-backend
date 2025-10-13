@@ -1,45 +1,43 @@
-// src/middlewares/permission.ts
-import { NextFunction, Request, Response } from 'express';
-import { PermissionService } from '../modules/permission/permission.service';
+import { Request, Response, NextFunction } from 'express';
 import AppError from '../errors/AppError';
+import httpStatus from 'http-status';
 
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    role: string;
-    tenantId: string;
-  };
-  tenantId?: string;
-}
+/**
+ * @param pageRoute - The page path (e.g. '/dashboard/update-customer')
+ * @param action - One of 'view' | 'create' | 'edit' | 'delete'
+ */
+export const checkPermission = (pageRoute: string, action: 'view' | 'create' | 'edit' | 'delete') => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).userData;
 
-interface PermissionRequest {
-  pageId: string;
-  action: 'create' | 'edit' | 'view' | 'delete';
-}
-
-export const checkPermission = (pageId: string, action: 'create' | 'edit' | 'view' | 'delete') => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const tenantDomain = req.query.tenantDomain as string;
-      const userId = req.user?.userId;
-
-      if (!userId) {
-        throw new AppError(401, 'Unauthorized');
-      }
-
-      const hasPermission = await PermissionService.checkPermission(tenantDomain, {
-        userId,
-        pageId,
-        action,
-      } as any);
-
-      if (!hasPermission) {
-        throw new AppError(403, 'Forbidden');
-      }
-
-      next();
-    } catch (error) {
-      next(error);
+    if (!user) {
+      throw new AppError(httpStatus.UNAUTHORIZED, 'User not found in request');
     }
+
+    const permissions = user.permission || [];
+
+    // Find permission for the page
+    const pagePermission = permissions.find((perm: any) => {
+      const page = perm.pageId?.[0];
+      return (
+        page &&
+        (page.path === pageRoute || page.route === pageRoute)
+      );
+    });
+
+    if (!pagePermission) {
+      throw new AppError(httpStatus.FORBIDDEN, 'You do not have permission for this page');
+    }
+
+    // Check if the requested action is allowed
+    const isAllowed = pagePermission[action];
+    if (!isAllowed) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        `You do not have ${action.toUpperCase()} permission on this page`
+      );
+    }
+
+    next();
   };
 };

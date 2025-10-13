@@ -44,8 +44,8 @@ const getAllSupplier = async (
 
     const supplierQuery = new QueryBuilder(Supplier.find(), query)
       .search(['name'])
-      .filter()
-      .sort()
+      // .filter()
+      // .sort()
       .paginate()
       .fields();
     const meta = await supplierQuery.countTotal();

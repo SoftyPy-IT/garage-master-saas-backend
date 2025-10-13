@@ -3,6 +3,7 @@ import express from 'express';
 import validateRequest from '../../middlewares/validateRequest';
 import { supplierValidation } from './supplier.validation';
 import { supplierController } from './supplier.controller';
+import { auth } from '../../middlewares/auth';
 
 const router = express.Router();
 
@@ -10,15 +11,17 @@ router
   .route('/')
   .post(
     validateRequest(supplierValidation.supplierValidationSchema),
+  auth('admin', 'superadmin'),
     supplierController.createSupplier,
   )
   .get(supplierController.getAllSupplier);
 
 // Add the profile route separately - this is the correct way
-router.get('/:id/profile', supplierController.getSupplierProfile);
+router.get('/:id/profile',  auth('admin', 'superadmin'), supplierController.getSupplierProfile);
 
 router
   .route('/:id')
+  
   .get(supplierController.getSingleSupplier)
   .put(supplierController.updateSupplier);
 

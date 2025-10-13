@@ -8,28 +8,21 @@ export const supplierSchema: Schema<TSupplier> = new Schema<TSupplier>(
     orders: [{ type: Schema.Types.ObjectId, ref: 'PurchaseOrder' }],
     purchases: [{ type: Schema.Types.ObjectId, ref: 'Purchase' }],
     purchaseReturn: [{ type: Schema.Types.ObjectId, ref: 'PurchaseReturn' }],
-
     totalDue: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
     balance: { type: Number, default: 0 },
-
     full_name: { type: String, required: [true, 'Supplier name is required'] },
     contact_person_name: { type: String, required: [true, 'Contact person name is required'] },
-
     country_code: String,
     phone_number: String,
     full_Phone_number: String,
     email: { type: String, lowercase: true, trim: true },
-
-    // Business & Address Information
     tax_id: String,
     street_address: String,
     country: String,
     state: String,
     city: String,
     postal_code: String,
-
-    // Financial & Other Details
     bank_name: String,
     account_number: String,
     swift_code: String,

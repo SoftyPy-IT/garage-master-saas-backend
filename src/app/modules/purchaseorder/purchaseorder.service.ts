@@ -176,7 +176,6 @@ export const updatePurchaseOrder = async (
         } else {
           // Create new stock
           const res = await Stocks.create([stockData], { session });
-          console.log('stock create check', res);
         }
 
         // Create StockTransaction record

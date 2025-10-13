@@ -51,8 +51,8 @@ export const getAllCategory = async (
 
   const categoryQuery = new QueryBuilder(Category.find(), query)
     .search(categorySearch)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 

@@ -4,7 +4,6 @@ import httpStatus from 'http-status';
 
 import sendResponse from '../../utils/sendResponse';
 import { supplierServices } from './supplier.service';
-import AppError from '../../errors/AppError';
 import catchAsync from '../../utils/catchAsync';
 
 export const createSupplier = async (
@@ -37,12 +36,9 @@ export const getAllSupplier = async (
   next: NextFunction,
 ) => {
   try {
-    const tenantDomain =
-      (req.headers['x-tenant-domain'] as string) ||
-      (req.query.tenantDomain as string) ||
-      req.headers.host ||
-      '';
-    //  const tenantDomain = req.headers.host || '';
+    const tenantDomain = req.query.tenantDomain as string 
+    console.log('tenant domain', tenantDomain)
+
     const suppliers = await supplierServices.getAllSupplier(
       tenantDomain,
       req.query,

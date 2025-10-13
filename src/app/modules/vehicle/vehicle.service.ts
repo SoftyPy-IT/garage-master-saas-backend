@@ -295,8 +295,6 @@ const updateVehicleDetails = async (
   payload: Partial<TVehicle>,
 ) => {
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-console.log('from payload service',payload)
-  // sanitize fields (avoid unwanted updates like _id etc.)
   const sanitizedData = sanitizePayload(payload);
 
   const updatedVehicle = await Vehicle.findByIdAndUpdate(
