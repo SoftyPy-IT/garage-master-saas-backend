@@ -37,11 +37,7 @@ const getAllProductType = async (
   next: NextFunction,
 ) => {
   try {
-    const tenantDomain =
-      (req.headers['x-tenant-domain'] as string) ||
-      (req.query.tenantDomain as string) ||
-      req.headers.host ||
-      '';
+    const tenantDomain =req.query.tenantDomain as string;
     const result = await productTypeServices.getAllProductType(
       tenantDomain,
       req.query,
@@ -110,7 +106,7 @@ const updateProductType = async (
   next: NextFunction,
 ) => {
   try {
-    const { tenantDomain } = req.body;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
     const result = await productTypeServices.updateProductType(
       tenantDomain,
@@ -121,7 +117,7 @@ const updateProductType = async (
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: 'ProductType update succesfully',
+      message: 'ProductType update successfully',
       data: result,
     });
   } catch (err) {

@@ -5,9 +5,6 @@ import { CustomerServices } from './customer.service';
 
 const createCustomer = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string
-  console.log('check tenant', tenantDomain)
-
-console.log('check body', req.body)
 
   const customer = await CustomerServices.createCustomerDetails(
     tenantDomain,

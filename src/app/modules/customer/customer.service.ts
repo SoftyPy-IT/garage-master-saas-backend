@@ -15,7 +15,6 @@ const createCustomerDetails = async (
   tenantDomain: string,
   payload: { customer: TCustomer; vehicle: TVehicle },
 ) => {
-  console.log('domain check this ', tenantDomain);
   const { Model: Customer, connection: customerConnection } =
     await getTenantModel(tenantDomain, 'Customer');
 

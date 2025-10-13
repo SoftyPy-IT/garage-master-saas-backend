@@ -17,7 +17,6 @@ export const createProductType = async (
   return result;
 };
 
-// 2. Get All Product Types
 export const getAllProductType = async (
   tenantDomain: string,
   query: Record<string, unknown>,
@@ -29,8 +28,8 @@ export const getAllProductType = async (
 
   const categoryQuery = new QueryBuilder(ProductType.find(), query)
     .search(productTypeSearch)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 

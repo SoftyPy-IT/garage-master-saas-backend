@@ -24,7 +24,6 @@ const createPurchaseReturn = async (req: Request, res: Response, next: NextFunct
 const getAllPurchaseReturns = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
-    console.log(tenantDomain)
     const result = await purchaseReturnServices.getAllPurchaseReturns(tenantDomain, req.query);
     sendResponse(res, {
       statusCode: httpStatus.OK,

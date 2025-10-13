@@ -29,8 +29,8 @@ export const getAllBrand = async (
 
   const brandQuery = new QueryBuilder(Brand.find(), query)
     .search(brandSearch)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 

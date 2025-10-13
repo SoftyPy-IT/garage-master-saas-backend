@@ -62,7 +62,6 @@ export const loginUser = catchAsync(async (req, res) => {
 
  const tokenVerify = catchAsync(async (req, res) => {
   const token = req.cookies.accessToken;
-  console.log("token check this ", token);
 
   if (!token) {
     throw new AppError(401, "Not authenticated");

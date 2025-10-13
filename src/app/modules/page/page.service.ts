@@ -67,7 +67,6 @@ const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPa
 };
 
 const deletePage = async (tenantDomain: string, id: string) => {
-  console.log('tenant check', tenantDomain)
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
 

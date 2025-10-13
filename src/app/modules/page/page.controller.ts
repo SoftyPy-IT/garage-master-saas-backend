@@ -9,7 +9,6 @@ import pick from '../../utils/pick';
 
 const createPage = catchAsync(async (req: Request, res: Response) => {
    const tenantDomain = req.query.tenantDomain as string;
-   console.log('hit this route', tenantDomain)
   const result = await PageService.createPage(tenantDomain, req.body as IPage);
   
   sendResponse(res, {
@@ -60,7 +59,6 @@ const updatePage = catchAsync(async (req: Request, res: Response) => {
 
 const deletePage = catchAsync(async (req: Request, res: Response) => {
    const tenantDomain = req.query.tenantDomain as string;
-   console.log('id check',req.params.id)
   const result = await PageService.deletePage(tenantDomain, req.params.id);
   
   sendResponse(res, {

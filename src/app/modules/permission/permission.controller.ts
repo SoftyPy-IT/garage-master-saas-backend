@@ -29,8 +29,6 @@ const createUserPermission = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
   const permissionData = req.body as IPermissionRequest;
-  console.log('permission check', permissionData)
-  console.log('body check', req.body)
   const result = await PermissionService.createUserPermission(tenantDomain, userId, permissionData);
 
   sendResponse(res, {
@@ -46,11 +44,6 @@ export const updateRolePermissions = catchAsync(async (req, res) => {
   const userId = req.params.userId;
   const permissionId = req.params.id;
   const permissions = req.body as IPermissionRequest[];
-
-  console.log('User ID:', userId);
-  console.log('Permission ID:', permissionId);
-  console.log('Tenant Domain:', tenantDomain);
-
   const result = await PermissionService.updateUserPermission(
     tenantDomain,
     userId,
@@ -101,8 +94,6 @@ const deleteUserPermission = catchAsync(async (req, res) => {
   const userId = req.params.userId;
   const permissionId = req.params.id;
 
-  console.log('Delete Request =>', { tenantDomain, userId, permissionId });
-
   const result = await PermissionService.deleteUserPermission(
     tenantDomain,
     userId,
@@ -134,7 +125,6 @@ export const createMultiplePermissions = async (req: Request, res: Response) => 
   const tenantDomain = req.query.tenantDomain as string;
 
   const permissionData = req.body;
-  console.log('req permission this ',permissionData)
 
   if (!Array.isArray(permissionData)) {
     throw new AppError(httpStatus.BAD_REQUEST, 'permissionData must be an array');
