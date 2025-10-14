@@ -24,8 +24,8 @@ const getAllUnit = async (tenantDomain: string, query: Record<string, unknown>) 
 
   const categoryQuery = new QueryBuilder(Unit.find(), query)
     .search(unitSearch)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 

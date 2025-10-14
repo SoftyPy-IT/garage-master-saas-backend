@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
-import { IBarcode, IBarcodeModel } from './barcode.interface';
+import { IBarcode } from './barcode.interface';
 
-const barcodeSchema = new Schema<IBarcode, IBarcodeModel>(
+export const barcodeSchema = new Schema<IBarcode>(
   {
     name: { type: String, required: true, unique: true },
     slug: { type: String, required: true, unique: true },
@@ -18,9 +18,6 @@ const barcodeSchema = new Schema<IBarcode, IBarcodeModel>(
   }
 );
 
-barcodeSchema.statics.isBarcodeExist = async function (name: string) {
-  return !!(await this.findOne({ name }));
-};
 
-const Barcode = model<IBarcode, IBarcodeModel>('Barcode', barcodeSchema);
+const Barcode = model<IBarcode>('Barcode', barcodeSchema);
 export default Barcode;
