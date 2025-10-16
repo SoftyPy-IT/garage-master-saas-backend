@@ -18,8 +18,8 @@ const createRole = async (tenantDomain: string, payload: IRole) => {
 const getAllRoles = async (tenantDomain: string) => {
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
-  const { Model: User } = await getTenantModel(tenantDomain, 'User'); // assuming you have User model
-  const { Model: Page } = await getTenantModel(tenantDomain, 'Page'); // assuming you have Page model
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
   return Role.find().populate([
     {

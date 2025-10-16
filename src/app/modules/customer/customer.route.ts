@@ -1,6 +1,7 @@
 import express from 'express';
 import { customerController } from './customer.controller';
-import { auth, checkPermission } from '../../middlewares/auth';
+import { auth } from '../../middlewares/auth';
+import { checkPermission } from '../../middlewares/checkPermission';
 
 const router = express.Router();
 

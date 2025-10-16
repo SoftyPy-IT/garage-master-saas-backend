@@ -1,4 +1,4 @@
-// src/modules/user/user.service.ts
+
 import bcrypt from 'bcrypt';
 import httpStatus from 'http-status';
 import { TUser } from './user.interface';
@@ -7,7 +7,6 @@ import config from '../../config';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { Tenant } from '../tenant/tenant.model';
-import { User } from './user.model';
 import { PermissionService } from '../permission/permission.service';
 import { Types } from 'mongoose';
 
@@ -50,6 +49,7 @@ export const createUser = async (payload: TUser) => {
     name: newUser.name,
     role: newUser.role,
     tenantId: tenantInfo._id.toString(),
+    domain: newUser.domain,
   };
 
   const accessToken = createToken(
