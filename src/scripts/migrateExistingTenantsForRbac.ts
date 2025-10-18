@@ -14,8 +14,7 @@ const CENTRAL_DB_URI = 'mongodb+srv://softypy_saas:saas_softypy33@cluster0.ywst3
 
 async function migrateTenants() {
   try {
-    // কোনো কালার ছাড়া সাধারণ কনসোল লগ
-    console.log('🚀 Starting migration process...');
+    console.log('🚀 Starting migration process for all existing tenants...');
     await mongoose.connect(CENTRAL_DB_URI);
     console.log('✅ Connected to central database.');
 
@@ -29,7 +28,7 @@ async function migrateTenants() {
 
     // ২. প্রতিটি টেনান্টের জন্য মাইগ্রেশন চালান
     for (const tenant of tenants) {
-      console.log('\n----------------------------------------');
+      console.log(`\n----------------------------------------`);
       console.log(`🔄 Migrating tenant: ${tenant.name} (${tenant.domain})`);
       await migrateSingleTenant(tenant);
     }
@@ -60,19 +59,19 @@ async function migrateSingleTenant(tenant: ITenant) {
     // ৩. ডিফল্ট রোল তৈরি করুন (যদি না থাকে)
     const existingRoles = await RoleModel.find();
     if (existingRoles.length === 0) {
-      await RoleModel.insertMany(DEFAULT_ROLES);
-      console.log('  ✅ Created default roles.');
+      await RoleModel.insertMany(DEFAULT_ROLES); // এখানে DEFAULT_ROLES ব্যবহার হচ্ছে
+      console.log('  ✅ Created default roles (Admin, Manager, Employee).');
     } else {
-      console.log('  ℹ️ Default roles already exist. Skipping.');
+      console.log('  ℹ️ Default roles already exist. Skipping role creation.');
     }
 
     // ৪. ডিফল্ট পেজ তৈরি করুন (যদি না থাকে)
     const existingPages = await PageModel.find();
     if (existingPages.length === 0) {
-      await PageModel.insertMany(DEFAULT_PAGES);
-      console.log('  ✅ Created default pages.');
+      await PageModel.insertMany(DEFAULT_PAGES); // এখানে DEFAULT_PAGES ব্যবহার হচ্ছে
+      console.log(`  ✅ Created ${DEFAULT_PAGES.length} default pages.`);
     } else {
-      console.log('  ℹ️ Default pages already exist. Skipping.');
+      console.log('  ℹ️ Default pages already exist. Skipping page creation.');
     }
 
     // ৫. 'Admin' রোল এবং সব পেজ খুঁজুন
@@ -98,9 +97,9 @@ async function migrateSingleTenant(tenant: ITenant) {
         delete: true,
       }));
       await PermissionModel.insertMany(permissionsToCreate);
-      console.log("  ✅ Granted full permissions to 'Admin' role.");
+      console.log(`  ✅ Granted full permissions to 'Admin' role for all ${allPages.length} pages.`);
     } else {
-      console.log("  ℹ️ Permissions for 'Admin' role already exist. Skipping.");
+      console.log("  ℹ️ Permissions for 'Admin' role already exist. Skipping permission assignment.");
     }
 
     // ৭. সব বিদ্যমান ইউজারদের 'Admin' রোল দিন (যাদের রোল নেই)
@@ -121,7 +120,9 @@ async function migrateSingleTenant(tenant: ITenant) {
 
   } catch (error: any) {
     console.error(`❌ Migration failed for tenant ${tenant.domain}:`, error.message);
+    // একটি টেনান্টের মাইগ্রেশন ব্যর্থ হলেও পুরো প্রক্রিয়া থামাবেন না
   }
 }
 
 // স্ক্রিপ্টটি চালান
+migrateTenants();
