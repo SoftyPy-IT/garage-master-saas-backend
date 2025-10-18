@@ -195,7 +195,7 @@ export const createTenant = async (
       role: 'admin',
     }], { session });
 
-    // ✅ Grant full permissions to Admin
+    // Grant full permissions to Admin
     if (createdPages.length > 0) {
       const permissionsToCreate = createdPages.map((page) => ({
         roleId: [adminRole._id],

@@ -1,5 +1,3 @@
-// src/utils/tenantSeedData.ts
-
 export interface IDefaultPage {
   name: string;
   category: string;
@@ -14,7 +12,7 @@ export interface IDefaultRole {
   description: string;
 }
 
-// আপনার Route.jsx ফাইল থেকে তৈরি করা সম্পূর্ণ পেজ লিস্ট
+// default page 
 export const DEFAULT_PAGES: IDefaultPage[] = [
   // Dashboard
   { name: 'Dashboard', category: 'Main', path: '/dashboard', route: '/dashboard', status: 'active' },
@@ -190,20 +188,20 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Restore', category: 'System', path: '/dashboard/restore', route: '/dashboard/restore', status: 'active' },
 ];
 
-// ডিফল্ট রোলের তালিকা
+// default role 
 export const DEFAULT_ROLES: IDefaultRole[] = [
   {
-    name: 'Admin',
+    name: 'admin',
     type: 'admin',
     description: 'Full system access',
   },
   {
-    name: 'Manager',
+    name: 'manager',
     type: 'manager',
     description: 'Can manage day-to-day operations but not system settings',
   },
   {
-    name: 'Employee',
+    name: 'employee',
     type: 'employee',
     description: 'Can perform assigned tasks',
   },
