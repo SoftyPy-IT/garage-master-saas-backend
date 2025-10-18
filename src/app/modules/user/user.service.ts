@@ -11,6 +11,7 @@ import { PermissionService } from '../permission/permission.service';
 import { Types } from 'mongoose';
 
 export const createUser = async (payload: TUser) => {
+  console.log('user payload check ',payload)
   const { Model: User, tenant } = await getTenantModel(
     payload.tenantDomain,
     'User',
