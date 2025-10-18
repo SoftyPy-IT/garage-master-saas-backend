@@ -47,9 +47,11 @@ app.use(
       const allowedOrigins = [
         'http://localhost:5173',
         'https://trustautosolution.com',
-                'https://moriyom.com',
+        'https://worldautosolution.com',
+        'https://moriyom.com',
         'http://trustautosolution.com.localhost:5173',
-                'http://moriyom.com.localhost:5173',
+        'http://moriyom.com.localhost:5173',
+        'https://garage.worldautosolution.com'
       ];
 
 
@@ -67,7 +69,7 @@ app.use(
 
       return callback(new Error('Not allowed by CORS: ' + origin));
     },
-    credentials: true, // ✅ Must be true for cookies
+    credentials: true, 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
