@@ -3,14 +3,10 @@ import validateRequest from '../../middlewares/validateRequest';
 import { upload } from '../../utils/ImageUpload';
 import { productTypeControllers } from './productType.controller';
 import { ProductTypeValidations } from './productType.validation';
-import { auth } from '../../middlewares/auth';
-import { checkPermission } from '../../middlewares/checkPermission';
 const router = express.Router();
 router.post(
   '/',
   upload,
-    auth('admin', 'superadmin'),
-    checkPermission('/dashboard/product-type', 'create'),
   validateRequest(ProductTypeValidations.createProductType),
   productTypeControllers.createProductType,
 );
