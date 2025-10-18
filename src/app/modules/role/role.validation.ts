@@ -1,18 +1,7 @@
 // src/modules/role/role.validation.ts
 import { z } from "zod";
 
-// Permission Schema Validation
-const permissionSchema = z.object({
-  pageId: z.string({
-    required_error: "Page ID is required",
-  }),
-  create: z.boolean().optional().default(false),
-  edit: z.boolean().optional().default(false),
-  view: z.boolean().optional().default(false),
-  delete: z.boolean().optional().default(false),
-});
 
-// Role Schema Validation
 export const createRoleValidationSchema = z.object({
   body: z.object({
     name: z
@@ -23,13 +12,13 @@ export const createRoleValidationSchema = z.object({
       required_error: "Role type is required",
     }),
     description: z.string().trim().optional(),
-    createdBy: z.string({ required_error: "Created by is required" }),
+    createdBy: z.string(),
     status: z.enum(["active", "inactive"]).optional().default("active"),
-    permissions: z.array(permissionSchema).optional(),
+
   }),
 });
 
-// For updating role (partial fields allowed)
+
 export const updateRoleValidationSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1).optional(),
@@ -37,6 +26,5 @@ export const updateRoleValidationSchema = z.object({
     description: z.string().trim().optional(),
     createdBy: z.string().optional(),
     status: z.enum(["active", "inactive"]).optional(),
-    permissions: z.array(permissionSchema).optional(),
   }),
 });

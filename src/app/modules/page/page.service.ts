@@ -3,9 +3,9 @@ import httpStatus from 'http-status';
 import { Types } from 'mongoose';
 import { IPage, IPageFilters } from './page.interface';
 import AppError from '../../errors/AppError';
-import { getTenantModel } from '../../utils/getTenantModels'; // আপনার getTenantModel path
+import { getTenantModel } from '../../utils/getTenantModels';
 
-// Create Page
+
 const createPage = async (tenantDomain: string, payload: IPage) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
@@ -31,6 +31,7 @@ const getAllPages = async (tenantDomain: string, filters: IPageFilters = {}) => 
     query.$or = [
       { name: { $regex: searchTerm, $options: 'i' } },
       { path: { $regex: searchTerm, $options: 'i' } },
+      { route: { $regex: searchTerm, $options: 'i' } },
       { category: { $regex: searchTerm, $options: 'i' } },
     ];
   }
@@ -41,15 +42,6 @@ const getAllPages = async (tenantDomain: string, filters: IPageFilters = {}) => 
   return await Page.find(query).sort({ category: 1, name: 1 }).exec();
 };
 
-// Get pages for select options
-const getAllPagesForOptions = async (tenantDomain: string) => {
-  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
-  return await Page.find({ status: 'active' })
-    .sort({ category: 1, name: 1 })
-    .exec();
-};
-
-// Get page by ID
 const getPageById = async (tenantDomain: string, id: string) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
@@ -58,7 +50,6 @@ const getPageById = async (tenantDomain: string, id: string) => {
   return result;
 };
 
-// Update Page
 const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPage>) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
@@ -75,7 +66,6 @@ const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPa
   return result;
 };
 
-// Delete Page
 const deletePage = async (tenantDomain: string, id: string) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
@@ -94,21 +84,10 @@ const deletePage = async (tenantDomain: string, id: string) => {
   return result;
 };
 
-// Get Pages by category
-const getPagesByCategory = async (tenantDomain: string, category: string) => {
-  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
-
-  return await Page.find({ category, status: 'active' })
-    .sort({ name: 1 })
-    .exec();
-};
-
 export const PageService = {
   createPage,
   getAllPages,
-  getAllPagesForOptions,
   getPageById,
   updatePage,
   deletePage,
-  getPagesByCategory,
 };

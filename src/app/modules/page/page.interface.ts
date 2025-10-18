@@ -1,14 +1,10 @@
-import { Document, Model } from 'mongoose';
-
 export interface IPage {
   name: string;
-  category: string;
   path: string;
-  description?: string;
+  category:string;
+  route: string;
   status: 'active' | 'inactive';
 }
-
-
 
 export interface IPageFilters {
   searchTerm?: string;

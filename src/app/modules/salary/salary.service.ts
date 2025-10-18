@@ -219,7 +219,6 @@ const deleteSalaryFromDB = async (tenantDomain: string, id: string) => {
     tenantDomain,
     'Salary',
   );
-  console.log('from salary tenant',tenantDomain);
   const { Model: Employee } = await getTenantModel(tenantDomain, 'Employee');
 
   const session = await connection.startSession();

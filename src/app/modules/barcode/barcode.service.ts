@@ -1,39 +1,37 @@
-import Barcode from './barcode.model';
+
 import { IBarcode } from './barcode.interface';
 import QueryBuilder from '../../builder/QueryBuilder';
 import httpStatus from 'http-status';
 import AppError from '../../errors/AppError';
-import { Request } from 'express';
 import { UploadApiResponse } from 'cloudinary';
-import { Product } from '../product/product.model';
 import generateAndUploadBarcode from '../../utils/generateBarcode';
+import { getTenantModel } from '../../utils/getTenantModels';
+import mongoose from 'mongoose';
 
-export const getAllBarcode = async (
-  query: Record<string, unknown>,
-): Promise<{ meta: any; barcodes: any[] }> => {
+export const getAllBarcode = async (query: any, tenantDomain: string) => {
+  const { Model: Barcode } = await getTenantModel(tenantDomain, "Barcode");
   const barcodeSearchableFields = ['name'];
 
   const barcodeQuery = new QueryBuilder(
-    Barcode.find({
-      isDeleted: false,
-    }), query, )
+    Barcode.find(), query,)
     .search(barcodeSearchableFields)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 
   const meta = await barcodeQuery.countTotal();
   const barcodes = await barcodeQuery.modelQuery;
 
-  return { 
-    meta, 
-    barcodes 
+  return {
+    meta,
+    barcodes
   };
 };
 
 
-export const getBarcodeById = async (id: string): Promise<IBarcode | null> => {
+export const getBarcodeById = async (tenantDomain: string, id: string): Promise<IBarcode | null> => {
+  const { Model: Barcode } = await getTenantModel(tenantDomain, "Barcode");
   const barcode = await Barcode.findOne({ _id: id, isDeleted: false });
   if (!barcode) {
     throw new AppError(httpStatus.NOT_FOUND, 'This barcode is not found');
@@ -41,62 +39,91 @@ export const getBarcodeById = async (id: string): Promise<IBarcode | null> => {
   return barcode;
 };
 
-export const createBarcode = async (req: Request): Promise<IBarcode | null> => {
+export const createBarcode = async (
+  tenantDomain: string,
+  payload: IBarcode
+): Promise<IBarcode | null> => {
   try {
-    const { name, description, product_id } = req.body;
-    if (await Barcode.isBarcodeExist(name)) {
+    const { name, description, product_id } = payload;
+
+    const { Model: Barcode } = await getTenantModel(tenantDomain, "Barcode");
+    const { Model: Product } = await getTenantModel(tenantDomain, "Product");
+
+    if (!product_id) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Product ID is required");
+    }
+
+    // Convert to ObjectId if it’s a string
+    const productObjectId =
+      typeof product_id === "string"
+        ? new mongoose.Types.ObjectId(product_id)
+        : product_id;
+
+    const exist = await Barcode.findOne({ name });
+    if (exist) {
       throw new AppError(
         httpStatus.CONFLICT,
-        'The barcode already exists with this name',
+        "The barcode already exists with this name"
       );
     }
 
-    const product = await Product.findById(product_id);
+    // Use productObjectId to query
+    const product = await Product.findById(productObjectId);
     if (!product) {
-      throw new AppError(httpStatus.NOT_FOUND, 'This product is not found');
+      throw new AppError(httpStatus.NOT_FOUND, "This product is not found");
     }
 
-    const productBarcode = await Barcode.findOne({ product_id });
-    if (productBarcode) {
+    // Check if product already has a barcode
+    const existingBarcode = await Barcode.findOne({ product_id: productObjectId });
+    if (existingBarcode) {
       throw new AppError(
         httpStatus.CONFLICT,
-        'This product already has a barcode',
+        "This product already has a barcode"
       );
     }
 
+    // Generate barcode image and upload
     const result = (await generateAndUploadBarcode(
-      product_id,
+      productObjectId.toString()
     )) as UploadApiResponse;
+
     if (!result) {
       throw new AppError(
         httpStatus.INTERNAL_SERVER_ERROR,
-        'Error generating or uploading barcode',
+        "Error generating or uploading barcode"
       );
     }
 
+    // Prepare and create barcode data
     const barcodeData = {
       name,
       slug:
-        name.toLowerCase().replace(/ /g, '-') +
-        '_barcode_' +
+        name.toLowerCase().replace(/ /g, "-") +
+        "_barcode_" +
         Math.floor(Math.random() * 1000),
       description,
-      product_id,
+      product_id: productObjectId,
       barcode: {
         url: result.secure_url,
         public_id: result.public_id,
       },
     };
-    const data = await Barcode.create(barcodeData);
-    return data;
+
+    const newBarcode = await Barcode.create(barcodeData);
+    return newBarcode;
   } catch (error: any) {
-    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    console.error("❌ Barcode creation failed:", error.message);
+    throw new AppError(
+      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
+      error.message
+    );
   }
 };
 
-export const updateBarcode = async () => {};
+export const updateBarcode = async (tenantDomain: string, id: string) => { };
 
-export const deleteBarcode = async (id: string): Promise<void | null> => {
+export const deleteBarcode = async (tenantDomain: string, id: string) => {
+  const { Model: Barcode } = await getTenantModel(tenantDomain, "Barcode");
   const barcode = await Barcode.findOne({ _id: id, isDeleted: false });
   if (!barcode) {
     throw new AppError(httpStatus.NOT_FOUND, 'This barcode does not exist');

@@ -25,11 +25,7 @@ const createBrand = async (req: Request, res: Response, next: NextFunction) => {
 
 const getAllBrand = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const tenantDomain =
-      (req.headers['x-tenant-domain'] as string) ||
-      (req.query.tenantDomain as string) ||
-      req.headers.host ||
-      '';
+    const tenantDomain = req.query.tenantDomain as string ;
 
     const result = await brandServices.getAllBrand(tenantDomain,req.query);
 

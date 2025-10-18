@@ -1,37 +1,18 @@
+// src/modules/permission/permission.controller.ts
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../utils/catchAsync';
-import sendResponse from '../../utils/sendResponse';
 import { PermissionService } from './permission.service';
+import { IPermissionRequest } from './permission.interface';
+import sendResponse from '../../utils/sendResponse';
 import AppError from '../../errors/AppError';
 
-const checkPermission = catchAsync(async (req: Request, res: Response) => {
-  const tenantDomain = req.query.tenantDomain as string;
-  const result = await PermissionService.checkPermission(
-    tenantDomain,
-    req.body,
-  );
-
-  sendResponse<{ hasPermission: boolean }>(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Permission checked successfully',
-    data: { hasPermission: result },
-  });
-});
-
-const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
+const getUserPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId || (req.user?.userId as string);
 
   if (!userId) {
-    sendResponse(res, {
-      statusCode: httpStatus.BAD_REQUEST,
-      success: false,
-      message: 'User ID is required',
-      data: null,
-    });
-    return;
+    throw new AppError(httpStatus.BAD_REQUEST, 'User ID is required');
   }
 
   const result = await PermissionService.getUserPermissions(tenantDomain, userId);
@@ -44,17 +25,11 @@ const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const createUserPermission = catchAsync(async (req: Request, res: Response) => {
+const createUserPermission = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-
-  // Ensure userId comes as array from body (better than params)
-  const userIds = Array.isArray(req.params.userId) ? req.params.userId : [req.params.userId];
-
-  const result = await PermissionService.createUserPermission(
-    tenantDomain,
-    userIds,
-    req.body,
-  );
+  const userId = req.params.userId;
+  const permissionData = req.body as IPermissionRequest;
+  const result = await PermissionService.createUserPermission(tenantDomain, userId, permissionData);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -64,27 +39,30 @@ const createUserPermission = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
-const updateRolePermissions = catchAsync(
-  async (req: Request, res: Response) => {
-    const tenantDomain = req.query.tenantDomain as string;
-    await PermissionService.updateRolePermissions(
-      tenantDomain,
-      req.params.roleId,
-      req.body,
-    );
-
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: 'Role permissions updated successfully',
-      data: null,
-    });
-  },
-);
-
-const getMyPermissions = catchAsync(async (req: Request, res: Response) => {
+export const updateRolePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
+  const permissions = req.body as IPermissionRequest[];
+  const result = await PermissionService.updateUserPermission(
+    tenantDomain,
+    userId,
+    permissionId,
+    permissions
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Role permissions updated successfully',
+    data: result,
+  });
+});
+
+
+const getMyPermissions = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  
   if (!req.user?.userId) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not authenticated');
   }
@@ -99,10 +77,77 @@ const getMyPermissions = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getSinglePermission = catchAsync(async(req, res)=>{
+      const { id } = req.params;
+      const tenantDomain = req.query.tenantDomain as string;
+      const result = await PermissionService.getSinglePermission(tenantDomain, id);
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permission checked successfully',
+    data: { hasPermission: result },
+  });
+})
+const deleteUserPermission = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
+
+  const result = await PermissionService.deleteUserPermission(
+    tenantDomain,
+    userId,
+    permissionId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permission deleted successfully',
+    data: result,
+  });
+});
+
+const updateMultiplePermissions = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const permissionUpdates = req.body; 
+  const result = await PermissionService.updateMultiplePermissions(tenantDomain, permissionUpdates);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Permissions updated successfully',
+    data: result,
+  });
+});
+
+export const createMultiplePermissions = async (req: Request, res: Response) => {
+  const tenantDomain = req.query.tenantDomain as string;
+
+  const permissionData = req.body;
+
+  if (!Array.isArray(permissionData)) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'permissionData must be an array');
+  }
+  
+  const result = await PermissionService.createOrUpdateMultiplePermissions(tenantDomain, permissionData);
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'Permissions created successfully',
+    data: result,
+  });
+};
+
+
 export const PermissionController = {
-  checkPermission,
   getUserPermissions,
   createUserPermission,
   updateRolePermissions,
   getMyPermissions,
+  getSinglePermission,
+  deleteUserPermission,
+  updateMultiplePermissions,
+  createMultiplePermissions
 };

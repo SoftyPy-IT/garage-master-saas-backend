@@ -1,28 +1,41 @@
-import { Schema, Types, model } from 'mongoose';
-import { IUserPermission } from './permission.interface';
+// src/modules/permission/permission.model.ts
+import { Schema, model } from 'mongoose';
+import { IPermission } from './permission.interface';
 
-export const permissionSchema = new Schema<IUserPermission>(
+export const permissionSchema = new Schema<IPermission>(
   {
-    userId: [{ type: Types.ObjectId, ref: 'User', required: true }],
-    roleId: [{ type: Types.ObjectId, ref: 'Role', required: true }],
-    pageId: [{ type: Types.ObjectId, ref: 'Page', required: true }],
-    create: { type: Boolean, default: false },
-    edit: { type: Boolean, default: false },
-    view: { type: Boolean, default: false },
-    delete: { type: Boolean, default: false },
+    userId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User', 
+    }],
+    roleId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+    }],
+    pageId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Page',
+    }],
+    create: {
+      type: Boolean,
+      default: false,
+    },
+    edit: {
+      type: Boolean,
+      default: false,
+    },
+    view: {
+      type: Boolean,
+      default: false,
+    },
+    delete: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
-    toJSON: {
-      virtuals: true,
-      transform(doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
-    },
   }
 );
 
-export const Permission = model<IUserPermission>('Permission', permissionSchema);
+export const Permission = model<IPermission>('Permission', permissionSchema);

@@ -10,6 +10,6 @@ router.post(
   validateRequest(AuthValidation.loginValidationSchema),
   AuthController.loginUser,
 );
-
-
+router.post("/logout", AuthController.logoutUser);
+router.get("/me", AuthController.tokenVerify);
 export const authRoutes = router;

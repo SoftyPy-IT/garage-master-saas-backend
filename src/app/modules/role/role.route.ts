@@ -9,34 +9,40 @@ const router = express.Router();
 
 router.post(
   '/',
-  auth('admin'),
-  validateRequest(createRoleValidationSchema),
+  auth('admin', 'superadmin'),
+  // validateRequest(createRoleValidationSchema),
   RoleController.createRole
 );
 
 router.get(
   '/',
-  auth('admin', 'manager'),
+  auth('admin', 'superadmin'),
   RoleController.getAllRoles
 );
 
 router.get(
   '/:id',
-  auth('admin', 'manager'),
+  auth('admin', 'superadmin'),
   RoleController.getRoleById
 );
 
 router.put(
   '/:id',
-  auth('admin'),
+auth('admin', 'superadmin'),
   validateRequest(updateRoleValidationSchema),
   RoleController.updateRole
 );
 
 router.delete(
   '/:id',
-  auth('admin'),
+auth('admin', 'superadmin'),
   RoleController.deleteRole
+);
+
+router.post(
+  '/:roleId/permissions',
+auth('admin', 'superadmin'),
+  RoleController.assignPermissionsToRole
 );
 
 export const RoleRoutes = router;

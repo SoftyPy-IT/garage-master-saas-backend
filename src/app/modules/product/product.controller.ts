@@ -12,7 +12,7 @@ const createProduct = async (
   next: NextFunction,
 ) => {
 
-    const { tenantDomain } = req.body;
+  const { tenantDomain } = req.body;
   try {
     const file = req.file;
     const payload = req.body;
@@ -21,7 +21,7 @@ const createProduct = async (
       delete payload.data;
     }
 
-    const result = await productServices.createProduct(tenantDomain,payload, file);
+    const result = await productServices.createProduct(tenantDomain, payload, file);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -42,13 +42,9 @@ const getAllProduct = async (
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain =
-    (req.headers['x-tenant-domain'] as string) ||
-    (req.query.tenantDomain as string) ||
-    req.headers.host ||
-    '';
+    const tenantDomain = req.query.tenantDomain as string;
 
-    const result = await productServices.getAllProduct(tenantDomain,req.query);
+    const result = await productServices.getAllProduct(tenantDomain, req.query);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -67,8 +63,8 @@ const getSingleProduct = async (
 ) => {
   try {
     const { id } = req.params;
-     const tenantDomain = req.query.tenantDomain as string;
-    const result = await productServices.getSingleProduct(tenantDomain,id);
+    const tenantDomain = req.query.tenantDomain as string;
+    const result = await productServices.getSingleProduct(tenantDomain, id);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -86,9 +82,9 @@ const deleteProduct = async (
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await productServices.deleteProduct(tenantDomain,id);
+    const result = await productServices.deleteProduct(tenantDomain, id);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -116,7 +112,7 @@ const updateProduct = async (
         message: 'Invalid ID',
       });
     }
-      const { tenantDomain } = req.body;
+    const { tenantDomain } = req.body;
     const result = await productServices.updateProduct(tenantDomain, id, req.body);
 
     if (!result) {

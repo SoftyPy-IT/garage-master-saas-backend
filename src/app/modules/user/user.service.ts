@@ -1,8 +1,5 @@
-// src/modules/user/user.service.ts
-import bcrypt from 'bcrypt';
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
+import bcrypt from 'bcrypt';
 import httpStatus from 'http-status';
 import { TUser } from './user.interface';
 import { createToken } from '../Auth/auth.utils';
@@ -10,7 +7,8 @@ import config from '../../config';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { Tenant } from '../tenant/tenant.model';
-import { User } from './user.model';
+import { PermissionService } from '../permission/permission.service';
+import { Types } from 'mongoose';
 
 export const createUser = async (payload: TUser) => {
   const { Model: User, tenant } = await getTenantModel(
@@ -33,7 +31,6 @@ export const createUser = async (payload: TUser) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Tenant not found!');
   }
 
-  
   const newUser = await User.create({
     ...payload,
     tenantId: tenantInfo._id,
@@ -52,6 +49,7 @@ export const createUser = async (payload: TUser) => {
     name: newUser.name,
     role: newUser.role,
     tenantId: tenantInfo._id.toString(),
+    domain: newUser.domain,
   };
 
   const accessToken = createToken(
@@ -83,14 +81,54 @@ export const createUser = async (payload: TUser) => {
 
 const getAllUser = async (tenantDomain: string) => {
   if (tenantDomain) {
+
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
-    const result = await User.find().populate('roleId');
+    const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+    const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+
+    // Deep populate permission → pageId & roleId
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
+
     return result;
   } else {
-    const result = await User.find().populate('roleId');
+    const { Model: User } = await getTenantModel('default', 'User');
+    const { Model: Role } = await getTenantModel('default', 'Role');
+    const { Model: Page } = await getTenantModel('default', 'Page');
+    const { Model: Permission } = await getTenantModel('default', 'Permission');
+
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
+
     return result;
   }
 };
+
 
 const deleteUser = async (tenantDomain: string, id: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
@@ -125,13 +163,13 @@ const updateUser = async (
     }
   }
 
- if (payload.password && typeof payload.password === 'string') {
-  const hashedPassword = await bcrypt.hash(
-    payload.password,
-    Number(config.bcrypt_salt_round),
-  );
-  payload.password = hashedPassword;
-}
+  if (payload.password && typeof payload.password === 'string') {
+    const hashedPassword = await bcrypt.hash(
+      payload.password,
+      Number(config.bcrypt_salt_round),
+    );
+    payload.password = hashedPassword;
+  }
 
   const updatedUser = await User.findByIdAndUpdate(id, payload, {
     new: true,
@@ -141,9 +179,40 @@ const updateUser = async (
   return updatedUser;
 };
 
+const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: string) => {
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const role = await Role.findById(roleId);
+  if (!role) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+  }
+
+  // Add role to user
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { roleId: new Types.ObjectId(roleId) } },
+    { new: true }
+  ).populate('roleId');
+
+  return updatedUser;
+};
+
+const getUserPermissions = async (tenantDomain: string, userId: string) => {
+  const permissions = await PermissionService.getUserPermissions(tenantDomain, userId);
+  return permissions;
+};
+
 export const UserServices = {
   createUser,
   getAllUser,
   deleteUser,
   updateUser,
+  assignRoleToUser,
+  getUserPermissions,
 };

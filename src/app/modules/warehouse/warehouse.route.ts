@@ -5,13 +5,13 @@ import { warehouseControllers } from './warehouse.controller';
 
 const router = express.Router();
 
+router.get('/', warehouseControllers.getAllWarehouses);
 router.post(
   '/',
   validateRequest(WarehouseValidations.createWarehouse),
   warehouseControllers.createWarehouse,
 );
 
-router.get('/', warehouseControllers.getAllWarehouses);
 
 router.get('/:id', warehouseControllers.getSingleWarehouse);
 

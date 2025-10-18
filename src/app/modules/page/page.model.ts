@@ -1,3 +1,4 @@
+
 import { Schema, model } from 'mongoose';
 import { IPage } from './page.interface';
 
@@ -11,8 +12,6 @@ export const pageSchema = new Schema<IPage>(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
-      trim: true,
     },
     path: {
       type: String,
@@ -20,21 +19,19 @@ export const pageSchema = new Schema<IPage>(
       unique: true,
       trim: true,
     },
-    description: {
+    route: {
       type: String,
+      required: [true, 'Route is required'],
       trim: true,
     },
     status: {
       type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
     },
   },
   {
     timestamps: true,
   }
 );
-
 
 const Page = model<IPage>('Page', pageSchema);
 
