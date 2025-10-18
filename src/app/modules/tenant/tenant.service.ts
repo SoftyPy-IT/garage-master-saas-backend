@@ -163,18 +163,18 @@ export const createTenant = async (
     const PermissionModel = tenantDb.model('Permission', permissionSchema);
     const SubscriptionModel = tenantDb.model('Subscription', subscriptionSchema);
 
-    // ✅ Create default pages
+    //Create default pages
     const createdPages = await PageModel.insertMany(DEFAULT_PAGES, { session });
 
-    // ✅ Create default roles
+    // Create default roles
     const createdRoles = await RoleModel.insertMany(DEFAULT_ROLES, { session });
 
-    const adminRole = createdRoles.find((role: any) => role.name === 'Admin');
+    const adminRole = createdRoles.find((role: any) => role.name === 'admin');
     if (!adminRole) {
       throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Admin role could not be created.');
     }
 
-    // ✅ Create admin user
+    // Create admin user
     const fullName = `${userPayload?.firstName} ${userPayload?.lastName}`.trim();
     const [newUser] = await UserModel.create([{
       name: fullName,

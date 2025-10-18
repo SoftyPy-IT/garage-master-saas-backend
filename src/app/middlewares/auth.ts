@@ -15,7 +15,7 @@ export const auth = (...requiredRoles: string[]) => {
     const { userId, tenantId, role, iat, domain } = decoded;
 
     if (!tenantId) throw new AppError(401, 'Tenant info missing in token');
-    const { Model: UserModel } = await getTenantModel(tenantId, 'User');
+    const { Model: UserModel } = await getTenantModel(domain, 'User');
     const { Model: Permission } = await getTenantModel(domain, 'Permission');
     const { Model: Page } = await getTenantModel(domain, 'Page');
 
@@ -26,6 +26,7 @@ export const auth = (...requiredRoles: string[]) => {
         model: Permission,
         populate: { path: 'pageId', model: Page },
       });
+      console.log('user check', user)
     if (!user) throw new AppError(404, 'User not found');
     if (user.status === 'inactive') throw new AppError(403, 'User inactive');
     if (user.passwordChangeAt && new Date(user.passwordChangeAt).getTime() / 1000 > (iat as number)) {
