@@ -26,7 +26,7 @@ export const auth = (...requiredRoles: string[]) => {
         model: Permission,
         populate: { path: 'pageId', model: Page },
       });
-      console.log('user check', user)
+
     if (!user) throw new AppError(404, 'User not found');
     if (user.status === 'inactive') throw new AppError(403, 'User inactive');
     if (user.passwordChangeAt && new Date(user.passwordChangeAt).getTime() / 1000 > (iat as number)) {
