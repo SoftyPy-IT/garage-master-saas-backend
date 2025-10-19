@@ -25,13 +25,13 @@ export const loginUser = async (payload: TLoginUser) => {
 
     if (!isPasswordMatch) {
       throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match!");
-    }
+    } console.log('user check this ', user)
 
     const jwtPayload = {
       userId: user._id.toString(),
       role: user.role,
       name: user.name,
-      tenantDomain:user.tenantDomain
+      domain: user.tenantDomain,
     };
 
     if (!config.jwt_access_secret || !config.jwt_refresh_secret) {
@@ -61,10 +61,10 @@ export const loginUser = async (payload: TLoginUser) => {
     throw new AppError(httpStatus.FORBIDDEN, 'Subscription is inactive or not paid');
   }
 
-  const now = new Date() 
+  const now = new Date()
   const subscriptionEnd = new Date(tenant.subscription.endDate);
 
-  if( now > subscriptionEnd ){
+  if (now > subscriptionEnd) {
     throw new AppError(httpStatus.FORBIDDEN, 'Subscription has expired !')
   }
 
@@ -94,6 +94,7 @@ export const loginUser = async (payload: TLoginUser) => {
     role: user.role,
     name: user.name,
     tenantId: tenant._id.toString(),
+    domain: user.tenantDomain
   };
 
   const accessToken = createToken(jwtPayload, config.jwt_access_secret as string, config.jwt_access_expires_in as string);

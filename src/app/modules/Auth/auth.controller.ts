@@ -17,7 +17,7 @@ export const loginUser = catchAsync(async (req, res) => {
     path: "/",
   };
   if (isProduction) {
-    cookieOptions.domain = ".trustautosolution.com";
+    cookieOptions.domain = ".moriyom.com";
   }
 
   // Set cookies
@@ -42,15 +42,6 @@ export const loginUser = catchAsync(async (req, res) => {
 
  const logoutUser = catchAsync(async (req, res) => {
   const result = await AuthServices.logoutUser();
-
-  // const domain =
-  //   process.env.NODE_ENV === "production"
-  //     ? ".trustautosolution.com"
-  //     : ".localhost";
-
-  // // Clear cookies securely
-  // res.clearCookie("accessToken", { httpOnly: true, secure: false, domain, path: "/" });
-  // res.clearCookie("refreshToken", { httpOnly: true, secure: false, domain, path: "/" });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

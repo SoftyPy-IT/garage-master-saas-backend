@@ -3,13 +3,15 @@ import { Router } from 'express';
 import { PermissionController } from './permission.controller';
 import { auth } from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { batchCreatePermissionSchema, checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
+import { permissionRequestSchema } from './permission.validation';
+import { checkPermission } from '../../middlewares/checkPermission';
 const router = Router();
 
 
 router.post(
   '/batch-create',
   auth('admin', 'superadmin'),
+  checkPermission('/dashboard/add-customer', 'create'),
   PermissionController.createMultiplePermissions,
 );
 router.post(

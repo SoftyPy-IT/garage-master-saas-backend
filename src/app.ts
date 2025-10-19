@@ -19,7 +19,7 @@ app.use(helmet());
 
 // Define ARCHIVE_PATH
 const rootDir = process.cwd();
-const ARCHIVE_PATH = path.join(rootDir, 'public', 'trust-auto-solutions.gzip');
+const ARCHIVE_PATH = path.join(rootDir, 'public', 'garage-master.gzip');
 
 // Logging middleware
 if (config.NODE_ENV === 'development') {
@@ -47,15 +47,18 @@ app.use(
       const allowedOrigins = [
         'http://localhost:5173',
         'https://trustautosolution.com',
-        'http://trustautosolution.com.localhost:5173', // ✅ explicitly allow your subdomain
+        'https://worldautosolution.com',
+        'https://moriyom.com',
+        'http://trustautosolution.com.localhost:5173',
+        'http://moriyom.com.localhost:5173',
+        'https://garage.worldautosolution.com'
       ];
 
-      // Allow all subdomains of trustautosolution.com
-      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*trustautosolution\.com$/)) {
+
+      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*moriyom\.com$/)) {
         return callback(null, true);
       }
 
-      // Allow all localhost-based subdomains, including trustautosolution.com.localhost:5173
       if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*localhost(:[0-9]+)?$/)) {
         return callback(null, true);
       }
@@ -66,22 +69,11 @@ app.use(
 
       return callback(new Error('Not allowed by CORS: ' + origin));
     },
-    credentials: true, // ✅ Must be true for cookies
+    credentials: true, 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-
-
-// app.use(cors({
-//   origin: [
-//     "http://localhost:5173",
-//     "http://trustautosolution.com.localhost:5173",
-//   ],
-//   credentials: true, // allow cookies
-//   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-//   allowedHeaders: ["Content-Type", "Authorization"],
-// }));
 
 
 app.options('*', cors());
