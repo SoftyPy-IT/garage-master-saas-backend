@@ -43,18 +43,9 @@ import { warrantySchema } from '../modules/warranties/warranties.model';
 import { pageSchema } from '../modules/page/page.model';
 import { roleSchema } from '../modules/role/role.model';
 import { permissionSchema } from '../modules/permission/permission.model';
+import { barcodeSchema } from '../modules/barcode/barcode.model';
 
-type AnySchema = mongoose.Schema<
-  any,
-  mongoose.Model<any, any, any, any, any, any>,
-  any,
-  any,
-  any,
-  any,
-  mongoose.DefaultSchemaOptions,
-  any,
-  any
->;
+
 
 type SchemaMap = {
   [key: string]: mongoose.Schema;
@@ -63,6 +54,7 @@ type SchemaMap = {
 
 const schemas: SchemaMap = {
   User: userSchema,
+  Barcode: barcodeSchema,
   Attendance: attendanceSchema,
   Salary: salarySchema,
   Employee: employeeSchema,
@@ -99,8 +91,8 @@ const schemas: SchemaMap = {
   Note: noteSchema,
   Warranty: warrantySchema,
   Role: roleSchema,
-  Page:pageSchema,
-  Permission:permissionSchema
+  Page: pageSchema,
+  Permission: permissionSchema
 };
 
 export const getTenantModel = async (

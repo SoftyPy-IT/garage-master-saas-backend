@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import httpStatus from 'http-status';
 import sendResponse from '../../utils/sendResponse';
 import { warehouseServices } from './warehouse.service';
+import catchAsync from '../../utils/catchAsync';
 
 const createWarehouse = async (
   req: Request,
@@ -27,17 +28,13 @@ const createWarehouse = async (
   }
 };
 
-const getAllWarehouses = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
+const getAllWarehouses = catchAsync(async (
+  req,
+  res,
+  next,
 ) => {
   try {
-    const tenantDomain =
-      (req.headers['x-tenant-domain'] as string) ||
-      (req.query.tenantDomain as string) ||
-      req.headers.host ||
-      '';
+    const tenantDomain =req.query.tenantDomain as string;
     const result = await warehouseServices.getAllWarehouses(
       tenantDomain,
       req.query,
@@ -51,7 +48,7 @@ const getAllWarehouses = async (
   } catch (err) {
     next(err);
   }
-};
+});
 
 const getSingleWarehouse = async (
   req: Request,

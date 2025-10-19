@@ -36,8 +36,8 @@ const getAllWarehouses = async (
 
   const warehouseQuery = new QueryBuilder(Warehouse.find(), query)
     .search(warehouseSearchFields)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 

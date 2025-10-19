@@ -15,13 +15,7 @@ export const createBarcodeSchema = z.object({
       })
       .max(255, { message: 'Description must not exceed 255 characters' }),
 
-    product_id: z
-      .array(
-        z.string({
-          required_error: 'Please select a product',
-          invalid_type_error: 'Product ID must be a string',
-        }),
-      )
+    product_id: z.string({ required_error: "Product id is required" })
       .optional(),
   }),
 });
