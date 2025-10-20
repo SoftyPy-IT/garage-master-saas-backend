@@ -99,102 +99,7 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
     permissions: permissionsArray,
   };
 };
-// export const createUserPermission = async (
-//   tenantDomain: string,
-//   userId: string,
-//   permissionData: any,
-// ) => {
-//   // Get Permission model and its connection
-//   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
-//   const session = await connection.startSession();
 
-//   try {
-//     session.startTransaction();
-
-//     // Get other models using the same connection
-//     const { Model: User } = await getTenantModel(tenantDomain, 'User');
-//     const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
-//     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
-
-//     // Convert IDs
-//     const userIds = Array.isArray(permissionData.userId)
-//       ? permissionData.userId.map((id: any) => new Types.ObjectId(id))
-//       : [new Types.ObjectId(permissionData.userId)];
-
-//     const roleIds = Array.isArray(permissionData.roleId)
-//       ? permissionData.roleId.map((id: any) => new Types.ObjectId(id))
-//       : [new Types.ObjectId(permissionData.roleId)];
-
-//     const pageIds = Array.isArray(permissionData.pageId)
-//       ? permissionData.pageId.map((id: any) => new Types.ObjectId(id))
-//       : [new Types.ObjectId(permissionData.pageId)];
-
-//     // Validate existence
-//     const user = await User.findById(userId).session(session);
-//     if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-
-//     const roles = await Role.find({ _id: { $in: roleIds } }).session(session);
-//     if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
-
-//     const pages = await Page.find({ _id: { $in: pageIds } }).session(session);
-//     if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
-
-//     // Create permission
-//     const [newPermission] = await Permission.create(
-//       [
-//         {
-//           userId: userIds,
-//           roleId: roleIds,
-//           pageId: pageIds,
-//           create: permissionData.create ?? false,
-//           edit: permissionData.edit ?? false,
-//           view: permissionData.view ?? false,
-//           delete: permissionData.delete ?? false,
-//         },
-//       ],
-//       { session }
-//     );
-
-//     // Link permission to user
-//     await User.updateOne(
-//       { _id: userId },
-//       [
-//         {
-//           $set: {
-//             permission: {
-//               $cond: {
-//                 if: { $isArray: '$permission' },
-//                 then: { $concatArrays: ['$permission', [newPermission._id]] },
-//                 else: [newPermission._id],
-//               },
-//             },
-//           },
-//         },
-//       ],
-//       { session }
-//     );
-
-//     // Commit transaction
-//     await session.commitTransaction();
-
-//     // Return populated permission
-//     return await Permission.findById(newPermission._id)
-//       .populate('userId')
-//       .populate('roleId')
-//       .populate('pageId')
-//       .session(session);
-//   } catch (error: any) {
-//     // Abort only if transaction not committed
-//     try {
-//       await session.abortTransaction();
-//     } catch (abortError) {
-//       // ignore, already committed or not active
-//     }
-//     throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to create permission');
-//   } finally {
-//     session.endSession(); // always end session
-//   }
-// };
 
 export const createUserPermission = async (
   tenantDomain: string,
@@ -250,7 +155,7 @@ export const createUserPermission = async (
     );
 
     // ✅ Link permission to user — transaction-safe, atomic
-   const afterUser=  await User.findByIdAndUpdate(
+    const afterUser = await User.findByIdAndUpdate(
       userId,
       { $addToSet: { permission: newPermission._id } },
       { session, new: true }

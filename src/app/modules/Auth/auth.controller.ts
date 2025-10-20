@@ -39,17 +39,26 @@ export const loginUser = catchAsync(async (req, res) => {
   });
 });
 
-
- const logoutUser = catchAsync(async (req, res) => {
-  const result = await AuthServices.logoutUser();
+export const logoutUser = catchAsync(async (req, res) => {
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+  });
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+  });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: result.message,
-    data:null
+    message: "Logged out successfully!",
+    data: null,
   });
 });
+
 
  const tokenVerify = catchAsync(async (req, res) => {
   const token = req.cookies.accessToken;
