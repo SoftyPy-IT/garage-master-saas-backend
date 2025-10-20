@@ -2,14 +2,27 @@
 import { Router } from 'express';
 import { PermissionController } from './permission.controller';
 import validateRequest from '../../middlewares/validateRequest';
-import { permissionRequestSchema } from './permission.validation';
+import { deleteMultiplePermissionsSchema, permissionRequestSchema } from './permission.validation';
 const router = Router();
 
 
 router.post(
   '/batch-create',
+  // validateRequest(multiplePermission),
   PermissionController.createMultiplePermissions,
 );
+router.delete(
+  '/user/:userId/:id',
+  PermissionController.deleteUserPermission
+);
+
+// Multiple permissions delete
+router.delete(
+  '/user/:userId/batch',
+  validateRequest(deleteMultiplePermissionsSchema),
+  PermissionController.deleteMultipleUserPermissions
+);
+
 router.post(
   '/:userId',
   validateRequest(permissionRequestSchema),
@@ -19,6 +32,10 @@ router.post(
 router.get(
   '/my-permissions',
   PermissionController.getMyPermissions
+);
+router.get(
+  '/user-permissions',
+  PermissionController.getAllPermissions
 );
 
 router.get(
@@ -32,14 +49,7 @@ router.get(
   PermissionController.getSinglePermission
 );
 
-
-router.put(
-  '/:userId/:id',
-
-  validateRequest(permissionRequestSchema),
-  PermissionController.updateRolePermissions
-);
-router.delete('/:id', PermissionController.deleteUserPermission)
+router.delete('/:id', PermissionController.deleteMultipleUserPermissions)
 router.patch(
   '/batch-update',
   PermissionController.updateMultiplePermissions,

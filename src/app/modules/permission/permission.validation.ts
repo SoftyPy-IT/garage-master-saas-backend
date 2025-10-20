@@ -35,9 +35,6 @@ export const batchCreatePermissionSchema = z.object({
 });
 
 
-
-
-
 export const checkPermissionZodSchema = z.object({
   body: z.object({
     userId: z.string({
@@ -50,4 +47,23 @@ export const checkPermissionZodSchema = z.object({
       required_error: 'Action is required',
     }),
   }),
+});
+export const multiplePermission = z.object({
+  body: z.array(
+    z.object({
+      roleId: z.array(z.string({
+        required_error: 'Role ID is required',
+      })),
+      pageId: z.array(z.string({
+        required_error: 'Page ID is required',
+      })),
+      userId: z.array(z.string({
+        required_error: 'User ID is required',
+      })),
+      create: z.boolean().optional(),
+      edit: z.boolean().optional(),
+      view: z.boolean().optional(),
+      delete: z.boolean().optional(),
+    })
+  )
 });
