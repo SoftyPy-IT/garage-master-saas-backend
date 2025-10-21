@@ -289,7 +289,6 @@ const updateMultiplePermissions = async (
     delete?: boolean;
   }>
 ) => {
-  // Get Permission model and its connection
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
   const session = await connection.startSession();
   session.startTransaction();
