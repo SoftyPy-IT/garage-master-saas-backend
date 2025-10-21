@@ -1,4 +1,4 @@
-// src/modules/permission/permission.service.ts
+
 import httpStatus from 'http-status';
 import mongoose, { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
@@ -35,7 +35,7 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
   // Merge both user and role permissions
   const allPermissions = [...userPermissions, ...rolePermissions];
 
-  // ✅ Build permission map to merge duplicate pages
+  // Build permission map to merge duplicate pages
   const permissionMap = new Map<string, any>();
 
   allPermissions.forEach((permission) => {
@@ -104,95 +104,79 @@ export const createUserPermission = async (
   userId: string,
   permissionData: any,
 ) => {
-  // Get Permission model and its connection
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
   const session = await connection.startSession();
+  session.startTransaction();
 
   try {
-    session.startTransaction();
-
-    // Get other models using the same connection
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
     const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-    // Convert IDs
-    const userIds = Array.isArray(permissionData.userId)
-      ? permissionData.userId.map((id: any) => new Types.ObjectId(id))
-      : [new Types.ObjectId(permissionData.userId)];
+    // Convert IDs properly
+    const roleIds = (Array.isArray(permissionData.roleId)
+      ? permissionData.roleId
+      : [permissionData.roleId]
+    ).map((id: string) => new Types.ObjectId(id));
 
-    const roleIds = Array.isArray(permissionData.roleId)
-      ? permissionData.roleId.map((id: any) => new Types.ObjectId(id))
-      : [new Types.ObjectId(permissionData.roleId)];
+    const pageIds = (Array.isArray(permissionData.pageId)
+      ? permissionData.pageId
+      : [permissionData.pageId]
+    ).map((id: string) => new Types.ObjectId(id));
 
-    const pageIds = Array.isArray(permissionData.pageId)
-      ? permissionData.pageId.map((id: any) => new Types.ObjectId(id))
-      : [new Types.ObjectId(permissionData.pageId)];
-
-    // Validate existence
+    // Validate user existence
     const user = await User.findById(userId).session(session);
     if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
 
+    // Validate roles
     const roles = await Role.find({ _id: { $in: roleIds } }).session(session);
     if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
 
+    // Validate pages
     const pages = await Page.find({ _id: { $in: pageIds } }).session(session);
     if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
-    // Create permission
+    // ✅ Create permission safely
     const [newPermission] = await Permission.create(
       [
         {
-          userId: userIds,
+          userId: [new Types.ObjectId(userId)],
           roleId: roleIds,
           pageId: pageIds,
-          create: permissionData.create ?? false,
-          edit: permissionData.edit ?? false,
-          view: permissionData.view ?? false,
-          delete: permissionData.delete ?? false,
+          create: !!permissionData.create,
+          edit: !!permissionData.edit,
+          view: !!permissionData.view,
+          delete: !!permissionData.delete,
         },
       ],
       { session }
     );
 
-    // Link permission to user
-    await User.updateOne(
-      { _id: userId },
-      [
-        {
-          $set: {
-            permission: {
-              $cond: {
-                if: { $isArray: '$permission' },
-                then: { $concatArrays: ['$permission', [newPermission._id]] },
-                else: [newPermission._id],
-              },
-            },
-          },
-        },
-      ],
-      { session }
+    // ✅ Link permission to user — transaction-safe, atomic
+    const afterUser = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { permission: newPermission._id } },
+      { session, new: true }
     );
 
-    // Commit transaction
+    console.log('user data this ', afterUser)
+
+    // ✅ Commit transaction
     await session.commitTransaction();
 
-    // Return populated permission
-    return await Permission.findById(newPermission._id)
+    // ✅ Populate before session ends
+    const populatedPermission = await Permission.findById(newPermission._id)
       .populate('userId')
       .populate('roleId')
-      .populate('pageId')
-      .session(session);
+      .populate('pageId');
+
+    return populatedPermission;
   } catch (error: any) {
-    // Abort only if transaction not committed
-    try {
-      await session.abortTransaction();
-    } catch (abortError) {
-      // ignore, already committed or not active
-    }
+    // Rollback if failed
+    if (session.inTransaction()) await session.abortTransaction();
     throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to create permission');
   } finally {
-    session.endSession(); // always end session
+    await session.endSession();
   }
 };
 
@@ -291,35 +275,8 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
   return result
 
 }
-export const deleteUserPermission = async (
-  tenantDomain: string,
-  userId: string,
-  permissionId: string
-) => {
-  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
-  const { Model: User } = await getTenantModel(tenantDomain, 'User');
-  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-  // Validate user existence
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  // Find and delete permission
-  const deletedPermission = await Permission.findOneAndDelete({
-    _id: permissionId,
-    userId: { $in: [userId] },
-  });
-
-  if (!deletedPermission) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Permission not found or already deleted');
-  }
-
-  return deletedPermission;
-};
-
- const updateMultiplePermissions = async (
+const updateMultiplePermissions = async (
   tenantDomain: string,
   permissionUpdates: Array<{
     permissionId: string;
@@ -438,15 +395,457 @@ export const deleteUserPermission = async (
   }
 };
 
+export const createMultipleUserPermissions = async (
+  tenantDomain: string,
+  permissionDataArray: Array<{
+    userId: string | string[];
+    pageId: string | string[];
+    roleId?: string | string[];
+    create?: boolean;
+    edit?: boolean;
+    view?: boolean;
+    delete?: boolean;
+  }>
+) => {
+  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const session = await connection.startSession();
+  session.startTransaction();
+
+  try {
+    const { Model: User } = await getTenantModel(tenantDomain, 'User');
+    const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+
+    const results = [];
+
+    for (const permissionData of permissionDataArray) {
+      // 🔹 Normalize possible arrays (frontend might send [id])
+      const userId =
+        Array.isArray(permissionData.userId) ? permissionData.userId[0] : permissionData.userId;
+      const pageId =
+        Array.isArray(permissionData.pageId) ? permissionData.pageId[0] : permissionData.pageId;
+      const roleId =
+        Array.isArray(permissionData.roleId) ? permissionData.roleId[0] : permissionData.roleId;
+
+      const { create, edit, view, delete: del } = permissionData;
+
+      // Validate user
+      const user = await User.findById(userId).session(session);
+      if (!user) throw new AppError(httpStatus.NOT_FOUND, `User with ID ${userId} not found`);
+
+      // Validate page
+      const page = await Page.findById(pageId).session(session);
+      if (!page) throw new AppError(httpStatus.NOT_FOUND, `Page with ID ${pageId} not found`);
+
+      // Validate role (optional)
+      let roleObjectId;
+      if (roleId) {
+        const role = await Role.findById(roleId).session(session);
+        if (!role) throw new AppError(httpStatus.NOT_FOUND, `Role with ID ${roleId} not found`);
+        roleObjectId = new Types.ObjectId(roleId);
+      }
+
+      // Check for existing permission
+      const existingPermission = await Permission.findOne({
+        userId: new Types.ObjectId(userId),
+        pageId: new Types.ObjectId(pageId),
+      }).session(session);
+
+      if (existingPermission) {
+        // 🔹 Update existing permission
+        const updatedPermission = await Permission.findByIdAndUpdate(
+          existingPermission._id,
+          {
+            $set: {
+              create: create ?? existingPermission.create,
+              edit: edit ?? existingPermission.edit,
+              view: view ?? existingPermission.view,
+              delete: del ?? existingPermission.delete,
+              ...(roleObjectId && { roleId: [roleObjectId] }),
+            },
+          },
+          { new: true, runValidators: true, session }
+        )
+          .populate('userId')
+          .populate('roleId')
+          .populate('pageId');
+
+        results.push({
+          action: 'updated',
+          permission: updatedPermission,
+        });
+      } else {
+        // 🔹 Create new permission
+        const [newPermission] = await Permission.create(
+          [
+            {
+              userId: [new Types.ObjectId(userId)],
+              pageId: [new Types.ObjectId(pageId)],
+              ...(roleObjectId && { roleId: [roleObjectId] }),
+              create: create ?? false,
+              edit: edit ?? false,
+              view: view ?? false,
+              delete: del ?? false,
+            },
+          ],
+          { session }
+        );
+
+        // Link permission to user
+        await User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { permission: newPermission._id } },
+          { session }
+        );
+
+        const populatedPermission = await Permission.findById(newPermission._id)
+          .populate('userId')
+          .populate('roleId')
+          .populate('pageId')
+          .session(session);
+
+        results.push({
+          action: 'created',
+          permission: populatedPermission,
+        });
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+    return results;
+  } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      error.message || 'Failed to process permissions'
+    );
+  }
+};
+export const getAllPermissions = async (tenantDomain: string, options?: {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  role?: string;
+  user?: string;
+  searchTerm?: string;
+}) => {
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    role = '',
+    user = '',
+    searchTerm = ''
+  } = options || {};
+
+  const skip = (page - 1) * limit;
+
+  const sort: any = {};
+  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+  // Build query based on filters
+  const query: any = {};
+
+  // If role filter is provided, find role IDs with that name
+  if (role) {
+    const roles = await Role.find({ name: { $regex: role, $options: 'i' } }).select('_id');
+    const roleIds = roles.map(r => r._id);
+    query.roleId = { $in: roleIds };
+  }
+
+  // If user filter is provided, find user IDs with that name or email
+  if (user) {
+    const users = await User.find({
+      $or: [
+        { name: { $regex: user, $options: 'i' } },
+        { email: { $regex: user, $options: 'i' } }
+      ]
+    }).select('_id');
+    const userIds = users.map(u => u._id);
+    query.userId = { $in: userIds };
+  }
+
+  // If search term is provided, search in page names, paths, or user emails
+  if (searchTerm) {
+    const pages = await Page.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { path: { $regex: searchTerm, $options: 'i' } }
+      ]
+    }).select('_id');
+
+    const users = await User.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { email: { $regex: searchTerm, $options: 'i' } }
+      ]
+    }).select('_id');
+
+    const pageIds = pages.map(p => p._id);
+    const userIds = users.map(u => u._id);
+
+    query.$or = [
+      { pageId: { $in: pageIds } },
+      { userId: { $in: userIds } }
+    ];
+  }
+
+  const permissions = await Permission.find(query)
+    .populate([
+      { path: 'userId', model: User },
+      { path: 'roleId', model: Role },
+      { path: 'pageId', model: Page }
+    ])
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  const total = await Permission.countDocuments(query);
+
+  return {
+    permissions,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit)
+    }
+  };
+};
 
 
+export const deleteUserPermission = async (
+  tenantDomain: string,
+  userId: string,
+  permissionId: string
+) => {
+  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const session = await connection.startSession();
 
+  try {
+    session.startTransaction();
+
+    // Validate user existence
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    }
+
+    // Find the permission to ensure it exists and belongs to the user
+    const permission = await Permission.findById(permissionId).session(session);
+    if (!permission) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Permission not found');
+    }
+
+    // Check if the permission is associated with the user
+    const isUserPermission = permission.userId.some((id: any) =>
+      id.toString() === userId.toString()
+    );
+
+    if (!isUserPermission) {
+      throw new AppError(httpStatus.FORBIDDEN, 'Permission does not belong to this user');
+    }
+
+    // Check if permission is associated with multiple users
+    if (permission.userId.length > 1) {
+      // If multiple users, remove only this user from the permission
+      await Permission.findByIdAndUpdate(
+        permissionId,
+        { $pull: { userId: new Types.ObjectId(userId) } },
+        { session }
+      );
+    } else {
+
+      await Permission.findByIdAndDelete(permissionId, { session });
+    }
+
+    // Remove the permission reference from the user document
+    await User.findByIdAndUpdate(
+      userId,
+      { $pull: { permission: new Types.ObjectId(permissionId) } },
+      { session }
+    );
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    // Return success response with details
+    return {
+      success: true,
+      message: 'Permission deleted successfully',
+      data: {
+        permissionId,
+        userId,
+        wasFullyDeleted: permission.userId.length === 1
+      }
+    };
+  } catch (error: any) {
+    // Abort the transaction if any error occurs
+    await session.abortTransaction();
+
+    // Re-throw the error with appropriate status code
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || 'Failed to delete permission'
+    );
+  } finally {
+    // End the session
+    session.endSession();
+  }
+};
+export const deleteMultipleUserPermissions = async (
+  tenantDomain: string,
+  userId: string,
+  permissionIds: string[]
+) => {
+  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const session = await connection.startSession();
+
+  try {
+    session.startTransaction();
+
+    // Validate user existence
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    }
+
+    if (!permissionIds || permissionIds.length === 0) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'No permission IDs provided');
+    }
+
+    // Filter out invalid ObjectIds and "batch" value
+    const validPermissionIds = permissionIds.filter(id =>
+      id !== 'batch' && Types.ObjectId.isValid(id)
+    );
+
+    if (validPermissionIds.length === 0) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'No valid permission IDs provided');
+    }
+
+    const results = [];
+
+    // Process each valid permission
+    for (const permissionId of validPermissionIds) {
+      try {
+        // Find the permission
+        const permission = await Permission.findById(permissionId).session(session);
+        if (!permission) {
+          results.push({
+            permissionId,
+            success: false,
+            message: 'Permission not found'
+          });
+          continue;
+        }
+
+        // Check if the permission is associated with the user
+        const isUserPermission = permission.userId.some((id: any) =>
+          id.toString() === userId.toString()
+        );
+
+        if (!isUserPermission) {
+          results.push({
+            permissionId,
+            success: false,
+            message: 'Permission does not belong to this user'
+          });
+          continue;
+        }
+
+        // Check if permission is associated with multiple users
+        if (permission.userId.length > 1) {
+          // If multiple users, remove only this user from the permission
+          await Permission.findByIdAndUpdate(
+            permissionId,
+            { $pull: { userId: new Types.ObjectId(userId) } },
+            { session }
+          );
+          results.push({
+            permissionId,
+            success: true,
+            message: 'User removed from permission',
+            wasFullyDeleted: false
+          });
+        } else {
+          // If only this user, delete the entire permission
+          await Permission.findByIdAndDelete(permissionId, { session });
+          results.push({
+            permissionId,
+            success: true,
+            message: 'Permission fully deleted',
+            wasFullyDeleted: true
+          });
+        }
+      } catch (error: any) {
+        results.push({
+          permissionId,
+          success: false,
+          message: error.message || 'Failed to process permission'
+        });
+      }
+    }
+
+    // Remove all permission references from the user document
+    await User.findByIdAndUpdate(
+      userId,
+      { $pullAll: { permission: validPermissionIds.map(id => new Types.ObjectId(id)) } },
+      { session }
+    );
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    return {
+      success: true,
+      message: 'Permissions processed successfully',
+      data: {
+        userId,
+        results,
+        totalProcessed: permissionIds.length,
+        validProcessed: validPermissionIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      }
+    };
+  } catch (error: any) {
+    await session.abortTransaction();
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || 'Failed to delete permissions'
+    );
+  } finally {
+    session.endSession();
+  }
+};
 
 export const PermissionService = {
   getUserPermissions,
   createUserPermission,
   updateUserPermission,
   getSinglePermission,
-  deleteUserPermission,
-  updateMultiplePermissions
+  updateMultiplePermissions,
+  createMultipleUserPermissions,
+  getAllPermissions,
+  deleteMultipleUserPermissions,
+  deleteUserPermission
 };

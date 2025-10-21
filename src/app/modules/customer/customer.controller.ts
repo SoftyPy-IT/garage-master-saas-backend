@@ -4,9 +4,7 @@ import sendResponse from '../../utils/sendResponse';
 import { CustomerServices } from './customer.service';
 
 const createCustomer = catchAsync(async (req, res) => {
-  //  const domain = (req.headers.origin as string) || (req.headers.host as string) || '';
-  const { tenantDomain } = req.body;
-  console.log(tenantDomain, 'tenant check this ')
+  const tenantDomain = req.query.tenantDomain as string
 
   const customer = await CustomerServices.createCustomerDetails(
     tenantDomain,
@@ -27,7 +25,6 @@ const getAllCustomers = catchAsync(async (req, res) => {
   const searchTerm = req.query.searchTerm as string;
   const host = req.headers.host || '';
    const tenantDomain = req.query.tenantDomain as string;
-  //  const tenantDomain = req.headers.host || '';
 
   const result = await CustomerServices.getAllCustomersFromDB(
     tenantDomain,
@@ -47,7 +44,6 @@ const getAllCustomers = catchAsync(async (req, res) => {
 
 const getSingleCustomerDetails = catchAsync(async (req, res) => {
   const { id } = req.params;
-  // const tenantDomain = req.headers.host || '';
    const tenantDomain = req.query.tenantDomain as string;
   const result = await CustomerServices.getSingleCustomerDetails(
     tenantDomain,

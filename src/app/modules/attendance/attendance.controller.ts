@@ -81,7 +81,6 @@ const getSingleAttendance = catchAsync(async (req, res) => {
 export const deleteAttendance = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const id = req.query.id as string;
-  console.log(tenantDomain, id )
   const deleted = await AttendanceServices.deleteAttendanceFromDB(tenantDomain, id);
   sendResponse(res, {
     statusCode: 200,

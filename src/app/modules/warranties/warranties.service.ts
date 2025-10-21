@@ -6,11 +6,9 @@ import { TWarranty } from './warranties.interface';
 import QueryBuilder from '../../builder/QueryBuilder';
 
 const createWarranty = async (payload: TWarranty, tenantDomain: string) => {
-  const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty');
-  console.log(payload);
+  const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty')
 
   const newWarranty = await Warranty.create(payload);
-  console.log('new warranty', newWarranty);
   return newWarranty;
 };
 
@@ -20,7 +18,6 @@ export const getAllWarranty = async (
 ) => {
   const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
-console.log(tenantDomain)
   const qb = new QueryBuilder(
     Warranty.find().populate({
       path: 'products',

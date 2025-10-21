@@ -57,7 +57,6 @@ const deleteWarranty = catchAsync(async (req, res) => {
 const updateWarranty = catchAsync(async (req, res) => {
   const { id } = req.params;
   const tenantDomain = req.query.tenantDomain as string;
-  console.log('from update tenant domain check this ',tenantDomain)
   const payload = req.body;
 
   const result = await WarrantyServices.updateWarranty(

@@ -1,49 +1,60 @@
-// src/modules/permission/permission.routes.ts
+
 import { Router } from 'express';
 import { PermissionController } from './permission.controller';
-import { auth } from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { checkPermissionZodSchema, permissionRequestSchema } from './permission.validation';
+import { deleteMultiplePermissionsSchema, permissionRequestSchema } from './permission.validation';
 const router = Router();
 
 
+router.post(
+  '/batch-create',
+  PermissionController.createMultiplePermissions,
+);
+
+router.post(
+  '/user/:userId/batch-delete',
+  validateRequest(deleteMultiplePermissionsSchema),
+  PermissionController.deleteMultipleUserPermissions
+);
+router.delete(
+  '/user/:userId/:id',
+  PermissionController.deleteUserPermission
+);
+
+
+router.post(
+  '/:userId',
+  validateRequest(permissionRequestSchema),
+  PermissionController.createUserPermission
+);
+
 router.get(
   '/my-permissions',
-  auth('admin', 'superadmin', 'manager', 'user'),
   PermissionController.getMyPermissions
+);
+router.get(
+  '/user-permissions',
+  PermissionController.getAllPermissions
 );
 
 router.get(
   '/user/:userId',
-  auth('admin', 'superadmin'),
+
   PermissionController.getUserPermissions
 );
 
 router.get(
   '/single/:id',
-  auth('admin', 'superadmin'),
   PermissionController.getSinglePermission
 );
 
-router.post(
-  '/:userId',
-  auth('admin', 'superadmin'),
-  validateRequest(permissionRequestSchema),
-  PermissionController.createUserPermission
-);
-
-router.put(
-  '/:userId/:id',
-  auth('admin', 'superadmin'),
-  validateRequest(permissionRequestSchema),
-  PermissionController.updateRolePermissions
-);
-router.delete('/:id', PermissionController.deleteUserPermission)
+router.delete('/:id', PermissionController.deleteMultipleUserPermissions)
 router.patch(
   '/batch-update',
-  auth('admin', 'superadmin'),
   PermissionController.updateMultiplePermissions,
 );
+
+
 
 
 

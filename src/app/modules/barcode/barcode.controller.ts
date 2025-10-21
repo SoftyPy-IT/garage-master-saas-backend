@@ -4,13 +4,10 @@ import httpStatus from 'http-status';
 import sendResponse from '../../utils/sendResponse';
 import catchAsync from '../../utils/catchAsync';
 
-const getAllBarcode = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+const getAllBarcode = catchAsync(async ( req, res, next) => {
   try {
-    const result = await barcodeService.getAllBarcode(req.query);
+        const tenantDomain = req.query.tenantDomain as string;
+    const result = await barcodeService.getAllBarcode(req.query, tenantDomain);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -21,10 +18,11 @@ const getAllBarcode = async (
   } catch (err) {
     next(err);
   }
-};
+});
 
 const getBarcodeById: RequestHandler = catchAsync(async (req, res) => {
-  const result = await barcodeService.getBarcodeById(req.params.id);
+      const tenantDomain = req.query.tenantDomain as string;
+  const result = await barcodeService.getBarcodeById( tenantDomain, req.params.id);
 
   sendResponse(res, {
     success: true,
@@ -35,7 +33,8 @@ const getBarcodeById: RequestHandler = catchAsync(async (req, res) => {
 });
 
 const createBarcode: RequestHandler = catchAsync(async (req, res) => {
-  const result = await barcodeService.createBarcode(req);
+      const tenantDomain = req.query.tenantDomain as string;
+  const result = await barcodeService.createBarcode(tenantDomain, req.body);
 
   sendResponse(res, {
     success: true,
@@ -46,7 +45,9 @@ const createBarcode: RequestHandler = catchAsync(async (req, res) => {
 });
 
 const updateBarcode: RequestHandler = catchAsync(async (req, res) => {
-  const result = await barcodeService.updateBarcode();
+  const {id} = req.params 
+       const tenantDomain = req.query.tenantDomain as string;
+  const result = await barcodeService.updateBarcode(tenantDomain, id);
 
   sendResponse(res, {
     success: true,
@@ -57,7 +58,9 @@ const updateBarcode: RequestHandler = catchAsync(async (req, res) => {
 });
 
 const deleteBarcode: RequestHandler = catchAsync(async (req, res) => {
-  await barcodeService.deleteBarcode(req.params.id);
+    const {id} = req.params 
+        const tenantDomain = req.query.tenantDomain as string;
+  await barcodeService.deleteBarcode(tenantDomain, id);
 
   sendResponse(res, {
     success: true,

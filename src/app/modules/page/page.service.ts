@@ -10,7 +10,7 @@ const createPage = async (tenantDomain: string, payload: IPage) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
   // Check if the page path already exists
-  const pageExists = await Page.findOne({path: payload.path});
+  const pageExists = await Page.findOne({ path: payload.path });
   if (pageExists) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Page path already exists!');
   }
@@ -22,6 +22,8 @@ const createPage = async (tenantDomain: string, payload: IPage) => {
 
 // Get all pages with filters
 const getAllPages = async (tenantDomain: string, filters: IPageFilters = {}) => {
+
+  console.log('tenant domain check', tenantDomain)
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { searchTerm, category, status } = filters;
 
@@ -57,7 +59,7 @@ const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPa
   if (!page) throw new AppError(httpStatus.NOT_FOUND, 'Page not found!');
 
   if (payload.path && payload.path !== page.path) {
-    const pageExists = await Page.findOne({path:payload.path});
+    const pageExists = await Page.findOne({ path: payload.path });
     if (pageExists) throw new AppError(httpStatus.BAD_REQUEST, 'Page path already exists!');
   }
 
@@ -67,7 +69,6 @@ const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPa
 };
 
 const deletePage = async (tenantDomain: string, id: string) => {
-  console.log('tenant check', tenantDomain)
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
 

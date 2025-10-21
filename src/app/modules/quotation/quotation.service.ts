@@ -613,9 +613,6 @@ export const createQuotationDetails = async (
         date: new Date(),
       });
       await stockTransaction.save({ session });
-
-      console.log('stock transaction check', stockTransaction);
-
       // Update product quantity
       const productData = await Product.findById(product).session(session);
       if (!productData) throw new AppError(404, `Product not found.`);

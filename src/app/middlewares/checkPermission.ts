@@ -1,45 +1,53 @@
-// src/middlewares/permission.ts
-import { NextFunction, Request, Response } from 'express';
-import { PermissionService } from '../modules/permission/permission.service';
-import AppError from '../errors/AppError';
+import { NextFunction, Request, Response } from "express";
+import catchAsync from "../utils/catchAsync";
+import AppError from "../errors/AppError";
 
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    role: string;
-    tenantId: string;
-  };
-  tenantId?: string;
-}
 
-interface PermissionRequest {
-  pageId: string;
-  action: 'create' | 'edit' | 'view' | 'delete';
-}
+const checkPagePermission = (user: any, pagePath: string, action: string): boolean => {
+  if (!user.permission || !Array.isArray(user.permission)) {
+    return false;
+  }
 
-export const checkPermission = (pageId: string, action: 'create' | 'edit' | 'view' | 'delete') => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const tenantDomain = req.query.tenantDomain as string;
-      const userId = req.user?.userId;
-
-      if (!userId) {
-        throw new AppError(401, 'Unauthorized');
-      }
-
-      const hasPermission = await PermissionService.checkPermission(tenantDomain, {
-        userId,
-        pageId,
-        action,
-      } as any);
-
-      if (!hasPermission) {
-        throw new AppError(403, 'Forbidden');
-      }
-
-      next();
-    } catch (error) {
-      next(error);
+  const permission = user.permission.find((p: any) => {
+    if (!p.pageId || !Array.isArray(p.pageId) || p.pageId.length === 0) {
+      return false;
     }
-  };
+
+    const page = p.pageId[0];
+    if (!page) return false;
+
+    const possiblePaths = [
+      pagePath,
+      pagePath.endsWith('/') ? pagePath.slice(0, -1) : pagePath + '/',
+      pagePath.startsWith('/') ? pagePath : '/' + pagePath,
+    ];
+
+    return (
+      possiblePaths.includes(page.path) ||
+      possiblePaths.includes(page.route)
+    );
+  });
+
+  if (permission && permission[action] === true) {
+    return true;
+  }
+
+  return false;
+};
+export const checkPermission = (pagePath: string, action: string) => {
+  return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const user = req.fullUser;
+
+    if (!user) {
+      throw new AppError(401, 'User not authenticated');
+    }
+
+    const hasPermission = checkPagePermission(user, pagePath, action);
+
+    if (!hasPermission) {
+      throw new AppError(403, `You don't have permission to ${action} this page`);
+    }
+
+    next();
+  });
 };

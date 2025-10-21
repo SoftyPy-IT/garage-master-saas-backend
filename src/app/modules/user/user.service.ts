@@ -1,4 +1,4 @@
-// src/modules/user/user.service.ts
+
 import bcrypt from 'bcrypt';
 import httpStatus from 'http-status';
 import { TUser } from './user.interface';
@@ -7,7 +7,6 @@ import config from '../../config';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { Tenant } from '../tenant/tenant.model';
-import { User } from './user.model';
 import { PermissionService } from '../permission/permission.service';
 import { Types } from 'mongoose';
 
@@ -50,6 +49,7 @@ export const createUser = async (payload: TUser) => {
     name: newUser.name,
     role: newUser.role,
     tenantId: tenantInfo._id.toString(),
+    domain: newUser.domain,
   };
 
   const accessToken = createToken(
@@ -81,19 +81,54 @@ export const createUser = async (payload: TUser) => {
 
 const getAllUser = async (tenantDomain: string) => {
   if (tenantDomain) {
+
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
     const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
-    const result = await User.find().populate([
+    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
+    const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
 
-      { path: 'permission', model: Permission },
+    // Deep populate permission → pageId & roleId
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
 
-    ]);
     return result;
   } else {
-    const result = await User.find().populate('roleId');
+    const { Model: User } = await getTenantModel('default', 'User');
+    const { Model: Role } = await getTenantModel('default', 'Role');
+    const { Model: Page } = await getTenantModel('default', 'Page');
+    const { Model: Permission } = await getTenantModel('default', 'Permission');
+
+    const result = await User.find()
+      .populate([
+        {
+          path: 'permission',
+          model: Permission,
+          populate: [
+            { path: 'pageId', model: Page },
+            { path: 'roleId', model: Role },
+          ],
+        },
+        { path: 'pageId', model: Page },
+        { path: 'roleId', model: Role },
+      ])
+      .lean();
+
     return result;
   }
 };
+
 
 const deleteUser = async (tenantDomain: string, id: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
@@ -144,7 +179,6 @@ const updateUser = async (
   return updatedUser;
 };
 
-// Assign role to user
 const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
@@ -169,7 +203,6 @@ const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: st
   return updatedUser;
 };
 
-// Get user permissions
 const getUserPermissions = async (tenantDomain: string, userId: string) => {
   const permissions = await PermissionService.getUserPermissions(tenantDomain, userId);
   return permissions;
