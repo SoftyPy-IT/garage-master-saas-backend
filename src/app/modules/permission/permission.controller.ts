@@ -160,7 +160,7 @@ export const deleteMultipleUserPermissions = catchAsync(async (req: Request, res
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
   const { permissionIds } = req.body;
-
+  console.log('user id check', userId)
   console.log(' Incoming body:', req.body);
   console.log(' Extracted permissionIds:', permissionIds);
 
