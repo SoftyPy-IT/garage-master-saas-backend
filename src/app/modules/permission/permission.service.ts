@@ -289,7 +289,6 @@ const updateMultiplePermissions = async (
     delete?: boolean;
   }>
 ) => {
-  // Get Permission model and its connection
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
   const session = await connection.startSession();
   session.startTransaction();
@@ -710,7 +709,7 @@ export const deleteUserPermission = async (
 };
 export const deleteMultipleUserPermissions = async (
   tenantDomain: string,
-  userId: string, // This should be the user whose permissions we're deleting
+  userId: string,
   permissionIds: string[]
 ) => {
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
