@@ -276,7 +276,6 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
 
 }
 
-
 const updateMultiplePermissions = async (
   tenantDomain: string,
   permissionUpdates: Array<{
