@@ -8,20 +8,19 @@ const router = Router();
 
 router.post(
   '/batch-create',
-  // validateRequest(multiplePermission),
   PermissionController.createMultiplePermissions,
+);
+
+router.post(
+  '/user/:userId/batch-delete',
+  validateRequest(deleteMultiplePermissionsSchema),
+  PermissionController.deleteMultipleUserPermissions
 );
 router.delete(
   '/user/:userId/:id',
   PermissionController.deleteUserPermission
 );
 
-// Multiple permissions delete
-router.delete(
-  '/user/:userId/batch',
-  validateRequest(deleteMultiplePermissionsSchema),
-  PermissionController.deleteMultipleUserPermissions
-);
 
 router.post(
   '/:userId',

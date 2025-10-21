@@ -67,50 +67,7 @@ const getSinglePermission = catchAsync(async (req, res) => {
     data: { hasPermission: result },
   });
 })
-export const deleteUserPermission = catchAsync(async (req: Request, res: Response) => {
-  const tenantDomain = req.query.tenantDomain as string;
-  const userId = req.params.userId;
-  const permissionId = req.params.id;
 
-  if (!userId) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User ID is required');
-  }
-
-  if (!permissionId) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Permission ID is required');
-  }
-
-  const result = await PermissionService.deleteUserPermission(tenantDomain, userId, permissionId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: result.message || 'Permission deleted successfully',
-    data: result.data,
-  });
-});
-export const deleteMultipleUserPermissions = catchAsync(async (req: Request, res: Response) => {
-  const tenantDomain = req.query.tenantDomain as string;
-  const userId = req.params.userId;
-  const { permissionIds } = req.body;
-
-  if (!userId) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'User ID is required');
-  }
-
-  if (!permissionIds || !Array.isArray(permissionIds) || permissionIds.length === 0) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Permission IDs array is required');
-  }
-
-  const result = await PermissionService.deleteMultipleUserPermissions(tenantDomain, userId, permissionIds);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: result.message || 'Permissions processed successfully',
-    data: result.data,
-  });
-});
 const updateMultiplePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const permissionUpdates = req.body;
@@ -173,6 +130,59 @@ const getAllPermissions = catchAsync(async (req, res) => {
     success: true,
     message: 'All permissions retrieved successfully',
     data: result,
+  });
+});
+export const deleteUserPermission = catchAsync(async (req: Request, res: Response) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const permissionId = req.params.id;
+
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User ID is required');
+  }
+
+  if (!permissionId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Permission ID is required');
+  }
+
+  const result = await PermissionService.deleteUserPermission(tenantDomain, userId, permissionId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message || 'Permission deleted successfully',
+    data: result.data,
+  });
+});
+
+
+export const deleteMultipleUserPermissions = catchAsync(async (req: Request, res: Response) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const userId = req.params.userId;
+  const { permissionIds } = req.body;
+
+  console.log(' Incoming body:', req.body);
+  console.log(' Extracted permissionIds:', permissionIds);
+
+  if (!userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User ID is required');
+  }
+
+  if (!permissionIds || !Array.isArray(permissionIds) || permissionIds.length === 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Permission IDs array is required');
+  }
+
+  const result = await PermissionService.deleteMultipleUserPermissions(
+    tenantDomain,
+    userId,
+    permissionIds
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.message || 'Permissions delete successfully',
+    data: result.data,
   });
 });
 
