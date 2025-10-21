@@ -710,7 +710,7 @@ export const deleteUserPermission = async (
 };
 export const deleteMultipleUserPermissions = async (
   tenantDomain: string,
-  userId: string,
+  userId: string, // This should be the user whose permissions we're deleting
   permissionIds: string[]
 ) => {
   const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
@@ -794,7 +794,6 @@ export const deleteMultipleUserPermissions = async (
           });
         }
       } catch (error: any) {
-        // Catch any errors during permission processing
         results.push({
           permissionId,
           success: false,
@@ -813,7 +812,6 @@ export const deleteMultipleUserPermissions = async (
     // Commit the transaction
     await session.commitTransaction();
 
-    // Return success response with details
     return {
       success: true,
       message: 'Permissions processed successfully',
@@ -827,24 +825,18 @@ export const deleteMultipleUserPermissions = async (
       }
     };
   } catch (error: any) {
-    // Abort the transaction if any error occurs
     await session.abortTransaction();
-
-    // Re-throw the error with appropriate status code
     if (error instanceof AppError) {
       throw error;
     }
-
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || 'Failed to delete permissions'
     );
   } finally {
-    // End the session
     session.endSession();
   }
 };
-
 
 export const PermissionService = {
   getUserPermissions,
