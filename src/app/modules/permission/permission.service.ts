@@ -624,123 +624,7 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
   };
 };
 
-export const deleteMultipleUserPermissions = async (
-  tenantDomain: string,
-  userId: string,
-  permissionIds: string[]
-) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
-  const { Model: User } = await getTenantModel(tenantDomain, 'User');
-  const session = await connection.startSession();
 
-  try {
-    session.startTransaction();
-
-    // Validate user existence
-    const user = await User.findById(userId).session(session);
-    if (!user) {
-      throw new AppError(httpStatus.NOT_FOUND, 'User not found');
-    }
-
-    if (!permissionIds || permissionIds.length === 0) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'No permission IDs provided');
-    }
-
-    const results = [];
-
-    // Process each permission
-    for (const permissionId of permissionIds) {
-      // Find the permission
-      const permission = await Permission.findById(permissionId).session(session);
-      if (!permission) {
-        results.push({
-          permissionId,
-          success: false,
-          message: 'Permission not found'
-        });
-        continue;
-      }
-
-      // Check if the permission is associated with the user
-      const isUserPermission = permission.userId.some((id: any) =>
-        id.toString() === userId.toString()
-      );
-
-      if (!isUserPermission) {
-        results.push({
-          permissionId,
-          success: false,
-          message: 'Permission does not belong to this user'
-        });
-        continue;
-      }
-
-      // Check if permission is associated with multiple users
-      if (permission.userId.length > 1) {
-        // If multiple users, remove only this user from the permission
-        await Permission.findByIdAndUpdate(
-          permissionId,
-          { $pull: { userId: new Types.ObjectId(userId) } },
-          { session }
-        );
-        results.push({
-          permissionId,
-          success: true,
-          message: 'User removed from permission',
-          wasFullyDeleted: false
-        });
-      } else {
-        // If only this user, delete the entire permission
-        await Permission.findByIdAndDelete(permissionId, { session });
-        results.push({
-          permissionId,
-          success: true,
-          message: 'Permission fully deleted',
-          wasFullyDeleted: true
-        });
-      }
-    }
-
-    // Remove all permission references from the user document
-    await User.findByIdAndUpdate(
-      userId,
-      { $pullAll: { permission: permissionIds.map(id => new Types.ObjectId(id)) } },
-      { session }
-    );
-
-    // Commit the transaction
-    await session.commitTransaction();
-
-    // Return success response with details
-    return {
-      success: true,
-      message: 'Permissions processed successfully',
-      data: {
-        userId,
-        results,
-        totalProcessed: permissionIds.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
-      }
-    };
-  } catch (error: any) {
-    // Abort the transaction if any error occurs
-    await session.abortTransaction();
-
-    // Re-throw the error with appropriate status code
-    if (error instanceof AppError) {
-      throw error;
-    }
-
-    throw new AppError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || 'Failed to delete permissions'
-    );
-  } finally {
-    // End the session
-    session.endSession();
-  }
-};
 export const deleteUserPermission = async (
   tenantDomain: string,
   userId: string,
@@ -825,6 +709,143 @@ export const deleteUserPermission = async (
     session.endSession();
   }
 };
+export const deleteMultipleUserPermissions = async (
+  tenantDomain: string,
+  userId: string,
+  permissionIds: string[]
+) => {
+  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const session = await connection.startSession();
+
+  try {
+    session.startTransaction();
+
+    // Validate user existence
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+    }
+
+    if (!permissionIds || permissionIds.length === 0) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'No permission IDs provided');
+    }
+
+    // Filter out invalid ObjectIds and "batch" value
+    const validPermissionIds = permissionIds.filter(id =>
+      id !== 'batch' && Types.ObjectId.isValid(id)
+    );
+
+    if (validPermissionIds.length === 0) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'No valid permission IDs provided');
+    }
+
+    const results = [];
+
+    // Process each valid permission
+    for (const permissionId of validPermissionIds) {
+      try {
+        // Find the permission
+        const permission = await Permission.findById(permissionId).session(session);
+        if (!permission) {
+          results.push({
+            permissionId,
+            success: false,
+            message: 'Permission not found'
+          });
+          continue;
+        }
+
+        // Check if the permission is associated with the user
+        const isUserPermission = permission.userId.some((id: any) =>
+          id.toString() === userId.toString()
+        );
+
+        if (!isUserPermission) {
+          results.push({
+            permissionId,
+            success: false,
+            message: 'Permission does not belong to this user'
+          });
+          continue;
+        }
+
+        // Check if permission is associated with multiple users
+        if (permission.userId.length > 1) {
+          // If multiple users, remove only this user from the permission
+          await Permission.findByIdAndUpdate(
+            permissionId,
+            { $pull: { userId: new Types.ObjectId(userId) } },
+            { session }
+          );
+          results.push({
+            permissionId,
+            success: true,
+            message: 'User removed from permission',
+            wasFullyDeleted: false
+          });
+        } else {
+          // If only this user, delete the entire permission
+          await Permission.findByIdAndDelete(permissionId, { session });
+          results.push({
+            permissionId,
+            success: true,
+            message: 'Permission fully deleted',
+            wasFullyDeleted: true
+          });
+        }
+      } catch (error: any) {
+        // Catch any errors during permission processing
+        results.push({
+          permissionId,
+          success: false,
+          message: error.message || 'Failed to process permission'
+        });
+      }
+    }
+
+    // Remove all permission references from the user document
+    await User.findByIdAndUpdate(
+      userId,
+      { $pullAll: { permission: validPermissionIds.map(id => new Types.ObjectId(id)) } },
+      { session }
+    );
+
+    // Commit the transaction
+    await session.commitTransaction();
+
+    // Return success response with details
+    return {
+      success: true,
+      message: 'Permissions processed successfully',
+      data: {
+        userId,
+        results,
+        totalProcessed: permissionIds.length,
+        validProcessed: validPermissionIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      }
+    };
+  } catch (error: any) {
+    // Abort the transaction if any error occurs
+    await session.abortTransaction();
+
+    // Re-throw the error with appropriate status code
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error.message || 'Failed to delete permissions'
+    );
+  } finally {
+    // End the session
+    session.endSession();
+  }
+};
+
 
 export const PermissionService = {
   getUserPermissions,
