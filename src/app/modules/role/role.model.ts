@@ -10,7 +10,15 @@ export const roleSchema = new Schema<IRole>(
     },
     type: {
       type: String,
-      enum: ['admin', 'manager', 'employee', 'user'],
+      enum: [
+        'admin',
+        'manager',
+        'technician',
+        'front-desk',
+        'accountant',
+        'warehouse',
+        'user',
+      ],
     },
     description: {
       type: String,
