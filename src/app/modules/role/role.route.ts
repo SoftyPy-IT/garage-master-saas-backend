@@ -26,22 +26,22 @@ router.get(
   RoleController.getRoleById
 );
 
-router.put(
+router.patch(
   '/:id',
-auth('admin', 'superadmin'),
+  auth('admin', 'superadmin'),
   validateRequest(updateRoleValidationSchema),
   RoleController.updateRole
 );
 
 router.delete(
   '/:id',
-auth('admin', 'superadmin'),
+  auth('admin', 'superadmin'),
   RoleController.deleteRole
 );
 
 router.post(
   '/:roleId/permissions',
-auth('admin', 'superadmin'),
+  auth('admin', 'superadmin'),
   RoleController.assignPermissionsToRole
 );
 

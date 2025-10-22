@@ -8,7 +8,15 @@ export const createRoleValidationSchema = z.object({
       .string({ required_error: "Role name is required" })
       .trim()
       .min(1, "Role name cannot be empty"),
-    type: z.enum(["admin", "manager", "employee", "user"], {
+    type: z.enum([
+      'admin',
+      'manager',
+      'technician',
+      'front-desk',
+      'accountant',
+      'warehouse',
+      'user',
+    ], {
       required_error: "Role type is required",
     }),
     description: z.string().trim().optional(),
