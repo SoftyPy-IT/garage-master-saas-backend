@@ -1,87 +1,100 @@
-// src/middlewares/dynamicCors.ts
 import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { Tenant } from '../modules/tenant/tenant.model';
 import config from '../config';
+import { redisClient } from '../utils/redis';
 
 
-let domainCache: { [key: string]: boolean } = {};
-let cacheExpiry = 0;
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL_SECONDS = 5 * 60;
 
 async function isDomainAllowed(origin: string): Promise<boolean> {
-    const now = Date.now();
-    if (domainCache[origin] !== undefined && now < cacheExpiry) {
-        return domainCache[origin];
-    }
-
-    if (process.env.NODE_ENV === 'development' && config.DEV_ALLOWED_ORIGINS.includes(origin)) {
-        domainCache[origin] = true;
-        cacheExpiry = now + CACHE_TTL;
-        return true;
-    }
-
     try {
-        const tenant = await Tenant.findOne({
-            domain: origin,
-            isActive: true
-        });
+        // 1️⃣ Check cache first
+        const cacheKey = `cors:domain:${origin}`;
+        const cachedValue = await redisClient.get(cacheKey);
 
+        if (cachedValue !== null) {
+            return cachedValue === 'true';
+        }
+
+        // 2️⃣ Check dev whitelist
+        if (
+            process.env.NODE_ENV === 'development' &&
+            config.DEV_ALLOWED_ORIGINS.includes(origin)
+        ) {
+            await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
+            return true;
+        }
+
+        // 3️⃣ Check in DB for tenant primary domain
+        const tenant = await Tenant.findOne({ domain: origin, isActive: true });
+
+        // 4️⃣ If not found, check secondary domains
         if (!tenant) {
             const secondaryTenant = await Tenant.findOne({
                 'domains.domain': origin,
-                'domains.isActive': true
+                'domains.isActive': true,
             });
 
             const isAllowed = !!secondaryTenant;
-            domainCache[origin] = isAllowed;
-            cacheExpiry = now + CACHE_TTL;
-
+            await redisClient.set(cacheKey, isAllowed ? 'true' : 'false', CACHE_TTL_SECONDS);
             return isAllowed;
         }
-        domainCache[origin] = true;
-        cacheExpiry = now + CACHE_TTL;
 
+        // 5️⃣ If tenant found, allow and cache
+        await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
         return true;
     } catch (error) {
-        console.error('ডোমেইন যাচাই ত্রুটি:', error);
+        console.error('❌ Domain validation error:', error);
         return false;
     }
 }
-export function clearDomainCache(): void {
-    domainCache = {};
-    cacheExpiry = 0;
-}
+
+/**
+ * Middleware: dynamicCors
+ * Dynamically resolves CORS based on tenant domain from Redis + MongoDB
+ */
 export const dynamicCors = (options: cors.CorsOptions = {}) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const origin = req.headers.origin;
+
+        // If no origin, disable CORS
         if (!origin) {
             return cors({
                 origin: false,
                 credentials: true,
                 methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
                 allowedHeaders: ['Content-Type', 'Authorization'],
-                ...options
+                ...options,
             })(req, res, next);
         }
+
+        // Resolve if allowed
         const isAllowed = await isDomainAllowed(origin);
 
         if (isAllowed) {
             return cors({
-                origin: true,
+                origin: origin, // ✅ return specific origin, not true — more secure
                 credentials: true,
                 methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
                 allowedHeaders: ['Content-Type', 'Authorization'],
-                ...options
+                ...options,
             })(req, res, next);
         } else {
+            console.warn(`🚫 Blocked CORS request from origin: ${origin}`);
             return cors({
                 origin: false,
                 credentials: true,
                 methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
                 allowedHeaders: ['Content-Type', 'Authorization'],
-                ...options
+                ...options,
             })(req, res, next);
         }
     };
 };
+
+// Optional: Cache clear utility
+export async function clearDomainCache(): Promise<void> {
+    await redisClient.delPattern('cors:domain:*');
+    console.log('🧹 All CORS domain cache cleared.');
+}
