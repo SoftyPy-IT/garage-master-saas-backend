@@ -33,9 +33,6 @@ export const batchCreatePermissionSchema = z.object({
 });
 
 
-
-
-
 export const checkPermissionZodSchema = z.object({
   body: z.object({
     userId: z.string({
@@ -46,6 +43,19 @@ export const checkPermissionZodSchema = z.object({
     }),
     action: z.enum(['create', 'edit', 'view', 'delete'], {
       required_error: 'Action is required',
+    }),
+  }),
+});
+export const deleteMultiplePermissionsSchema = z.object({
+  body: z.object({
+    permissionIds: z.array(z.string({
+      required_error: 'Permission IDs are required',
+      invalid_type_error: 'Permission IDs must be strings',
+    })).refine(ids => {
+      // Check if all IDs are valid ObjectIds and not "batch"
+      return ids.every(id => id !== 'batch' && /^[0-9a-fA-F]{24}$/.test(id));
+    }, {
+      message: 'All permission IDs must be valid MongoDB ObjectIds',
     }),
   }),
 });
