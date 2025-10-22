@@ -23,7 +23,10 @@ export default {
   DEFAULT_PASS: process.env.DEFAULT_PASS,
   REDIS_HOST: process.env.REDIS_HOST,
   REDIS_PORT: process.env.REDIS_PORT,
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+  DEV_ALLOWED_ORIGINS: process.env.DEV_ALLOWED_ORIGINS
+    ? process.env.DEV_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : [],
 
 
 };

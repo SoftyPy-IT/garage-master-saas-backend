@@ -15,6 +15,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { redisClient } from './app/utils/redis';
+import { dynamicCors } from './app/middlewares/domainCors';
 
 const app: Application = express();
 app.use(helmet());
@@ -40,40 +41,42 @@ if (config.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
+app.use(dynamicCors());
 
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'https://trustautosolution.com',
-        'https://worldautosolution.com',
-        'https://moriyom.com',
-        'http://trustautosolution.com.localhost:5173',
-        'http://moriyom.com.localhost:5173',
-        'https://garage.worldautosolution.com'
-      ];
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       if (!origin) return callback(null, true);
 
-      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*moriyom\.com$/)) {
-        return callback(null, true);
-      }
+//       const allowedOrigins = [
+//         'http://localhost:5173',
+//         'https://trustautosolution.com',
+//         'https://worldautosolution.com',
+//         'https://moriyom.com',
+//         'http://trustautosolution.com.localhost:5173',
+//         'http://moriyom.com.localhost:5173',
+//         'https://garage.worldautosolution.com'
+//       ];
 
-      if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*localhost(:[0-9]+)?$/)) {
-        return callback(null, true);
-      }
+//       if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*moriyom\.com$/)) {
+//         return callback(null, true);
+//       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+//       if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*localhost(:[0-9]+)?$/)) {
+//         return callback(null, true);
+//       }
 
-      return callback(new Error('Not allowed by CORS: ' + origin));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+//       if (allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       }
+
+//       return callback(new Error('Not allowed by CORS: ' + origin));
+//     },
+//     credentials: true,
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+//   })
+// );
 
 app.options('*', cors());
 
