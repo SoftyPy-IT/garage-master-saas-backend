@@ -1,3 +1,4 @@
+// src/app.ts
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import notFound from './app/middlewares/notFound';
@@ -13,6 +14,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import { redisClient } from './app/utils/redis';
 
 const app: Application = express();
 app.use(helmet());
@@ -27,18 +29,17 @@ if (config.NODE_ENV === 'development') {
 }
 
 // Rate limiting middleware
-app.use(
-  rateLimit({
-    max: 2000,
-    windowMs: 60 * 60 * 1000,
-    message: 'Too many requests sent by this IP, please try again in an hour!',
-  })
-);
+// app.use(
+//   rateLimit({
+//     max: 2000,
+//     windowMs: 60 * 60 * 1000,
+//     message: 'Too many requests sent by this IP, please try again in an hour!',
+//   })
+// );
 
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS Setup (allow credentials + subdomains)
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -54,7 +55,6 @@ app.use(
         'https://garage.worldautosolution.com'
       ];
 
-
       if (origin.match(/^https?:\/\/([a-z0-9-]+\.)*moriyom\.com$/)) {
         return callback(null, true);
       }
@@ -69,12 +69,11 @@ app.use(
 
       return callback(new Error('Not allowed by CORS: ' + origin));
     },
-    credentials: true, 
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-
 
 app.options('*', cors());
 
@@ -91,7 +90,7 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// ✅ Backup and logs routes
+//  Backup and logs routes
 app.get('/api/v1/logs', async (req, res) => {
   try {
     const result = await getAllLogsService(req);
@@ -158,5 +157,18 @@ app.get('/api/v1/backup-logs', (req, res) => {
 
 app.use(globalErrorHandler);
 app.use(notFound);
+
+
+redisClient.connect().catch(console.error);
+
+process.on('SIGINT', async () => {
+  await redisClient.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await redisClient.disconnect();
+  process.exit(0);
+});
 
 export default app;

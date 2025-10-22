@@ -18,9 +18,12 @@ export default {
   jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN,
   jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
   bcrypt_salt_round: process.env.BCRYPT_SALT_ROUND,
-  default_pass:process.env.default_pass,
-  super_admin_password:process.env.SUPER_ADMIN_PASSWORD,
-  DEFAULT_PASS:process.env.DEFAULT_PASS,
+  default_pass: process.env.default_pass,
+  super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
+  DEFAULT_PASS: process.env.DEFAULT_PASS,
+  REDIS_HOST: process.env.REDIS_HOST,
+  REDIS_PORT: process.env.REDIS_PORT,
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD
 
 
 };

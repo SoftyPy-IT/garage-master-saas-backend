@@ -3,18 +3,26 @@ import httpStatus from 'http-status';
 import mongoose, { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
+import { redisClient } from '../../utils/redis';
+import { getAllPermissionsCacheKey, getSinglePermissionCacheKey, getUserPermissionsCacheKey } from '../../utils/generateCashKey';
 
 export const getUserPermissions = async (tenantDomain: string, userId: string) => {
+  const cacheKey = getUserPermissionsCacheKey(tenantDomain, userId);
+
+  // firstly check from redis
+  const cachedPermissions = await redisClient.get(cacheKey);
+  if (cachedPermissions) {
+    return JSON.parse(cachedPermissions);
+  }
+
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-  //  Check if user exists
   const user = await User.findById(userId);
   if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
 
-  // Populate user-specific permissions
   const userPermissions = await Permission.find({
     userId: new Types.ObjectId(userId),
   })
@@ -66,7 +74,7 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
           delete: permission.delete ?? false,
         });
       } else {
-        // Merge permissions (logical OR)
+        // Merge permissions 
         permissionMap.set(pageIdStr, {
           ...existing,
           create: existing.create || permission.create,
@@ -79,17 +87,13 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
   });
 
   const permissionsArray = Array.from(permissionMap.values());
-
-  // Fetch total counts
   const [totalPages, totalRoles, totalUsers, totalPermissions] = await Promise.all([
     Page.countDocuments(),
     Role.countDocuments(),
     User.countDocuments(),
     Permission.countDocuments(),
   ]);
-
-  // Return structured response
-  return {
+  const result = {
     summary: {
       totalPages,
       totalRoles,
@@ -98,7 +102,11 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
     },
     permissions: permissionsArray,
   };
+  await redisClient.set(cacheKey, JSON.stringify(result), 300);
+
+  return result;
 };
+
 export const createUserPermission = async (
   tenantDomain: string,
   userId: string,
@@ -136,7 +144,7 @@ export const createUserPermission = async (
     const pages = await Page.find({ _id: { $in: pageIds } }).session(session);
     if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
-    // ✅ Create permission safely
+    // Create permission safely
     const [newPermission] = await Permission.create(
       [
         {
@@ -152,7 +160,7 @@ export const createUserPermission = async (
       { session }
     );
 
-    // ✅ Link permission to user — transaction-safe, atomic
+    // Link permission to user — transaction-safe, atomic
     const afterUser = await User.findByIdAndUpdate(
       userId,
       { $addToSet: { permission: newPermission._id } },
@@ -160,19 +168,16 @@ export const createUserPermission = async (
     );
 
     console.log('user data this ', afterUser)
-
-    // ✅ Commit transaction
     await session.commitTransaction();
-
-    // ✅ Populate before session ends
     const populatedPermission = await Permission.findById(newPermission._id)
       .populate('userId')
       .populate('roleId')
       .populate('pageId');
+    await redisClient.invalidateUserCache(tenantDomain, userId);
+    await redisClient.invalidateAllPermissionCache(tenantDomain);
 
     return populatedPermission;
   } catch (error: any) {
-    // Rollback if failed
     if (session.inTransaction()) await session.abortTransaction();
     throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to create permission');
   } finally {
@@ -218,7 +223,7 @@ const updateUserPermission = async (
     const pages = await Page.find({ _id: { $in: pageIds } });
     if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
-    // 🔄 Update Permission document
+    // Update Permission document
     const updatedPermission = await Permission.findByIdAndUpdate(
       permissionId,
       {
@@ -237,23 +242,22 @@ const updateUserPermission = async (
       throw new AppError(httpStatus.NOT_FOUND, 'Permission not found');
     }
 
-    // 🔗 Link Permission with User (if not already linked)
+    // Link Permission with User (if not already linked)
     await User.findByIdAndUpdate(
       userId,
       { $addToSet: { permission: updatedPermission._id } },
       { session },
     );
-
-    // ✅ Commit transaction
     await session.commitTransaction();
     session.endSession();
 
-    // Return fully populated result
+    //clear 
+    await redisClient.invalidateUserCache(tenantDomain, userId);
+    await redisClient.invalidatePermissionCache(tenantDomain, permissionId);
     return await Permission.findById(updatedPermission._id)
       .populate('roleId')
       .populate('pageId');
   } catch (error: any) {
-    // ❌ Rollback if anything fails
     await session.abortTransaction();
     session.endSession();
     throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to update permission');
@@ -261,6 +265,15 @@ const updateUserPermission = async (
 };
 
 const getSinglePermission = async (tenantDomain: string, id: string) => {
+  const cacheKey = getSinglePermissionCacheKey(tenantDomain, id);
+
+  // check from redis
+  const cachedPermission = await redisClient.get(cacheKey);
+  if (cachedPermission) {
+    return JSON.parse(cachedPermission);
+  }
+
+
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
@@ -269,11 +282,13 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
     { path: 'roleId', model: Role },
     { path: 'pageId', model: Page },
     { path: 'userId', model: User },
+  ]);
 
-  ])
+  if (result) {
+    await redisClient.set(cacheKey, JSON.stringify(result), 600);
+  }
 
-  return result
-
+  return result;
 }
 
 const updateMultiplePermissions = async (
@@ -300,6 +315,8 @@ const updateMultiplePermissions = async (
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
     const updatedPermissions = [];
+    const affectedUsers = new Set<string>();
+    console.log('permission check', permissionUpdates)
 
     for (const update of permissionUpdates) {
       const { permissionId, userId, roleId, pageId, ...permissionData } = update;
@@ -309,8 +326,6 @@ const updateMultiplePermissions = async (
       if (!existingPermission) {
         throw new AppError(httpStatus.NOT_FOUND, `Permission with ID ${permissionId} not found`);
       }
-
-      // Convert IDs to ObjectId arrays (or keep existing)
       const userIds = userId
         ? Array.isArray(userId)
           ? userId.map(id => new Types.ObjectId(id))
@@ -328,8 +343,6 @@ const updateMultiplePermissions = async (
           ? pageId.map(id => new Types.ObjectId(id))
           : [new Types.ObjectId(pageId)]
         : existingPermission.pageId;
-
-      // Validate existence
       const userDocs = await User.find({ _id: { $in: userIds } }).session(session);
       if (!userDocs.length) throw new AppError(httpStatus.NOT_FOUND, 'User(s) not found');
 
@@ -338,8 +351,6 @@ const updateMultiplePermissions = async (
 
       const pageDocs = await Page.find({ _id: { $in: pageIds } }).session(session);
       if (!pageDocs.length) throw new AppError(httpStatus.NOT_FOUND, 'Page(s) not found');
-
-      // Update Permission
       const updatedPermission = await Permission.findByIdAndUpdate(
         permissionId,
         {
@@ -359,7 +370,6 @@ const updateMultiplePermissions = async (
 
       // Link updated permission to Users safely
       for (const uid of userIds) {
-        // Ensure the user's `permission` field is an array
         await User.updateOne(
           { _id: uid },
           [
@@ -377,14 +387,23 @@ const updateMultiplePermissions = async (
           ],
           { session }
         );
+        affectedUsers.add(uid.toString());
       }
 
       updatedPermissions.push(updatedPermission);
     }
-
-    // Commit transaction
     await session.commitTransaction();
     session.endSession();
+
+    // clear all cash
+    for (const userId of affectedUsers) {
+      await redisClient.invalidateUserCache(tenantDomain, userId);
+    }
+    for (const update of permissionUpdates) {
+      await redisClient.invalidatePermissionCache(tenantDomain, update.permissionId);
+    }
+
+    await redisClient.invalidateAllPermissionCache(tenantDomain);
 
     return updatedPermissions;
   } catch (error: any) {
@@ -416,9 +435,10 @@ export const createMultipleUserPermissions = async (
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
     const results = [];
+    const affectedUsers = new Set<string>();
 
     for (const permissionData of permissionDataArray) {
-      // 🔹 Normalize possible arrays (frontend might send [id])
+      // Normalize possible arrays ([id])
       const userId =
         Array.isArray(permissionData.userId) ? permissionData.userId[0] : permissionData.userId;
       const pageId =
@@ -427,16 +447,10 @@ export const createMultipleUserPermissions = async (
         Array.isArray(permissionData.roleId) ? permissionData.roleId[0] : permissionData.roleId;
 
       const { create, edit, view, delete: del } = permissionData;
-
-      // Validate user
       const user = await User.findById(userId).session(session);
       if (!user) throw new AppError(httpStatus.NOT_FOUND, `User with ID ${userId} not found`);
-
-      // Validate page
       const page = await Page.findById(pageId).session(session);
       if (!page) throw new AppError(httpStatus.NOT_FOUND, `Page with ID ${pageId} not found`);
-
-      // Validate role (optional)
       let roleObjectId;
       if (roleId) {
         const role = await Role.findById(roleId).session(session);
@@ -451,7 +465,6 @@ export const createMultipleUserPermissions = async (
       }).session(session);
 
       if (existingPermission) {
-        // 🔹 Update existing permission
         const updatedPermission = await Permission.findByIdAndUpdate(
           existingPermission._id,
           {
@@ -474,7 +487,7 @@ export const createMultipleUserPermissions = async (
           permission: updatedPermission,
         });
       } else {
-        // 🔹 Create new permission
+        // Create new permission
         const [newPermission] = await Permission.create(
           [
             {
@@ -508,10 +521,19 @@ export const createMultipleUserPermissions = async (
           permission: populatedPermission,
         });
       }
+      affectedUsers.add(userId);
     }
 
     await session.commitTransaction();
     session.endSession();
+
+    // clear cash
+    for (const userId of affectedUsers) {
+      await redisClient.invalidateUserCache(tenantDomain, userId);
+    }
+
+    await redisClient.invalidateAllPermissionCache(tenantDomain);
+
     return results;
   } catch (error: any) {
     await session.abortTransaction();
@@ -522,6 +544,7 @@ export const createMultipleUserPermissions = async (
     );
   }
 };
+
 export const getAllPermissions = async (tenantDomain: string, options?: {
   page?: number;
   limit?: number;
@@ -531,6 +554,14 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
   user?: string;
   searchTerm?: string;
 }) => {
+  const cacheKey = getAllPermissionsCacheKey(tenantDomain, options);
+
+  // check from redis
+  const cachedPermissions = await redisClient.get(cacheKey);
+  if (cachedPermissions) {
+    return JSON.parse(cachedPermissions);
+  }
+
   const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
@@ -551,17 +582,14 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
   const sort: any = {};
   sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  // Build query based on filters
   const query: any = {};
 
-  // If role filter is provided, find role IDs with that name
   if (role) {
     const roles = await Role.find({ name: { $regex: role, $options: 'i' } }).select('_id');
     const roleIds = roles.map(r => r._id);
     query.roleId = { $in: roleIds };
   }
 
-  // If user filter is provided, find user IDs with that name or email
   if (user) {
     const users = await User.find({
       $or: [
@@ -573,7 +601,6 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
     query.userId = { $in: userIds };
   }
 
-  // If search term is provided, search in page names, paths, or user emails
   if (searchTerm) {
     const pages = await Page.find({
       $or: [
@@ -611,7 +638,7 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
 
   const total = await Permission.countDocuments(query);
 
-  return {
+  const result = {
     permissions,
     pagination: {
       total,
@@ -620,8 +647,10 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
       pages: Math.ceil(total / limit)
     }
   };
-};
+  await redisClient.set(cacheKey, JSON.stringify(result), 180);
 
+  return result;
+};
 
 export const deleteUserPermission = async (
   tenantDomain: string,
@@ -665,7 +694,6 @@ export const deleteUserPermission = async (
         { session }
       );
     } else {
-
       await Permission.findByIdAndDelete(permissionId, { session });
     }
 
@@ -676,10 +704,11 @@ export const deleteUserPermission = async (
       { session }
     );
 
-    // Commit the transaction
     await session.commitTransaction();
 
-    // Return success response with details
+    // clear cash
+    await redisClient.invalidateUserCache(tenantDomain, userId);
+    await redisClient.invalidatePermissionCache(tenantDomain, permissionId);
     return {
       success: true,
       message: 'Permission deleted successfully',
@@ -690,10 +719,7 @@ export const deleteUserPermission = async (
       }
     };
   } catch (error: any) {
-    // Abort the transaction if any error occurs
     await session.abortTransaction();
-
-    // Re-throw the error with appropriate status code
     if (error instanceof AppError) {
       throw error;
     }
@@ -703,10 +729,10 @@ export const deleteUserPermission = async (
       error.message || 'Failed to delete permission'
     );
   } finally {
-    // End the session
     session.endSession();
   }
 };
+
 export const deleteMultipleUserPermissions = async (
   tenantDomain: string,
   userId: string,
@@ -808,8 +834,15 @@ export const deleteMultipleUserPermissions = async (
       { session }
     );
 
-    // Commit the transaction
+
     await session.commitTransaction();
+    await redisClient.invalidateUserCache(tenantDomain, userId);
+
+    for (const permissionId of validPermissionIds) {
+      await redisClient.invalidatePermissionCache(tenantDomain, permissionId);
+    }
+
+    await redisClient.invalidateAllPermissionCache(tenantDomain);
 
     return {
       success: true,
