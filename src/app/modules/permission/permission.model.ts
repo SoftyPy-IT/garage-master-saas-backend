@@ -1,4 +1,3 @@
-// src/modules/permission/permission.model.ts
 import { Schema, model } from 'mongoose';
 import { IPermission } from './permission.interface';
 
@@ -6,7 +5,7 @@ export const permissionSchema = new Schema<IPermission>(
   {
     userId: [{
       type: Schema.Types.ObjectId,
-      ref: 'User', 
+      ref: 'User',
     }],
     roleId: [{
       type: Schema.Types.ObjectId,
@@ -37,5 +36,9 @@ export const permissionSchema = new Schema<IPermission>(
     timestamps: true,
   }
 );
+
+permissionSchema.index({ userId: 1, pageId: 1 });
+permissionSchema.index({ roleId: 1 });
+permissionSchema.index({ createdAt: -1 });
 
 export const Permission = model<IPermission>('Permission', permissionSchema);

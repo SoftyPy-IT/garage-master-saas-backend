@@ -1,4 +1,4 @@
-// src/modules/permission/permission.controller.ts
+
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../utils/catchAsync';
@@ -38,6 +38,7 @@ const createUserPermission = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
 const getMyPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
 
@@ -66,11 +67,12 @@ const getSinglePermission = catchAsync(async (req, res) => {
     message: 'Permission checked successfully',
     data: { hasPermission: result },
   });
-})
+});
 
 const updateMultiplePermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const permissionUpdates = req.body;
+  console.log('permission  update', req.body)
   const result = await PermissionService.updateMultiplePermissions(tenantDomain, permissionUpdates);
 
   sendResponse(res, {
@@ -85,7 +87,7 @@ export const createMultiplePermissions = async (req: Request, res: Response) => 
   const tenantDomain = req.query.tenantDomain as string;
 
   const permissionData = req.body;
-  console.log('permission check', permissionData)
+  console.log('permission check', permissionData);
 
   if (!Array.isArray(permissionData)) {
     throw new AppError(httpStatus.BAD_REQUEST, 'permissionData must be an array');
@@ -113,7 +115,6 @@ const getAllPermissions = catchAsync(async (req, res) => {
     searchTerm = ''
   } = req.query;
 
-
   const options = {
     page: parseInt(page as string),
     limit: parseInt(limit as string),
@@ -132,6 +133,7 @@ const getAllPermissions = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
 export const deleteUserPermission = catchAsync(async (req: Request, res: Response) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
@@ -155,12 +157,11 @@ export const deleteUserPermission = catchAsync(async (req: Request, res: Respons
   });
 });
 
-
 export const deleteMultipleUserPermissions = catchAsync(async (req: Request, res: Response) => {
   const tenantDomain = req.query.tenantDomain as string;
   const userId = req.params.userId;
   const { permissionIds } = req.body;
-  console.log('user id check', userId)
+  console.log('user id check', userId);
   console.log(' Incoming body:', req.body);
   console.log(' Extracted permissionIds:', permissionIds);
 
