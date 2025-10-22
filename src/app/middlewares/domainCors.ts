@@ -9,7 +9,7 @@ const CACHE_TTL_SECONDS = 5 * 60;
 
 async function isDomainAllowed(origin: string): Promise<boolean> {
     try {
-        // 1️⃣ Check cache first
+        //  Check cache first
         const cacheKey = `cors:domain:${origin}`;
         const cachedValue = await redisClient.get(cacheKey);
 
@@ -17,7 +17,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
             return cachedValue === 'true';
         }
 
-        // 2️⃣ Check dev whitelist
+        //  Check dev whitelist
         if (
             process.env.NODE_ENV === 'development' &&
             config.DEV_ALLOWED_ORIGINS.includes(origin)
@@ -26,10 +26,10 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
             return true;
         }
 
-        // 3️⃣ Check in DB for tenant primary domain
+        // Check in DB for tenant primary domain
         const tenant = await Tenant.findOne({ domain: origin, isActive: true });
 
-        // 4️⃣ If not found, check secondary domains
+        // If not found, check secondary domains
         if (!tenant) {
             const secondaryTenant = await Tenant.findOne({
                 'domains.domain': origin,
@@ -41,7 +41,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
             return isAllowed;
         }
 
-        // 5️⃣ If tenant found, allow and cache
+        //If tenant found, allow and cache
         await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
         return true;
     } catch (error) {
@@ -50,10 +50,6 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
     }
 }
 
-/**
- * Middleware: dynamicCors
- * Dynamically resolves CORS based on tenant domain from Redis + MongoDB
- */
 export const dynamicCors = (options: cors.CorsOptions = {}) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const origin = req.headers.origin;
@@ -74,7 +70,7 @@ export const dynamicCors = (options: cors.CorsOptions = {}) => {
 
         if (isAllowed) {
             return cors({
-                origin: origin, // ✅ return specific origin, not true — more secure
+                origin: origin,
                 credentials: true,
                 methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
                 allowedHeaders: ['Content-Type', 'Authorization'],
@@ -92,9 +88,7 @@ export const dynamicCors = (options: cors.CorsOptions = {}) => {
         }
     };
 };
-
-// Optional: Cache clear utility
 export async function clearDomainCache(): Promise<void> {
     await redisClient.delPattern('cors:domain:*');
-    console.log('🧹 All CORS domain cache cleared.');
+    console.log(' All CORS domain cache cleared.');
 }
