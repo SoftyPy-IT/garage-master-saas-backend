@@ -73,8 +73,6 @@ const getUserPermissions = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
   const { userId } = req.params;
 
-  console.log('tenant domain check this ', tenantDomain)
-
   const result = await UserServices.getUserPermissions(tenantDomain, userId);
 
   sendResponse(res, {
