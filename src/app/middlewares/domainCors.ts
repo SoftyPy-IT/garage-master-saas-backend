@@ -6,6 +6,7 @@ import { redisClient } from '../utils/redis';
 
 
 const CACHE_TTL_SECONDS = 5 * 60;
+
 async function isDomainAllowed(origin: string): Promise<boolean> {
     try {
         //  Check cache first
@@ -18,7 +19,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
 
         //  Check dev whitelist
         if (
-            process.env.NODE_ENV === 'production' &&
+            process.env.NODE_ENV === 'development' &&
             config.DEV_ALLOWED_ORIGINS.includes(origin)
         ) {
             await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
@@ -27,7 +28,6 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
 
         // Check in DB for tenant primary domain
         const tenant = await Tenant.findOne({ domain: origin, isActive: true });
-        console.log('domain check for cors ', tenant)
 
         // If not found, check secondary domains
         if (!tenant) {
