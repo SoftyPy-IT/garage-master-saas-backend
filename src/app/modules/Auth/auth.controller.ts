@@ -17,28 +17,83 @@ const cookieOptions: any = {
 if (process.env.NODE_ENV === "production") cookieOptions.domain = ".moriyom.com";
 
 
+// export const loginUser = catchAsync(async (req, res) => {
+//   const result = await AuthServices.loginUser(req.body);
+//   const { accessToken, refreshToken, user } = result;
+
+//   const isProduction = process.env.NODE_ENV === "production";
+//   const cookieOptions: any = {
+//     httpOnly: true,
+//     secure: true,
+//     sameSite: 'none',
+//     path: "/",
+//   };
+//   if (isProduction) {
+//     cookieOptions.domain = ".moriyom.com";
+//   }
+
+//   // Set cookies
+//   res.cookie("accessToken", accessToken, {
+//     ...cookieOptions,
+//     maxAge: 24 * 60 * 60 * 1000,
+//   });
+
+//   res.cookie("refreshToken", refreshToken, {
+//     ...cookieOptions,
+//     maxAge: 7 * 24 * 60 * 60 * 1000,
+//   });
+
+//   sendResponse(res, {
+//     statusCode: 200,
+//     success: true,
+//     message: "Login successful!",
+//     data: { user, accessToken, refreshToken },
+//   });
+// });
+
+
+import { URL } from 'url';
+
 export const loginUser = catchAsync(async (req, res) => {
   const result = await AuthServices.loginUser(req.body);
   const { accessToken, refreshToken, user } = result;
 
-  const isProduction = process.env.NODE_ENV === "production";
-  const cookieOptions: any = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    path: "/",
-  };
-  if (isProduction) {
-    cookieOptions.domain = ".moriyom.com";
+  const origin = req.headers.origin;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  let cookieDomain: string | undefined = undefined;
+
+  if (isProduction && origin) {
+    try {
+      const hostname = new URL(origin).hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 2) {
+        cookieDomain = `.${parts.slice(-2).join('.')}`;
+      } else {
+        cookieDomain = `.${hostname}`;
+      }
+    } catch (err) {
+      console.error('Error parsing cookie domain:', err);
+    }
   }
 
-  // Set cookies
-  res.cookie("accessToken", accessToken, {
+  const cookieOptions: any = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  };
+
+  if (cookieDomain) {
+    cookieOptions.domain = cookieDomain;
+  }
+
+  res.cookie('accessToken', accessToken, {
     ...cookieOptions,
     maxAge: 24 * 60 * 60 * 1000,
   });
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie('refreshToken', refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
@@ -46,10 +101,11 @@ export const loginUser = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Login successful!",
+    message: 'Login successful!',
     data: { user, accessToken, refreshToken },
   });
 });
+
 
 export const logoutUser = catchAsync(async (req, res) => {
   res.clearCookie("accessToken", {
@@ -104,7 +160,7 @@ export const tokenVerify = catchAsync(async (req, res) => {
       statusCode: 200,
       success: true,
       message: "User info fetched",
-      data: { ...payload, accessToken: token }, // safe because payload is now object
+      data: { ...payload, accessToken: token },
     });
   } catch (err) {
     // Try refresh token
