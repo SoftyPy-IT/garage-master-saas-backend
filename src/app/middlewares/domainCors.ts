@@ -28,6 +28,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
 
         // Check in DB for tenant primary domain
         const tenant = await Tenant.findOne({ domain: origin, isActive: true });
+        console.log('domain check for cors ', tenant)
 
         // If not found, check secondary domains
         if (!tenant) {
