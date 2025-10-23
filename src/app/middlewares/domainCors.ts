@@ -6,7 +6,6 @@ import { redisClient } from '../utils/redis';
 
 
 const CACHE_TTL_SECONDS = 5 * 60;
-
 async function isDomainAllowed(origin: string): Promise<boolean> {
     try {
         //  Check cache first
@@ -19,7 +18,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
 
         //  Check dev whitelist
         if (
-            process.env.NODE_ENV === 'development' &&
+            process.env.NODE_ENV === 'production' &&
             config.DEV_ALLOWED_ORIGINS.includes(origin)
         ) {
             await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
