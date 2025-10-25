@@ -1,4 +1,4 @@
-import httpStatus from 'http-status';
+
 
 import { AuthServices } from './auth.service';
 import catchAsync from '../../utils/catchAsync';
@@ -10,11 +10,11 @@ import config from '../../config';
 
 const cookieOptions: any = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.NODE_ENV === "development",
   sameSite: "none",
   path: "/",
 };
-if (process.env.NODE_ENV === "production") cookieOptions.domain = ".moriyom.com";
+if (process.env.NODE_ENV === "development") cookieOptions.domain = ".moriyom.com";
 
 
 export const loginUser = catchAsync(async (req, res) => {
@@ -104,7 +104,7 @@ export const tokenVerify = catchAsync(async (req, res) => {
       statusCode: 200,
       success: true,
       message: "User info fetched",
-      data: { ...payload, accessToken: token }, // safe because payload is now object
+      data: { ...payload, accessToken: token },
     });
   } catch (err) {
     // Try refresh token

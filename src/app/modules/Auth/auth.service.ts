@@ -11,7 +11,6 @@ import jwt, { SignOptions, JwtPayload } from "jsonwebtoken";
 
 
 export const loginUser = async (payload: any) => {
-  // Superadmin login
   if (payload.tenantDomain === "superadmin") {
     const user = await User.findOne({ name: payload.name, role: "superadmin" }).select("+password");
     if (!user) throw new AppError(httpStatus.NOT_FOUND, "Super admin not found!");
