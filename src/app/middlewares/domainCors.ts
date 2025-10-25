@@ -9,15 +9,12 @@ const CACHE_TTL_SECONDS = 5 * 60;
 
 async function isDomainAllowed(origin: string): Promise<boolean> {
     try {
-        //  Check cache first
         const cacheKey = `cors:domain:${origin}`;
         const cachedValue = await redisClient.get(cacheKey);
 
         if (cachedValue !== null) {
             return cachedValue === 'true';
         }
-
-        //  Check dev whitelist
         if (
             process.env.NODE_ENV === 'development' &&
             config.DEV_ALLOWED_ORIGINS.includes(origin)
@@ -26,10 +23,7 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
             return true;
         }
 
-        // Check in DB for tenant primary domain
         const tenant = await Tenant.findOne({ domain: origin, isActive: true });
-
-        // If not found, check secondary domains
         if (!tenant) {
             const secondaryTenant = await Tenant.findOne({
                 'domains.domain': origin,
@@ -40,8 +34,6 @@ async function isDomainAllowed(origin: string): Promise<boolean> {
             await redisClient.set(cacheKey, isAllowed ? 'true' : 'false', CACHE_TTL_SECONDS);
             return isAllowed;
         }
-
-        //If tenant found, allow and cache
         await redisClient.set(cacheKey, 'true', CACHE_TTL_SECONDS);
         return true;
     } catch (error) {
