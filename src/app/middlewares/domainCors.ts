@@ -56,8 +56,6 @@ export const dynamicCors = (options: cors.CorsOptions = {}) => {
                 ...options,
             })(req, res, next);
         }
-
-        // Resolve if allowed
         const isAllowed = await isDomainAllowed(origin);
 
         if (isAllowed) {
