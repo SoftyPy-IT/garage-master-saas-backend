@@ -279,7 +279,6 @@ const getAllMetaFromDB = async (
   const totalInvoice = await Invoice.find({ isRecycled: false });
   const totalIncome = await Income.find();
   const totalExpense = await Expense.find();
-  const leave = await LeaveRequest.find();
   const tenantInfo = await User.find();
   const subscription = tenantInfo[0]?.tenantInfo?.subscription;
 
@@ -314,12 +313,12 @@ const getAllMetaFromDB = async (
   const formattedTotalAdvance = formatToBDComma(totalAdvance);
   const formattedTotalRemaining = formatToBDComma(totalRemaining);
 
-  // calculate expense
+
   const totalOtherExpense = totalExpense.reduce(
     (sum, expense) => sum + (expense.totalOtherExpense || 0),
     0,
   );
-  // ✅ Calculate income totals
+  // Calculate income totals
   const totalIncomeAmount = totalIncome.reduce(
     (sum, income) => sum + (income.totalAmount || 0),
     0,
@@ -355,7 +354,7 @@ const getAllMetaFromDB = async (
     0,
   );
 
-  // ✅ Quotation status summary
+  // Quotation status summary
   const statusCounts = await Quotation.aggregate([
     {
       $match: {

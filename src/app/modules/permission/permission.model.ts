@@ -37,8 +37,8 @@ export const permissionSchema = new Schema<IPermission>(
   }
 );
 
-permissionSchema.index({ userId: 1, pageId: 1 });
-permissionSchema.index({ roleId: 1 });
-permissionSchema.index({ createdAt: -1 });
+// permissionSchema.index({ userId: 1, pageId: 1 });
+// permissionSchema.index({ roleId: 1 });
+// permissionSchema.index({ createdAt: -1 });
 
 export const Permission = model<IPermission>('Permission', permissionSchema);
