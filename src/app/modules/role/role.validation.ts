@@ -16,6 +16,7 @@ export const createRoleValidationSchema = z.object({
       'accountant',
       'warehouse',
       'user',
+      'employee'
     ], {
       required_error: "Role type is required",
     }),

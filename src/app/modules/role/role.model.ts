@@ -18,6 +18,7 @@ export const roleSchema = new Schema<IRole>(
         'accountant',
         'warehouse',
         'user',
+        'employee'
       ],
     },
     description: {
