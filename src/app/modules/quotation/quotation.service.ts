@@ -19,7 +19,6 @@ import { Customer } from '../customer/customer.model';
 import { Company } from '../company/company.model';
 import { ShowRoom } from '../showRoom/showRoom.model';
 import { TVehicle } from '../vehicle/vehicle.interface';
-import { Vehicle } from '../vehicle/vehicle.model';
 import { formatToIndianCurrency, generateQuotationNo } from './quotation.utils';
 import puppeteer from 'puppeteer';
 import { join } from 'path';
@@ -27,439 +26,6 @@ import ejs from 'ejs';
 import { amountInWords } from '../../middlewares/taka-in-words';
 import { getTenantModel } from '../../utils/getTenantModels';
 
-// export const createQuotationDetails = async (
-//   tenantDomain: string,
-//   payload: {
-//     customer: TCustomer;
-//     company: TCompany;
-//     showroom: TShowRoom;
-//     quotation: TQuotation;
-//     vehicle: TVehicle;
-//   },
-// ) => {
-//   const { connection } = await getTenantModel(tenantDomain, 'Quotation');
-//   const session = await connection.startSession();
-//   session.startTransaction();
-
-//   try {
-//     const { customer, company, showroom, quotation, vehicle } = payload;
-
-//     // Models
-//     const Quotation = (await getTenantModel(tenantDomain, 'Quotation')).Model;
-//     const Customer = (await getTenantModel(tenantDomain, 'Customer')).Model;
-//     const Company = (await getTenantModel(tenantDomain, 'Company')).Model;
-//     const ShowRoom = (await getTenantModel(tenantDomain, 'ShowRoom')).Model;
-//     const Vehicle = (await getTenantModel(tenantDomain, 'Vehicle')).Model;
-//     const Stocks = (await getTenantModel(tenantDomain, 'Stocks')).Model;
-//     const StockTransaction = (await getTenantModel(tenantDomain, 'StockTransaction')).Model;
-//     const Product = (await getTenantModel(tenantDomain, 'Product')).Model;
-
-//     // Sanitize input
-//     const sanitizeCustomer = sanitizePayload(customer);
-//     const sanitizeCompany = sanitizePayload(company);
-//     const sanitizeShowroom = sanitizePayload(showroom);
-//     const sanitizeQuotation = sanitizePayload(quotation);
-//     const sanitizeVehicle = sanitizePayload(vehicle);
-
-//     // Check required totals
-//     if (
-//       sanitizeQuotation.parts_total === undefined ||
-//       sanitizeQuotation.service_total === undefined ||
-//       sanitizeQuotation.net_total === undefined
-//     ) {
-//       throw new AppError(400, 'Missing required total values in quotation');
-//     }
-
-//     // Generate quotation number and amounts in words
-//     const quotationNumber = await generateQuotationNo(tenantDomain);
-//     const partsInWords = amountInWords(sanitizeQuotation.parts_total);
-//     const serviceInWords = amountInWords(sanitizeQuotation.service_total);
-//     const netTotalInWords = amountInWords(sanitizeQuotation.net_total);
-
-//     // Create quotation
-//     const quotationData = new Quotation({
-//       ...sanitizeQuotation,
-//       quotation_no: quotationNumber,
-//       parts_total_in_words: partsInWords,
-//       service_total_in_words: serviceInWords,
-//       net_total_in_words: netTotalInWords,
-//     });
-
-//     await quotationData.save({ session });
-
-//     const { input_data = [], service_input_data = [] } = quotation;
-
-//     // Aggregate stock updates
-//     const productItems = input_data.filter(
-//       (item) => item.product && item.warehouse && item.quantity,
-//     );
-
-//     const stockUpdateMap = new Map<
-//       string,
-//       {
-//         product: string;
-//         warehouse: string;
-//         batchNumber?: string;
-//         totalQuantity: number;
-//         product_name: string;
-//         sellingPrice: number;
-//       }
-//     >();
-
-//     for (const item of productItems) {
-//       const { product, quantity = 0, warehouse, batchNumber, product_name, sellingPrice = 0 } = item;
-//       const key = `${product}-${warehouse}-${batchNumber || 'no-batch'}`;
-
-//       if (stockUpdateMap.has(key)) {
-//         stockUpdateMap.get(key)!.totalQuantity += quantity;
-//       } else {
-//         stockUpdateMap.set(key, {
-//           product: String(product),
-//           warehouse,
-//           batchNumber,
-//           totalQuantity: quantity,
-//           product_name,
-//           sellingPrice,
-//         });
-//       }
-//     }
-
-//     // Update stock and create transactions
-//     for (const { product, warehouse, batchNumber, totalQuantity, product_name, sellingPrice } of stockUpdateMap.values()) {
-//       const stockQuery: any = { product, warehouse };
-//       if (batchNumber) stockQuery.batchNumber = batchNumber;
-
-//       const existingStock = await Stocks.findOne(stockQuery).session(session);
-//       if (!existingStock) throw new AppError(404, `Stock "${product_name}" not found.`);
-
-//       if (existingStock.quantity < totalQuantity) {
-//         throw new AppError(
-//           400,
-//           `Insufficient stock for "${product_name}". Available: ${existingStock.quantity}, Required: ${totalQuantity}`,
-//         );
-//       }
-
-//       // Deduct stock
-//       existingStock.quantity -= totalQuantity;
-//       await existingStock.save({ session });
-
-//       // Record transaction
-//       const stockTransaction = new StockTransaction({
-//         product,
-//         warehouse,
-//         quantity: totalQuantity,
-//         batchNumber,
-//         type: 'out',
-//         referenceType: 'sale',
-//         referenceId: quotationData._id,
-//         sellingPrice,
-//         date: new Date(),
-//       });
-//       await stockTransaction.save({ session });
-
-//       // Update product quantity
-//       const productData = await Product.findById(product).session(session);
-//       if (!productData) throw new AppError(404, `Product not found.`);
-
-//       if ((productData.product_quantity ?? 0) < totalQuantity) {
-//         throw new AppError(
-//           400,
-//           `Insufficient quantity in product "${product_name}". Available: ${productData.product_quantity}, Required: ${totalQuantity}`,
-//         );
-//       }
-
-//       productData.product_quantity -= totalQuantity;
-//       productData.lastSoldDate = new Date().toISOString();
-//       await productData.save({ session });
-//     }
-
-//     // Link quotation to user
-//     if (quotation.user_type === 'customer') {
-//       const existingCustomer = await Customer.findOne({ customerId: quotation.Id }).session(session);
-//       if (existingCustomer) {
-//         await Customer.findByIdAndUpdate(
-//           existingCustomer._id,
-//           { $set: sanitizeCustomer, $push: { quotations: quotationData._id } },
-//           { new: true, runValidators: true, session },
-//         );
-//         quotationData.customer = existingCustomer._id;
-//         await quotationData.save({ session });
-//       }
-//     } else if (quotation.user_type === 'company') {
-//       const existingCompany = await Company.findOne({ companyId: quotation.Id }).session(session);
-//       if (existingCompany) {
-//         await Company.findByIdAndUpdate(
-//           existingCompany._id,
-//           { $set: sanitizeCompany, $push: { quotations: quotationData._id } },
-//           { new: true, runValidators: true, session },
-//         );
-//         quotationData.company = existingCompany._id;
-//         await quotationData.save({ session });
-//       }
-//     } else if (quotation.user_type === 'showRoom') {
-//       const existingShowRoom = await ShowRoom.findOne({ showRoomId: quotation.Id }).session(session);
-//       if (existingShowRoom) {
-//         await ShowRoom.findByIdAndUpdate(
-//           existingShowRoom._id,
-//           { $set: sanitizeShowroom, $push: { quotations: quotationData._id } },
-//           { new: true, runValidators: true, session },
-//         );
-//         quotationData.showRoom = existingShowRoom._id;
-//         await quotationData.save({ session });
-//       }
-//     }
-
-//     // Link vehicle if available
-//     if (vehicle && vehicle.chassis_no) {
-//       const vehicleData = await Vehicle.findOneAndUpdate(
-//         { chassis_no: vehicle.chassis_no },
-//         { $set: { mileageHistory: vehicle.mileageHistory || [] } },
-//         { new: true, runValidators: true, session },
-//       );
-
-//       if (vehicleData) {
-//         quotationData.vehicle = vehicleData._id;
-//         await quotationData.save({ session });
-//       }
-//     }
-
-//     // Commit transaction
-//     await session.commitTransaction();
-//     session.endSession();
-
-//     return quotationData;
-//   } catch (error) {
-//     await session.abortTransaction();
-//     session.endSession();
-//     throw error;
-//   }
-// };
-
-// const updateQuotationIntoDB = async (
-//   tenantDomain: string,
-//   id: string,
-//   payload: {
-//     customer: TCustomer;
-//     company: TCompany;
-//     showroom: TShowRoom;
-//     quotation: TQuotation;
-//     vehicle: TVehicle;
-//   },
-// ) => {
-//   const { Model: Quotation, connection } = await getTenantModel(
-//     tenantDomain,
-//     'Quotation',
-//   );
-//   const Customer = (await getTenantModel(tenantDomain, 'Customer')).Model;
-//   const Company = (await getTenantModel(tenantDomain, 'Company')).Model;
-//   const ShowRoom = (await getTenantModel(tenantDomain, 'ShowRoom')).Model;
-//   const Vehicle = (await getTenantModel(tenantDomain, 'Vehicle')).Model;
-//   const Stocks = (await getTenantModel(tenantDomain, 'Stocks')).Model;
-//   const StockTransaction = (
-//     await getTenantModel(tenantDomain, 'StockTransaction')
-//   ).Model;
-//   const Product = (await getTenantModel(tenantDomain, 'Product')).Model;
-
-//   const session = await connection.startSession();
-//   session.startTransaction();
-
-//   try {
-//     const { customer, company, showroom, quotation, vehicle } = payload;
-
-//     const sanitizeCustomer = sanitizePayload(customer);
-//     const sanitizeCompany = sanitizePayload(company);
-//     const sanitizeShowroom = sanitizePayload(showroom);
-//     const sanitizeQuotation = sanitizePayload(quotation);
-//     const sanitizeVehicle = sanitizePayload(vehicle);
-
-//     const partsInWords = amountInWords(sanitizeQuotation.parts_total as number);
-//     const serviceInWords = amountInWords(
-//       sanitizeQuotation.service_total as number,
-//     );
-//     const netTotalInWords = amountInWords(
-//       sanitizeQuotation.net_total as number,
-//     );
-
-//     const oldQuotation = await Quotation.findById(id).session(session);
-//     if (!oldQuotation)
-//       throw new AppError(StatusCodes.NOT_FOUND, 'No quotation found');
-
-//     const oldStockTransactions = await StockTransaction.find({
-//       referenceId: id,
-//       referenceType: 'sale',
-//     }).session(session);
-
-//     for (const tx of oldStockTransactions) {
-//       const stockQuery: any = { product: tx.product, warehouse: tx.warehouse };
-//       if (tx.batchNumber) stockQuery.batchNumber = tx.batchNumber;
-
-//       const stock = await Stocks.findOne(stockQuery).session(session);
-//       if (stock) {
-//         stock.quantity += tx.quantity;
-//         await stock.save({ session });
-//       }
-//     }
-
-//     await StockTransaction.deleteMany({
-//       referenceId: id,
-//       referenceType: 'sale',
-//     }).session(session);
-
-//     const updateQuotation = await Quotation.findByIdAndUpdate(
-//       id,
-//       {
-//         $set: {
-//           ...sanitizeQuotation,
-//           parts_total_In_words: partsInWords,
-//           service_total_in_words: serviceInWords,
-//           net_total_in_words: netTotalInWords,
-//         },
-//       },
-//       { new: true, runValidators: true, session },
-//     );
-
-//     if (!updateQuotation)
-//       throw new AppError(StatusCodes.NOT_FOUND, 'No quotation found');
-
-//     const { input_data = [], service_input_data = [] } = sanitizeQuotation;
-//     const allItems = [...input_data, ...service_input_data];
-
-//     if (allItems.length > 0) {
-//       const stockUpdateMap = new Map<
-//         string,
-//         {
-//           product: string;
-//           warehouse: string;
-//           batchNumber?: string;
-//           totalQuantity: number;
-//           product_name: string;
-//           sellingPrice: number;
-//         }
-//       >();
-
-//       for (const item of allItems) {
-//         const {
-//           product,
-//           quantity = 0,
-//           warehouse,
-//           batchNumber,
-//           product_name,
-//           sellingPrice = 0,
-//         } = item;
-//         if (!product || !warehouse) continue;
-
-//         const key = `${product}-${warehouse}-${batchNumber || 'no-batch'}`;
-//         if (stockUpdateMap.has(key)) {
-//           stockUpdateMap.get(key)!.totalQuantity += quantity;
-//         } else {
-//           stockUpdateMap.set(key, {
-//             product: String(product),
-//             warehouse,
-//             batchNumber,
-//             totalQuantity: quantity,
-//             product_name,
-//             sellingPrice,
-//           });
-//         }
-//       }
-
-//       for (const {
-//         product,
-//         warehouse,
-//         batchNumber,
-//         totalQuantity,
-//         product_name,
-//         sellingPrice,
-//       } of stockUpdateMap.values()) {
-//         const stockQuery: any = { product, warehouse };
-//         if (batchNumber) stockQuery.batchNumber = batchNumber;
-
-//         const existingStock = await Stocks.findOne(stockQuery).session(session);
-//         if (!existingStock) {
-//           throw new AppError(
-//             StatusCodes.NOT_FOUND,
-//             `Stock "${product_name}" not found.`,
-//           );
-//         }
-
-//         if (existingStock.quantity < totalQuantity) {
-//           throw new AppError(
-//             StatusCodes.BAD_REQUEST,
-//             `Insufficient stock for "${product_name}". Available: ${existingStock.quantity}, Required: ${totalQuantity}`,
-//           );
-//         }
-
-//         existingStock.quantity -= totalQuantity;
-//         await existingStock.save({ session });
-
-//         const stockTransaction = new StockTransaction({
-//           product,
-//           warehouse,
-//           quantity: totalQuantity,
-//           batchNumber,
-//           type: 'out',
-//           referenceType: 'sale',
-//           referenceId: updateQuotation._id,
-//           sellingPrice,
-//           date: new Date(),
-//         });
-
-//         await stockTransaction.save({ session });
-//       }
-//     }
-
-//     if (quotation.user_type === 'customer') {
-//       const existingCustomer = await Customer.findOne({
-//         customerId: quotation.Id,
-//       }).session(session);
-//       if (existingCustomer) {
-//         await Customer.findByIdAndUpdate(
-//           existingCustomer._id,
-//           { $set: sanitizeCustomer },
-//           { new: true, runValidators: true, session },
-//         );
-//       }
-//     } else if (quotation.user_type === 'company') {
-//       const existingCompany = await Company.findOne({
-//         companyId: quotation.Id,
-//       }).session(session);
-//       if (existingCompany) {
-//         await Company.findByIdAndUpdate(
-//           existingCompany._id,
-//           { $set: sanitizeCompany },
-//           { new: true, runValidators: true, session },
-//         );
-//       }
-//     } else if (quotation.user_type === 'showRoom') {
-//       const existingShowRoom = await ShowRoom.findOne({
-//         showRoomId: quotation.Id,
-//       }).session(session);
-//       if (existingShowRoom) {
-//         await ShowRoom.findByIdAndUpdate(
-//           existingShowRoom._id,
-//           { $set: sanitizeShowroom },
-//           { new: true, runValidators: true, session },
-//         );
-//       }
-//     }
-
-//     if (vehicle?.chassis_no) {
-//       await Vehicle.findOneAndUpdate(
-//         { chassis_no: vehicle.chassis_no },
-//         { $set: sanitizeVehicle },
-//         { new: true, runValidators: true, session },
-//       );
-//     }
-
-//     await session.commitTransaction();
-//     session.endSession();
-//     return updateQuotation;
-//   } catch (error) {
-//     await session.abortTransaction();
-//     session.endSession();
-//     throw error;
-//   }
-// };
 
 export const createQuotationDetails = async (
   tenantDomain: string,
@@ -538,7 +104,7 @@ export const createQuotationDetails = async (
         totalQuantity: number;
         product_name: string;
         sellingPrice: number;
-        totalValue: number; // Added to calculate average selling price
+        totalValue: number;
       }
     >();
 
@@ -550,7 +116,6 @@ export const createQuotationDetails = async (
         product_name,
         sellingPrice = 0,
       } = item;
-      // Remove batchNumber from the key - now only product and warehouse
       const key = `${product}-${warehouse}`;
 
       if (stockUpdateMap.has(key)) {
@@ -577,15 +142,16 @@ export const createQuotationDetails = async (
       product_name,
       totalValue,
     } of stockUpdateMap.values()) {
-      // Calculate average selling price
       const averageSellingPrice = totalValue / totalQuantity;
+      console.log('total quantity', totalQuantity)
 
-      // Find existing stock without batchNumber filter
+      // Find existing stock without 
       const existingStock = await Stocks.findOne({
         product,
         warehouse,
       }).session(session);
-      
+      console.log('exisiting qunatity check ', existingStock)
+
       if (!existingStock) {
         throw new AppError(404, `Stock for product "${product_name}" not found in warehouse.`);
       }
@@ -597,11 +163,9 @@ export const createQuotationDetails = async (
         );
       }
 
-      // Deduct stock
       existingStock.quantity -= totalQuantity;
       await existingStock.save({ session });
 
-      // Record transaction without batchNumber
       const stockTransaction = new StockTransaction({
         product,
         warehouse,
@@ -609,7 +173,7 @@ export const createQuotationDetails = async (
         type: 'out',
         referenceType: 'sale',
         referenceId: quotationData._id,
-        sellingPrice: averageSellingPrice, // Use average selling price
+        sellingPrice: averageSellingPrice,
         date: new Date(),
       });
       await stockTransaction.save({ session });

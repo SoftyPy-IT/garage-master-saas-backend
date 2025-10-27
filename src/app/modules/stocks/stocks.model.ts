@@ -60,7 +60,7 @@ export const stockSchema = new Schema<IStock>(
   },
 );
 
-// 🔹 Virtual for stock value
+
 stockSchema.virtual('stockValue').get(function () {
   if (this.type === 'in' && this.purchasePrice != null) {
     return this.quantity * this.purchasePrice;
@@ -68,7 +68,7 @@ stockSchema.virtual('stockValue').get(function () {
   return null;
 });
 
-// 🔹 Index for faster query
+
 stockSchema.index({ product: 1, warehouse: 1, batchNumber: 1 });
 
 export const Stocks = model<IStock>('Stocks', stockSchema);

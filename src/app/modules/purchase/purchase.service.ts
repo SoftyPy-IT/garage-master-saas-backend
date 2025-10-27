@@ -4,28 +4,22 @@ import { TPurchase } from './purchase.interface';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { reCalcSupplierTotals } from '../supplier/supplier.service';
 
-const createPurchase = async (tenantDomain: string, payload: any) => {
-  const { Model: Purchase, connection } = await getTenantModel(
-    tenantDomain,
-    'Purchase',
-  );
+
+export const createPurchase = async (tenantDomain: string, payload: any) => {
+  const { Model: Purchase, connection } = await getTenantModel(tenantDomain, 'Purchase');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
-  const { Model: StockTransaction } = await getTenantModel(
-    tenantDomain,
-    'StockTransaction',
-  );
-
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
   const session = await connection.startSession();
-  session.startTransaction();
-
   try {
+    session.startTransaction();
+
     const [newPurchase] = await Purchase.create([payload], { session });
 
     let affectedSuppliers: string[] = [];
 
-    //  Update suppliers
     if (payload.suppliers?.length) {
       for (const supplierId of payload.suppliers) {
         const supplier = await Supplier.findById(supplierId).session(session);
@@ -34,147 +28,272 @@ const createPurchase = async (tenantDomain: string, payload: any) => {
         if (!supplier.purchases.includes(newPurchase._id)) {
           supplier.purchases.push(newPurchase._id);
         }
-
         await supplier.save({ session });
         affectedSuppliers.push(supplierId.toString());
       }
     }
 
-    //  Update stock + create StockTransaction
+
     if (payload.products?.length) {
       for (const item of payload.products) {
         const productId = item.productId;
         const quantity = Number(item.quantity) || 0;
-        const warehouse = payload.warehouse;
+        const warehouseId = Array.isArray(payload.warehouse)
+          ? payload.warehouse[0]
+          : payload.warehouse;
+        const stockQuery: any = {
+          product: productId,
+          warehouse: warehouseId,
+          type: 'in'
+        };
 
-        // ✅ query তৈরি
-        const query: any = { product: productId, warehouse };
-        if (item.batchNumber) query.batchNumber = item.batchNumber;
-
-        const existingStock = await Stocks.findOne(query).session(session);
+        if (item.batchNumber) {
+          stockQuery.batchNumber = item.batchNumber;
+        }
+        const existingStock = await Stocks.findOne(stockQuery).session(session);
 
         if (existingStock) {
           existingStock.quantity += quantity;
           await existingStock.save({ session });
         } else {
-          await Stocks.create(
-            [
-              {
-                product: productId,
-                warehouse,
-                quantity,
-                batchNumber: item.batchNumber || undefined,
-                expiryDate: item.expiryDate || undefined,
-                type: 'in',
-                referenceType: 'purchase',
-              },
-            ],
-            { session },
-          );
+          const stock = await Stocks.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity: quantity,
+            batchNumber: item.batchNumber || null,
+            expiryDate: item.expiryDate || null,
+            type: 'in',
+            referenceType: 'purchase',
+            referenceId: newPurchase._id,
+            purchasePrice: Number(item.productPrice) || 0,
+            date: new Date(),
+          }], { session });
         }
 
-        //  Update product stock quantity
+        const wsQuery = {
+          product: productId,
+          warehouse: warehouseId
+        };
+
+        const warehouseStock = await WarehouseStock.findOne(wsQuery).session(session);
+
+
+        if (warehouseStock) {
+          warehouseStock.quantity += quantity;
+          await warehouseStock.save({ session });
+        } else {
+          const newWarehouseStock = await WarehouseStock.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity: quantity,
+          }], { session });
+        }
+
+        // Update Product total stock
         await Product.findByIdAndUpdate(
           productId,
           { $inc: { stock: quantity } },
-          { new: true, session },
+          { session }
         );
 
-        //  Create StockTransaction log
-        await StockTransaction.create(
-          [
-            {
-              product: productId,
-              warehouse,
-              quantity,
-              batchNumber: item.batchNumber || undefined,
-              type: 'in',
-              referenceType: 'purchase',
-              referenceId: newPurchase._id,
-              sellingPrice: Number(item.productPrice) || 0,
-              date: new Date(),
-            },
-          ],
-          { session },
-        );
+        // Create stock transaction record
+        await StockTransaction.create([{
+          product: productId,
+          warehouse: warehouseId,
+          quantity: quantity,
+          batchNumber: item.batchNumber || null,
+          type: 'in',
+          referenceType: 'purchase',
+          referenceId: newPurchase._id,
+          sellingPrice: Number(item.productPrice) || 0,
+          date: new Date(),
+        }], { session });
       }
     }
 
     await session.commitTransaction();
     session.endSession();
 
-    // Recalculate supplier totals
     for (const supplierId of affectedSuppliers) {
       await reCalcSupplierTotals(tenantDomain, supplierId);
     }
 
     return newPurchase;
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
-    console.error('❌ Purchase creation failed:', err);
+
+    console.error(' Purchase creation failed:', err);
     throw err;
   }
 };
-
-const updatePurchase = async (
+export const updatePurchase = async (
   tenantDomain: string,
   id: string,
-  payload: Partial<TPurchase>,
+  payload: Partial<TPurchase>
 ) => {
-  const { Model: Purchase, connection } = await getTenantModel(
-    tenantDomain,
-    'Purchase',
-  );
+  const { Model: Purchase, connection } = await getTenantModel(tenantDomain, 'Purchase');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
+  const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
+  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
 
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    const purchase = await Purchase.findById(id).session(session);
-    if (!purchase) throw new Error('Purchase not found');
+    const existingPurchase = await Purchase.findById(id).session(session);
+    if (!existingPurchase) throw new Error('Purchase not found');
+    if (existingPurchase.products?.length) {
+      for (const oldItem of existingPurchase.products) {
+        const productId = oldItem.productId;
+        const quantity = Number(oldItem.quantity) || 0;
+        const warehouseId = Array.isArray(existingPurchase.warehouse)
+          ? existingPurchase.warehouse[0]
+          : existingPurchase.warehouse;
 
-    const updated = await Purchase.findByIdAndUpdate(id, payload, {
-      new: true,
-      session,
-    });
 
-    if (updated.suppliers && updated.suppliers.length) {
-      for (const supplierId of updated.suppliers) {
-        const supplier = await Supplier.findById(supplierId).session(session);
-        if (!supplier) continue;
 
-        if (!supplier.purchases.includes(updated._id)) {
-          supplier.purchases.push(updated._id);
+        // Revert WarehouseStock
+        const ws = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+        if (ws) {
+          ws.quantity -= quantity;
+          if (ws.quantity < 0) ws.quantity = 0;
+          await ws.save({ session });
         }
 
-        await supplier.save({ session });
+        // Revert Product total
+        await Product.findByIdAndUpdate(productId, { $inc: { stock: -quantity } }, { session });
 
+        // Revert stock record
+        const st = await Stocks.findOne({
+          product: productId,
+          warehouse: warehouseId,
+          referenceId: id,
+          referenceType: 'purchase'
+        }).session(session);
+
+        if (st) {
+          st.quantity -= quantity;
+          if (st.quantity <= 0) await Stocks.deleteOne({ _id: st._id }).session(session);
+          else await st.save({ session });
+        }
+
+        // Remove stock transaction linked to this purchase
+        await StockTransaction.deleteMany({
+          referenceId: id,
+          referenceType: 'purchase',
+          product: productId
+        }).session(session);
+      }
+    }
+
+    const updatedPurchase = await Purchase.findByIdAndUpdate(id, payload, { new: true, session });
+
+    if (payload.products?.length) {
+      for (const item of payload.products) {
+        const productId = item.productId;
+        const quantity = Number(item.quantity) || 0;
+        const warehouseId = Array.isArray(payload.warehouse)
+          ? payload.warehouse[0]
+          : payload.warehouse;
+
+        // Update/create stock
+        const stockQuery: any = {
+          product: productId,
+          warehouse: warehouseId,
+          type: 'in',
+          batchNumber: item.batchNumber || null,
+          referenceType: 'purchase',
+          referenceId: updatedPurchase._id,
+        };
+
+        const existingStock = await Stocks.findOne(stockQuery).session(session);
+        if (existingStock) {
+          existingStock.quantity += quantity;
+          await existingStock.save({ session });
+        } else {
+          await Stocks.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity: quantity,
+            batchNumber: item.batchNumber || null,
+            expiryDate: item.expiryDate || null,
+            type: 'in',
+            referenceType: 'purchase',
+            referenceId: updatedPurchase._id,
+            purchasePrice: Number(item.productPrice) || 0,
+            date: new Date(),
+          }], { session });
+        }
+
+        // Update WarehouseStock
+        const warehouseStock = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+        if (warehouseStock) {
+          warehouseStock.quantity += quantity;
+          await warehouseStock.save({ session });
+        } else {
+          await WarehouseStock.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity: quantity,
+          }], { session });
+        }
+
+        // Update Product total stock
+        await Product.findByIdAndUpdate(productId, { $inc: { stock: quantity } }, { session });
+
+        // Create new StockTransaction
+        await StockTransaction.create([{
+          product: productId,
+          warehouse: warehouseId,
+          quantity: quantity,
+          batchNumber: item.batchNumber || null,
+          type: 'in',
+          referenceType: 'purchase',
+          referenceId: updatedPurchase._id,
+          sellingPrice: Number(item.productPrice) || 0,
+          date: new Date(),
+        }], { session });
+      }
+    }
+
+    //  supplier link
+    if (updatedPurchase.suppliers && updatedPurchase.suppliers.length) {
+      for (const supplierId of updatedPurchase.suppliers) {
+        const supplier = await Supplier.findById(supplierId).session(session);
+        if (!supplier) continue;
+        if (!supplier.purchases.includes(updatedPurchase._id)) {
+          supplier.purchases.push(updatedPurchase._id);
+        }
+        await supplier.save({ session });
         await reCalcSupplierTotals(tenantDomain, supplierId);
       }
     }
 
     await session.commitTransaction();
     session.endSession();
-    return updated;
+
+    return updatedPurchase;
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    console.error('Update Purchase failed:', err);
     throw err;
   }
 };
 
-const deletePurchase = async (tenantDomain: string, id: string) => {
-  const { Model: Purchase } = await getTenantModel(tenantDomain, 'Purchase');
+
+export const deletePurchase = async (tenantDomain: string, id: string) => {
+  const { Model: Purchase, connection } = await getTenantModel(tenantDomain, 'Purchase');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
-  const { Model: StockTransaction } = await getTenantModel(
-    tenantDomain,
-    'StockTransaction',
-  );
-  const { Model: connection } = await getTenantModel(tenantDomain, 'Purchase');
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
 
   const session = await connection.startSession();
   session.startTransaction();
@@ -187,69 +306,93 @@ const deletePurchase = async (tenantDomain: string, id: string) => {
     const purchasePaidAmount = purchase.paidAmount || 0;
     const purchaseDueAmount = purchase.dueAmount || 0;
 
-    // Remove purchase from supplier's purchases array
-    await Supplier.updateMany(
-      { _id: { $in: supplierIds } },
-      { $pull: { purchases: id } },
-      { session },
-    );
+    // Remove the purchase ID from the suppliers' purchases array
+    if (supplierIds.length) {
+      await Supplier.updateMany(
+        { _id: { $in: supplierIds } },
+        { $pull: { purchases: id } },
+        { session }
+      );
+    }
 
-    //  স্টক আপডেট এবং StockTransaction log
-    if (purchase.products && purchase.products.length) {
+    // Update stock, warehouse stock, product totals, and create stock transactions
+    if (purchase.products?.length) {
       for (const item of purchase.products) {
         const productId = item.productId;
-        const quantity = item.quantity || 0;
-        const warehouse = purchase.warehouse;
+        const quantity = Number(item.quantity) || 0;
 
-        const existingStock = await Stocks.findOne({
+        // Normalize warehouse (use first if it's an array)
+        const warehouseId = Array.isArray(purchase.warehouse)
+          ? purchase.warehouse[0]
+          : purchase.warehouse;
+
+        // Update Stocks collection
+        const stockQuery: any = {
           product: productId,
-          warehouse: warehouse,
-          batchNumber: item.batchNumber || null,
-        }).session(session);
+          warehouse: warehouseId,
+          type: 'in',
+          batchNumber: item.batchNumber ?? null,
+          referenceType: 'purchase',
+          referenceId: purchase._id,
+        };
+        const existingStock = await Stocks.findOne(stockQuery).session(session);
 
         if (existingStock) {
           if (existingStock.quantity >= quantity) {
             existingStock.quantity -= quantity;
-            await existingStock.save({ session });
+            if (existingStock.quantity <= 0) {
+              await Stocks.deleteOne({ _id: existingStock._id }).session(session);
+            } else {
+              await existingStock.save({ session });
+            }
           } else {
             throw new Error(
-              `স্টকে পর্যাপ্ত পরিমাণ পণ্য নেই। বর্তমান স্টক: ${existingStock.quantity}, বাদ দিতে চাচ্ছেন: ${quantity}`,
+              `Insufficient stock. Current stock: ${existingStock.quantity}, trying to remove: ${quantity}`
             );
           }
         } else {
-          throw new Error(`এই পণ্যের জন্য কোনো স্টক রেকর্ড পাওয়া যায়নি`);
+          throw new Error(`No stock record found for this product`);
         }
 
+        // Update WarehouseStock collection
+        const warehouseStock = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+        if (warehouseStock) {
+          warehouseStock.quantity -= quantity;
+          if (warehouseStock.quantity < 0) warehouseStock.quantity = 0;
+          await warehouseStock.save({ session });
+        }
+
+        // Update total product stock
         await Product.findByIdAndUpdate(
           productId,
           { $inc: { stock: -quantity } },
-          { session },
+          { session }
         );
 
-        //  Add StockTransaction log (out)
+        // Create a stock transaction log for this deletion
         await StockTransaction.create(
-          [
-            {
-              product: productId,
-              warehouse,
-              quantity,
-              batchNumber: item.batchNumber || undefined,
-              type: 'out',
-              referenceType: 'purchase_delete',
-              referenceId: purchase._id,
-              date: new Date(),
-            },
-          ],
-          { session },
+          [{
+            product: productId,
+            warehouse: warehouseId,
+            quantity,
+            batchNumber: item.batchNumber ?? null,
+            type: 'out',
+            referenceType: 'purchase_delete',
+            referenceId: purchase._id,
+            date: new Date(),
+          }],
+          { session }
         );
       }
     }
 
+    // Delete the purchase record itself
     await Purchase.deleteOne({ _id: id }, { session });
 
     await session.commitTransaction();
     session.endSession();
 
+    // Recalculate supplier totals after deletion
     for (const supplierId of supplierIds) {
       await reCalcSupplierTotals(tenantDomain, supplierId);
     }
@@ -260,11 +403,13 @@ const deletePurchase = async (tenantDomain: string, id: string) => {
       removedDueAmount: purchaseDueAmount,
     };
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
     session.endSession();
+    console.error('Delete Purchase failed:', err);
     throw err;
   }
 };
+
 
 const getAllPurchase = async (
   tenantDomain: string,
