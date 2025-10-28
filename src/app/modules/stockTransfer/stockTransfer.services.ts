@@ -1,7 +1,4 @@
-// stockTransfer.services.ts
-import mongoose from 'mongoose';
 import { getTenantModel } from '../../utils/getTenantModels';
-import { calculateCurrentStock } from '../stocks/stocks.service';
 
 const getAllStockTransfers = async (tenantDomain: string) => {
   const { Model: StockTransfer } = await getTenantModel(
@@ -15,8 +12,7 @@ const getAllStockTransfers = async (tenantDomain: string) => {
 
   return transfers;
 };
-
-const createStockTransfer = async (
+export const createStockTransfer = async (
   tenantDomain: string,
   transferData: {
     referenceNo: string;
@@ -27,18 +23,16 @@ const createStockTransfer = async (
     items: Array<{
       product: string;
       quantity: number;
-      note: string;
-      batchNumber: string;
+      note?: string;
+      batchNumber?: string;
     }>;
   }
 ): Promise<{ success: boolean; message?: string; data?: any }> => {
-  const { Model: StockTransfer, connection } = await getTenantModel(
-    tenantDomain,
-    'StockTransfer',
-  );
 
+  const { Model: StockTransfer, connection } = await getTenantModel(tenantDomain, 'StockTransfer');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 
   const session = await connection.startSession();
@@ -49,112 +43,136 @@ const createStockTransfer = async (
     const transferResults = [];
 
     for (const item of items) {
-      // Use proper aggregation to calculate current stock
-      const stockAggregation = await Stocks.aggregate([
-        {
-          $match: {
-            product: new mongoose.Types.ObjectId(item.product),
-            warehouse: new mongoose.Types.ObjectId(fromWarehouse),
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            totalIn: { $sum: { $cond: [{ $eq: ['$type', 'in'] }, '$quantity', 0] } },
-            totalOut: { $sum: { $cond: [{ $eq: ['$type', 'out'] }, '$quantity', 0] } }
-          }
-        }
-      ]).session(session);
+      const productId = item.product;
+      const transferQty = Number(item.quantity);
 
-      const currentStock = stockAggregation.length > 0 
-        ? stockAggregation[0].totalIn - stockAggregation[0].totalOut 
-        : 0;
+      // 1) check warehouse stock
+      const sourceWarehouseStock = await WarehouseStock.findOne({
+        warehouse: fromWarehouse,
+        product: productId,
+      }).session(session);
 
-      if (currentStock < item.quantity) {
-        await session.abortTransaction();
-        session.endSession();
-        return {
-          success: false,
-          message: `Insufficient stock for product ${item.product} in source warehouse. Current stock: ${currentStock}, Requested: ${item.quantity}`,
-        };
+      const currentStock = sourceWarehouseStock?.quantity || 0;
+
+      if (currentStock < transferQty) {
+        throw new Error(
+          `Insufficient stock for product ${productId} in source warehouse. Current stock: ${currentStock}, Requested: ${transferQty}`
+        );
       }
 
-      // Create stock transfer record
-      const transfer = new StockTransfer({
-        product: item.product,
-        fromWarehouse,
-        toWarehouse,
-        quantity: item.quantity,
-        transferId: referenceNo,
-        batchNumber: item.batchNumber,
-        note: item.note,
-        transferredBy,
-        date: new Date(date),
-        status: 'completed',
-      });
+      // 2) create StockTransfer (single doc)
+      const [transfer] = await StockTransfer.create(
+        [
+          {
+            product: productId,
+            fromWarehouse,
+            toWarehouse,
+            quantity: transferQty,
+            transferId: referenceNo,
+            batchNumber: item.batchNumber || null,
+            note: item.note || '',
+            transferredBy,
+            date: new Date(date),
+            status: 'completed',
+          },
+        ],
+        { session }
+      ); // create with single-doc array is safe
 
-      await transfer.save({ session });
+      // 3) Stocks entries (out and in) — single docs individually
+      await Stocks.create(
+        [
+          {
+            product: productId,
+            warehouse: fromWarehouse,
+            type: 'out',
+            quantity: transferQty,
+            referenceType: 'transfer',
+            referenceId: transfer._id,
+            date: new Date(date),
+            batchNumber: item.batchNumber || null,
+            note: item.note || '',
+            purchasePrice: 0,
+            sellingPrice: 0,
+          },
+        ],
+        { session }
+      );
 
-      // Create stock record for source warehouse (out transaction)
-      const sourceStockOut = new Stocks({
-        product: item.product,
-        warehouse: fromWarehouse,
-        type: 'out',
-        quantity: item.quantity,
-        referenceType: 'transfer',
-        referenceId: transfer._id,
-        date: new Date(date),
-        batchNumber: item.batchNumber,
-        note: item.note,
-        purchasePrice: 0,
-        sellingPrice: 0, 
-      });
+      await Stocks.create(
+        [
+          {
+            product: productId,
+            warehouse: toWarehouse,
+            type: 'in',
+            quantity: transferQty,
+            referenceType: 'transfer',
+            referenceId: transfer._id,
+            date: new Date(date),
+            batchNumber: item.batchNumber || null,
+            note: item.note || '',
+            purchasePrice: 0,
+            sellingPrice: 0,
+          },
+        ],
+        { session }
+      );
 
-      await sourceStockOut.save({ session });
+      // 4) Update WarehouseStock -- decrease source
+      sourceWarehouseStock.quantity -= transferQty;
+      await sourceWarehouseStock.save({ session });
 
-      // FIXED: Create stock transaction for source warehouse (out)
-      const sourceTransaction = new StockTransaction({
-        product: item.product,
-        warehouse: fromWarehouse,
-        quantity: item.quantity,
-        type: 'out',
-        referenceType: 'transfer',
-        referenceId: transfer._id,
-        date: new Date(date),
-      });
-
-      await sourceTransaction.save({ session });
-
-      // FIXED: Create stock record for destination warehouse (in transaction)
-      const destStockIn = new Stocks({
-        product: item.product,
+      // increase / create destination WarehouseStock
+      const destWarehouseStock = await WarehouseStock.findOne({
         warehouse: toWarehouse,
-        type: 'in',
-        quantity: item.quantity,
-        referenceType: 'transfer',
-        referenceId: transfer._id,
-        date: new Date(date),
-        batchNumber: item.batchNumber,
-        note: item.note,
-     
-        purchasePrice: 0,
-        sellingPrice: 0,
-      });
+        product: productId,
+      }).session(session);
 
-      await destStockIn.save({ session });
+      if (destWarehouseStock) {
+        destWarehouseStock.quantity += transferQty;
+        await destWarehouseStock.save({ session });
+      } else {
+        // create single doc
+        await WarehouseStock.create(
+          [
+            {
+              warehouse: toWarehouse,
+              product: productId,
+              quantity: transferQty,
+            },
+          ],
+          { session }
+        );
+      }
 
-      // FIXED: Create stock transaction for destination warehouse (in)
-      const destTransaction = new StockTransaction({
-        product: item.product,
-        warehouse: toWarehouse,
-        quantity: item.quantity,
-        type: 'in',
-        referenceType: 'transfer',
-        referenceId: transfer._id,
-        date: new Date(date),
-      });
+      // 5) Product.total stock: DO NOT change (transfer keeps global stock intact)
+      // If you DID want to sync Product.stock to sum of warehouses, do it separately.
 
-      await destTransaction.save({ session });
+      // 6) Create StockTransaction logs.
+      // <-- FIX: use insertMany with ordered: true when creating multiple docs with session
+      await StockTransaction.insertMany(
+        [
+          {
+            product: productId,
+            warehouse: fromWarehouse,
+            quantity: transferQty,
+            type: 'out',
+            referenceType: 'transfer',
+            referenceId: transfer._id,
+            date: new Date(date),
+          },
+          {
+            product: productId,
+            warehouse: toWarehouse,
+            quantity: transferQty,
+            type: 'in',
+            referenceType: 'transfer',
+            referenceId: transfer._id,
+            date: new Date(date),
+          },
+        ],
+        { session, ordered: true } // << important to avoid the create() session+multiple-docs error
+      );
 
       transferResults.push(transfer);
     }
@@ -168,7 +186,9 @@ const createStockTransfer = async (
       data: transferResults,
     };
   } catch (error: any) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     console.error('Stock transfer failed:', error);
     return {
@@ -179,136 +199,121 @@ const createStockTransfer = async (
 };
 
 
-const deleteStockTransfer = async (
+export const deleteStockTransfer = async (
   tenantDomain: string,
   id: string,
 ): Promise<{ deleted: boolean; message?: string }> => {
-  const { Model: StockTransfer, connection } = await getTenantModel(
-    tenantDomain,
-    'StockTransfer',
-  );
+  const { Model: StockTransfer, connection } = await getTenantModel(tenantDomain, 'StockTransfer');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
-  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
 
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    // find stock transper
     const stockTransfer = await StockTransfer.findById(id).session(session);
     if (!stockTransfer) {
       await session.abortTransaction();
       session.endSession();
-      return { deleted: false, message: 'Do not find stock transfer' };
+      return { deleted: false, message: 'Stock transfer not found' };
     }
 
-    // reverse transaction make
-    // ১. source warehouse stock return  
-    const sourceReversalStock = new Stocks({
-      product: stockTransfer.product,
-      warehouse: stockTransfer.fromWarehouse,
-      type: 'in',
-      quantity: stockTransfer.quantity,
-      referenceType: 'transfer',
-      referenceId: stockTransfer._id,
-      date: new Date(),
-      batchNumber: stockTransfer.batchNumber,
-      note: `reverse: ${stockTransfer.note || ''}`,
-      purchasePrice: 0,
-      sellingPrice: 0,
-    });
+    const { product, fromWarehouse, toWarehouse, quantity, batchNumber, note } = stockTransfer;
 
-    await sourceReversalStock.save({ session });
+    // 1️⃣ Reverse WarehouseStock adjustments
+    // Return stock to source warehouse
+    const fromWS = await WarehouseStock.findOne({ warehouse: fromWarehouse, product }).session(session);
+    if (fromWS) {
+      fromWS.quantity += quantity;
+      await fromWS.save({ session });
+    } else {
+      await WarehouseStock.create([{ warehouse: fromWarehouse, product, quantity }], { session });
+    }
 
-    // source warehouse stock transaction make
-    const sourceReversalTransaction = new StockTransaction({
-      product: stockTransfer.product,
-      warehouse: stockTransfer.fromWarehouse,
-      quantity: stockTransfer.quantity,
-      type: 'in',
-      referenceType: 'transfer',
-      referenceId: stockTransfer._id,
-      date: new Date(),
-    });
+    // Decrease stock from destination warehouse
+    const toWS = await WarehouseStock.findOne({ warehouse: toWarehouse, product }).session(session);
+    if (toWS) {
+      toWS.quantity = Math.max(0, toWS.quantity - quantity); // prevent negative
+      await toWS.save({ session });
+    }
 
-    await sourceReversalTransaction.save({ session });
-
-    // ২. stock out from destination warehouse 
-    const destReversalStock = new Stocks({
-      product: stockTransfer.product,
-      warehouse: stockTransfer.toWarehouse,
-      type: 'out',
-      quantity: stockTransfer.quantity,
-      referenceType: 'transfer',
-      referenceId: stockTransfer._id,
-      date: new Date(),
-      batchNumber: stockTransfer.batchNumber,
-      note: `reverse: ${stockTransfer.note || ''}`,
-      purchasePrice: 0,
-      sellingPrice: 0,
-    });
-
-    await destReversalStock.save({ session });
-
-    // stock transaction make for destination warehouse 
-    const destReversalTransaction = new StockTransaction({
-      product: stockTransfer.product,
-      warehouse: stockTransfer.toWarehouse,
-      quantity: stockTransfer.quantity,
-      type: 'out',
-      referenceType: 'transfer',
-      referenceId: stockTransfer._id,
-      date: new Date(),
-    });
-
-    await destReversalTransaction.save({ session });
-
-    // ৩. delete original stock transaction 
-    await StockTransaction.deleteMany(
-      { referenceType: 'transfer', referenceId: stockTransfer._id },
-      { session }
-    );
-
-    // ৪. delete stock transfer
-    await StockTransfer.deleteOne({ _id: id }, { session });
-
-    // ৫. count stock quantity again
-    const fromWarehouseStock = await calculateCurrentStock(
-      tenantDomain,
-      stockTransfer.product,
-      stockTransfer.fromWarehouse,
-      session,
-    );
-    
-    const toWarehouseStock = await calculateCurrentStock(
-      tenantDomain,
-      stockTransfer.product,
-      stockTransfer.toWarehouse,
-      session,
-    );
-
-    await Product.findByIdAndUpdate(
-      stockTransfer.product,
-      {
-        $set: {
-          quantity: fromWarehouseStock + toWarehouseStock,
+    // 2️⃣ Reverse Stock entries (log the reversal in Stocks)
+    await Stocks.insertMany(
+      [
+        {
+          product,
+          warehouse: fromWarehouse,
+          type: 'in',
+          quantity,
+          referenceType: 'transfer-reversal',
+          referenceId: stockTransfer._id,
+          batchNumber,
+          note: `Reversal of transfer ${note || ''}`,
+          date: new Date(),
+          purchasePrice: 0,
+          sellingPrice: 0,
         },
-      },
-      { session },
+        {
+          product,
+          warehouse: toWarehouse,
+          type: 'out',
+          quantity,
+          referenceType: 'transfer-reversal',
+          referenceId: stockTransfer._id,
+          batchNumber,
+          note: `Reversal of transfer ${note || ''}`,
+          date: new Date(),
+          purchasePrice: 0,
+          sellingPrice: 0,
+        },
+      ],
+      { session, ordered: true }
     );
+
+    // 3️⃣ Reverse StockTransaction logs
+    await StockTransaction.insertMany(
+      [
+        {
+          product,
+          warehouse: fromWarehouse,
+          quantity,
+          type: 'in',
+          referenceType: 'transfer-reversal',
+          referenceId: stockTransfer._id,
+          date: new Date(),
+        },
+        {
+          product,
+          warehouse: toWarehouse,
+          quantity,
+          type: 'out',
+          referenceType: 'transfer-reversal',
+          referenceId: stockTransfer._id,
+          date: new Date(),
+        },
+      ],
+      { session, ordered: true }
+    );
+
+    // 4️⃣ Delete original movement data
+    await Stocks.deleteMany({ referenceType: 'transfer', referenceId: stockTransfer._id }).session(session);
+    await StockTransaction.deleteMany({ referenceType: 'transfer', referenceId: stockTransfer._id }).session(session);
+    await StockTransfer.deleteOne({ _id: id }).session(session);
 
     await session.commitTransaction();
     session.endSession();
-    return { deleted: true, message: 'Deleted stock transfer successfully' };
+
+    return { deleted: true, message: 'Stock transfer deleted and reversed successfully' };
   } catch (error: any) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
     session.endSession();
-    console.error('Do not delete stock transfer:', error);
-    return { deleted: false, message: error.message || 'Failed to deleted stock transfer !' };
+    console.error('Delete stock transfer failed:', error);
+    return { deleted: false, message: error.message || 'Failed to delete stock transfer' };
   }
 };
-const updateStockTransfer = async (
+
+export const updateStockTransfer = async (
   tenantDomain: string,
   id: string,
   updateData: {
@@ -319,58 +324,68 @@ const updateStockTransfer = async (
     note?: string;
   }
 ): Promise<{ success: boolean; message?: string; data?: any }> => {
-  const { Model: StockTransfer, connection } = await getTenantModel(
-    tenantDomain,
-    'StockTransfer',
-  );
+  const { Model: StockTransfer, connection } = await getTenantModel(tenantDomain, 'StockTransfer');
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+  const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
 
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    // Find the stock transfer record
-    const stockTransfer = await StockTransfer.findById(id).session(session);
-    if (!stockTransfer) {
+    const transferDocs = await StockTransfer.find({
+      $or: [{ _id: id }, { transferId: id }, { _id: id }],
+    }).session(session);
+
+    if (!transferDocs.length) {
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: 'Stock transfer not found' };
     }
 
-    // Fields allowed for update
     const allowedUpdates = ['referenceNo', 'date', 'transferredBy', 'status', 'note'];
     const updates = Object.keys(updateData);
-    
-    // Check if attempting to update invalid fields
-    const isValidOperation = updates.every(update => allowedUpdates.includes(update));
-    
+
+    const isValidOperation = updates.every((update) => allowedUpdates.includes(update));
     if (!isValidOperation) {
       await session.abortTransaction();
       session.endSession();
       return { success: false, message: 'Invalid update operation' };
     }
 
-    // Update fields with explicit type handling
-    if (updateData.referenceNo !== undefined) {
-      stockTransfer.referenceNo = updateData.referenceNo;
-    }
-    
-    if (updateData.date !== undefined) {
-      stockTransfer.date = new Date(updateData.date);
-    }
-    
-    if (updateData.transferredBy !== undefined) {
-      stockTransfer.transferredBy = updateData.transferredBy;
-    }
-    
-    if (updateData.status !== undefined) {
-      stockTransfer.status = updateData.status;
-    }
-    
-    if (updateData.note !== undefined) {
-      stockTransfer.note = updateData.note;
-    }
+    // Apply updates to all transfer docs
+    for (const transfer of transferDocs) {
+      if (updateData.referenceNo !== undefined)
+        transfer.transferId = updateData.referenceNo;
+      if (updateData.date !== undefined)
+        transfer.date = new Date(updateData.date);
+      if (updateData.transferredBy !== undefined)
+        transfer.transferredBy = updateData.transferredBy;
+      if (updateData.status !== undefined)
+        transfer.status = updateData.status;
+      if (updateData.note !== undefined)
+        transfer.note = updateData.note;
 
-    await stockTransfer.save({ session });
+      await transfer.save({ session });
+
+      // Update linked StockTransaction & Stocks (keep consistency)
+      await StockTransaction.updateMany(
+        { referenceType: 'transfer', referenceId: transfer._id },
+        {
+          ...(updateData.date && { date: new Date(updateData.date) }),
+          ...(updateData.note && { note: updateData.note }),
+        },
+        { session }
+      );
+
+      await Stocks.updateMany(
+        { referenceType: 'transfer', referenceId: transfer._id },
+        {
+          ...(updateData.date && { date: new Date(updateData.date) }),
+          ...(updateData.note && { note: updateData.note }),
+        },
+        { session }
+      );
+    }
 
     await session.commitTransaction();
     session.endSession();
@@ -378,18 +393,16 @@ const updateStockTransfer = async (
     return {
       success: true,
       message: 'Stock transfer updated successfully',
-      data: stockTransfer,
+      data: transferDocs,
     };
   } catch (error: any) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
     session.endSession();
-    console.error('Error updating stock transfer:', error);
-    return {
-      success: false,
-      message: error.message || 'Failed to update stock transfer',
-    };
+    console.error('Update stock transfer failed:', error);
+    return { success: false, message: error.message || 'Failed to update stock transfer' };
   }
 };
+
 export const stockTransferServices = {
   getAllStockTransfers,
   createStockTransfer,

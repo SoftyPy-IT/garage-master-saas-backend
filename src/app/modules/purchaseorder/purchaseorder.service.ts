@@ -32,7 +32,7 @@ export const createPurchaseOrder = async (
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-        'An unexpected error occurred while creating the purchase order',
+      'An unexpected error occurred while creating the purchase order',
     );
   }
 };
@@ -52,23 +52,21 @@ export const updatePurchaseOrder = async (
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stock');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
   const { Model: StockTransaction } = await getTenantModel(
     tenantDomain,
     'StockTransaction',
   );
 
-  // Start transaction
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    // Find existing order
+
     const existingOrder = await PurchaseOrder.findById(id).session(session);
     if (!existingOrder) {
       throw new AppError(httpStatus.NOT_FOUND, 'Purchase Order not found');
     }
-
-    // Check if order is already received
     const isAlreadyReceived = existingOrder.status === 'Received';
 
     // Update the purchase order
@@ -84,9 +82,8 @@ export const updatePurchaseOrder = async (
       );
     }
 
-    // Update suppliers if changed
+    // Remove from old suppliers
     if (payload.suppliers) {
-      // Remove from old suppliers
       await Supplier.updateMany(
         { _id: { $in: existingOrder.suppliers } },
         { $pull: { orders: existingOrder._id } },
@@ -101,7 +98,6 @@ export const updatePurchaseOrder = async (
       );
     }
 
-    // If marking as Received and it wasn't received before → Create Purchase + update Supplier + Stock + StockTransaction
     if (isMarkingReceived && !isAlreadyReceived) {
       const purchasePayload: Partial<TPurchase> = {
         date: new Date(),
@@ -122,85 +118,90 @@ export const updatePurchaseOrder = async (
           productPrice: item.unit_price,
           discount: item.discount,
           tax: item.tax,
+          batchNumber: item.batchNumber,
+          expiryDate: item.expiryDate,
         })),
       };
 
-      const newPurchase = await Purchase.create([purchasePayload], { session });
+      const [newPurchase] = await Purchase.create([purchasePayload], { session });
 
-      // Update supplier totalDue, balance, and link purchase
-      if (updatedOrder.suppliers && updatedOrder.suppliers.length > 0) {
+      // Supplier update
+      if (updatedOrder.suppliers?.length) {
         for (const supplierId of updatedOrder.suppliers) {
           const supplier = await Supplier.findById(supplierId).session(session);
           if (!supplier) continue;
 
-          const due =
-            (newPurchase[0].grandTotal || 0) - (newPurchase[0].paidAmount || 0);
+          const due = (newPurchase.grandTotal || 0) - (newPurchase.paidAmount || 0);
           supplier.totalDue = (supplier.totalDue || 0) + due;
-          supplier.balance =
-            (supplier.totalDue || 0) - (supplier.totalPaid || 0);
+          supplier.balance = (supplier.totalDue || 0) - (supplier.totalPaid || 0);
 
-          if (!supplier.purchases.includes(newPurchase[0]._id)) {
-            supplier.purchases.push(newPurchase[0]._id);
+          if (!supplier.purchases.includes(newPurchase._id)) {
+            supplier.purchases.push(newPurchase._id);
           }
-
           await supplier.save({ session });
         }
       }
 
-      // Update stock + product quantities + create StockTransaction
+      // Stock, WarehouseStock, Product, StockTransaction
       for (const item of updatedOrder.products) {
-        // Find existing stock without considering batchNumber
-        const existingStock = await Stocks.findOne({
-          product: item.productId,
-          warehouse: updatedOrder.warehouse,
-        }).session(session);
-
-        // Prepare stock data with all required fields
-        const stockData = {
-          product: item.productId,
-          warehouse: updatedOrder.warehouse,
-          quantity: item.quantity,
-          type: 'in',
-          referenceType: 'purchase',
-          referenceId: newPurchase[0]._id,
-          purchasePrice: item.unit_price,
-          date: new Date(),
-        };
-
-        // Add batchNumber if it exists in the item
+        const productId = item.productId;
+        const quantity = item.quantity;
+        const warehouseId = updatedOrder.warehouse;
+        const stockQuery: any = { product: productId, warehouse: warehouseId };
+        if (item.batchNumber) stockQuery.batchNumber = item.batchNumber;
+        const existingStock = await Stocks.findOne(stockQuery).session(session);
 
         if (existingStock) {
-          // Update existing stock: add quantity
-          existingStock.quantity += item.quantity;
+          existingStock.quantity += quantity;
           await existingStock.save({ session });
         } else {
-          // Create new stock
-          const res = await Stocks.create([stockData], { session });
+          await Stocks.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity,
+            batchNumber: item.batchNumber || null,
+            expiryDate: item.expiryDate || null,
+            type: 'in',
+            referenceType: 'purchase',
+            referenceId: newPurchase._id,
+            purchasePrice: item.unit_price,
+            date: new Date(),
+          }], { session });
         }
 
-        // Create StockTransaction record
-        const transactionData = {
-          product: item.productId,
-          warehouse: updatedOrder.warehouse.toString(),
-          quantity: item.quantity,
+        // Update WarehouseStock
+        const wsQuery = { product: productId, warehouse: warehouseId };
+        const warehouseStock = await WarehouseStock.findOne(wsQuery).session(session);
+
+        if (warehouseStock) {
+          warehouseStock.quantity += quantity;
+          await warehouseStock.save({ session });
+        } else {
+          await WarehouseStock.create([{
+            product: productId,
+            warehouse: warehouseId,
+            quantity,
+          }], { session });
+        }
+
+        // Update Product total stock
+        await Product.findByIdAndUpdate(productId, { $inc: { stock: quantity } }, { session });
+
+        // Create StockTransaction
+        await StockTransaction.create([{
+          product: productId,
+          warehouse: warehouseId,
+          quantity,
+          batchNumber: item.batchNumber || null,
           type: 'in',
           referenceType: 'purchase',
-          referenceId: newPurchase[0]._id,
+          referenceId: newPurchase._id,
+          sellingPrice: item.unit_price,
           date: new Date(),
-        };
-
-        // Add batchNumber to transaction if it exists
-
-        await StockTransaction.create([transactionData], { session });
-
-        // Update product stock quantity
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { $inc: { stock: item.quantity } },
-          { new: true, session },
-        );
+        }], { session });
       }
     }
+
 
     await session.commitTransaction();
     session.endSession();
@@ -212,7 +213,7 @@ export const updatePurchaseOrder = async (
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-        'An unexpected error occurred while updating the purchase order',
+      'An unexpected error occurred while updating the purchase order',
     );
   }
 };
@@ -269,10 +270,11 @@ const deletePurchaseOrder = async (tenantDomain: string, id: string) => {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-        'An unexpected error occurred while deleting the purchase order',
+      'An unexpected error occurred while deleting the purchase order',
     );
   }
 };
+
 const getAllPurchaseOrders = async (
   tenantDomain: string,
   query: Record<string, unknown>,

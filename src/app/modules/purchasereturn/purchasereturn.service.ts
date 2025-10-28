@@ -4,120 +4,116 @@ import { purchaseReturnSearch } from './purchasereturn.constant';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { reCalcSupplierTotals } from '../supplier/supplier.service';
 
-export const createPurchaseReturn = async (
-  tenantDomain: string,
-  payload: TPurchaseReturn,
-) => {
-  const { Model: PurchaseReturn, connection } = await getTenantModel(
-    tenantDomain,
-    'PurchaseReturn',
-  );
+export const createPurchaseReturn = async (tenantDomain: string, payload: any) => {
+  const { Model: PurchaseReturn, connection } = await getTenantModel(tenantDomain, 'PurchaseReturn');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
-  const { Model: StockTransaction } = await getTenantModel(
-    tenantDomain,
-    'StockTransaction',
-  );
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 
   const session = await connection.startSession();
   session.startTransaction();
 
   try {
+
     const [newReturn] = await PurchaseReturn.create([payload], { session });
 
-    // 🔹 Link suppliers
-    if (payload.suppliers) {
-      await Supplier.updateMany(
-        { _id: { $in: payload.suppliers } },
-        { $push: { purchaseReturn: newReturn._id } },
-        { session },
-      );
+    // Link suppliers & recalc totals
+    const affectedSuppliers: string[] = [];
+    if (payload.suppliers?.length) {
+      for (const supplierId of payload.suppliers) {
+        const supplier = await Supplier.findById(supplierId).session(session);
+        if (!supplier) continue;
 
-      // 🔹 Recalculate totals for affected suppliers
-      const supplierIds = Array.isArray(payload.suppliers)
-        ? payload.suppliers
-        : [payload.suppliers];
+        if (!supplier.purchaseReturn?.includes(newReturn._id)) {
+          supplier.purchaseReturn = supplier.purchaseReturn || [];
+          supplier.purchaseReturn.push(newReturn._id);
+        }
 
-      for (const supplierId of supplierIds) {
-        await reCalcSupplierTotals(tenantDomain, supplierId.toString());
+        await supplier.save({ session });
+        affectedSuppliers.push(supplierId.toString());
       }
     }
 
-    // 🔹 Handle stock + stock transactions
+    // Process each returned item
     for (const item of payload.items) {
-      const stockQuery = {
-        product: item.productId,
-        warehouse: payload.warehouse,
-      };
+      const productId = item.productId;
+      const quantity = Number(item.quantity);
+      const warehouseId = Array.isArray(payload.warehouse)
+        ? payload.warehouse[0]
+        : payload.warehouse;
 
+      const stockQuery: any = { product: productId, warehouse: warehouseId, type: 'in' };
+      if (item.batchNumber) stockQuery.batchNumber = item.batchNumber;
+
+      //Update Stocks
       const existingStock = await Stocks.findOne(stockQuery).session(session);
-      if (!existingStock) {
+      if (!existingStock || existingStock.quantity < quantity) {
         throw new Error(
-          `Stock not found for product ${item.productName} in warehouse ${payload.warehouse}`,
+          `Insufficient stock for ${item.productName}. Available: ${existingStock?.quantity || 0}, Return Quantity: ${quantity}`
         );
       }
-
-      if (existingStock.quantity < item.quantity) {
-        throw new Error(
-          `Insufficient stock for ${item.productName}. Available: ${existingStock.quantity}, Return Quantity: ${item.quantity}`,
-        );
-      }
-
-      existingStock.quantity -= item.quantity;
+      existingStock.quantity -= quantity;
       await existingStock.save({ session });
 
-      // ✅ StockTransaction OUT
-      await StockTransaction.create(
-        [
-          {
-            product: item.productId,
-            warehouse: payload.warehouse,
-            quantity: item.quantity,
-            type: 'out',
-            referenceType: 'purchase-return',
-            referenceId: newReturn._id,
-            sellingPrice: item.unitPrice,
-            date: new Date(),
-          },
-        ],
-        { session },
-      );
+      // Update WarehouseStock
+      let warehouseStock = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+      if (!warehouseStock) {
+        warehouseStock = new WarehouseStock({
+          product: productId,
+          warehouse: warehouseId,
+          quantity: 0,
+        });
+      }
+      warehouseStock.quantity -= quantity;
+      if (warehouseStock.quantity < 0) {
+        throw new Error(`Warehouse stock cannot be negative for ${item.productName}`);
+      }
+      await warehouseStock.save({ session });
 
-      await Product.findByIdAndUpdate(
-        item.productId,
-        { $inc: { stock: -item.quantity } },
-        { session },
-      );
+
+      await Product.findByIdAndUpdate(productId, { $inc: { stock: -quantity } }, { session });
+
+      //Create StockTransaction
+      await StockTransaction.create([{
+        product: productId,
+        warehouse: warehouseId,
+        quantity,
+        batchNumber: item.batchNumber || null,
+        type: 'out',
+        referenceType: 'purchase-return',
+        referenceId: newReturn._id,
+        sellingPrice: item.unitPrice || 0,
+        date: new Date(),
+      }], { session });
     }
-
     await session.commitTransaction();
     session.endSession();
+    for (const supplierId of affectedSuppliers) {
+      await reCalcSupplierTotals(tenantDomain, supplierId);
+    }
 
     return newReturn;
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
     session.endSession();
     throw err;
   }
 };
+
 
 export const updatePurchaseReturn = async (
   tenantDomain: string,
   id: string,
   payload: Partial<TPurchaseReturn>,
 ) => {
-  const { Model: PurchaseReturn, connection } = await getTenantModel(
-    tenantDomain,
-    'PurchaseReturn',
-  );
+  const { Model: PurchaseReturn, connection } = await getTenantModel(tenantDomain, 'PurchaseReturn');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
-  const { Model: StockTransaction } = await getTenantModel(
-    tenantDomain,
-    'StockTransaction',
-  );
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
 
   const session = await connection.startSession();
   session.startTransaction();
@@ -126,140 +122,76 @@ export const updatePurchaseReturn = async (
     const existingReturn = await PurchaseReturn.findById(id).session(session);
     if (!existingReturn) throw new Error('Purchase return not found');
 
-    // 🔹 Supplier re-link
+    const oldItemsMap = new Map<string, any>();
+    existingReturn.items.forEach((item: any) => oldItemsMap.set(item.productId.toString(), item));
+    const newItems = payload.items || existingReturn.items;
+
+    const warehouseId = Array.isArray(payload.warehouse) ? payload.warehouse[0] : payload.warehouse || existingReturn.warehouse;
+
+    //Handle supplier links
     if (payload.suppliers) {
-      // Remove old links
       if (existingReturn.suppliers?.length) {
         await Supplier.updateMany(
           { _id: { $in: existingReturn.suppliers } },
           { $pull: { purchaseReturn: existingReturn._id } },
-          { session },
+          { session }
         );
       }
-
-      // Add new links
       await Supplier.updateMany(
         { _id: { $in: payload.suppliers } },
         { $addToSet: { purchaseReturn: existingReturn._id } },
-        { session },
+        { session }
       );
 
-      // Recalculate totals for all affected suppliers
-      const supplierIds = Array.isArray(payload.suppliers)
-        ? payload.suppliers
-        : [payload.suppliers];
-
+      //Recalculate affected suppliers totals
+      const supplierIds = Array.isArray(payload.suppliers) ? payload.suppliers : [payload.suppliers];
       for (const supplierId of supplierIds) {
         await reCalcSupplierTotals(tenantDomain, supplierId.toString());
       }
     }
 
-    // 🔹 Build map of old items
-    const oldItemsMap = new Map<string, any>();
-    existingReturn.items.forEach((item: any) =>
-      oldItemsMap.set(item.productId.toString(), item),
-    );
-
-    const newItems = payload.items || existingReturn.items;
-
+    //Process items
     for (const newItem of newItems) {
       const productId = newItem.productId.toString();
       const oldItem = oldItemsMap.get(productId);
+      const quantity = Number(newItem.quantity);
 
-      const warehouse = payload.warehouse || existingReturn.warehouse;
+      let diff = oldItem ? quantity - Number(oldItem.quantity) : quantity;
 
-      if (!oldItem) {
-        // ➕ New item added
-        const stock = await Stocks.findOne({
-          product: newItem.productId,
-          warehouse,
-        }).session(session);
-
-        if (!stock)
-          throw new Error(`Stock not found for ${newItem.productName}`);
-        if (stock.quantity < newItem.quantity) {
-          throw new Error(
-            `Insufficient stock for ${newItem.productName}. Available: ${stock.quantity}, Needed: ${newItem.quantity}`,
-          );
-        }
-
-        stock.quantity -= newItem.quantity;
-        await stock.save({ session });
-
-        // ✅ StockTransaction OUT
-        await StockTransaction.create(
-          [
-            {
-              product: newItem.productId,
-              warehouse,
-              quantity: newItem.quantity,
-              type: 'out',
-              referenceType: 'purchase-return',
-              referenceId: existingReturn._id,
-              sellingPrice: newItem.unitPrice,
-              date: new Date(),
-            },
-          ],
-          { session },
-        );
-
-        await Product.findByIdAndUpdate(
-          newItem.productId,
-          { $inc: { stock: -newItem.quantity } },
-          { session },
-        );
-      } else {
-        // ✏️ Existing item updated
-        const diff = newItem.quantity - oldItem.quantity;
-        if (diff !== 0) {
-          const stock = await Stocks.findOne({
-            product: newItem.productId,
-            warehouse,
-          }).session(session);
-
-          if (!stock)
-            throw new Error(`Stock not found for ${newItem.productName}`);
-          if (diff > 0 && stock.quantity < diff) {
-            throw new Error(
-              `Insufficient stock for ${newItem.productName}. Available: ${stock.quantity}, Needed: ${diff}`,
-            );
-          }
-
-          stock.quantity -= diff;
-          await stock.save({ session });
-
-          // ✅ StockTransaction OUT / IN
-          await StockTransaction.create(
-            [
-              {
-                product: newItem.productId,
-                warehouse,
-                quantity: Math.abs(diff),
-                type: diff > 0 ? 'out' : 'in',
-                referenceType: 'purchase-return',
-                referenceId: existingReturn._id,
-                sellingPrice: newItem.unitPrice,
-                date: new Date(),
-              },
-            ],
-            { session },
-          );
-
-          await Product.findByIdAndUpdate(
-            newItem.productId,
-            { $inc: { stock: -diff } },
-            { session },
-          );
-        }
+      // Update Stocks
+      let stock = await Stocks.findOne({ product: productId, warehouse: warehouseId, type: 'in', batchNumber: newItem.batchNumber || undefined }).session(session);
+      if (!stock) {
+        if (diff > 0) throw new Error(`Stock not found for ${newItem.productName}`);
+        stock = new Stocks({ product: productId, warehouse: warehouseId, quantity: 0, type: 'in', referenceType: 'purchase-return', referenceId: id, purchasePrice: newItem.unitPrice || 0 });
       }
-    }
+      stock.quantity -= diff;
+      if (stock.quantity < 0) throw new Error(`Insufficient stock for ${newItem.productName}`);
+      await stock.save({ session });
 
-    // 🔹 Finally update purchase return
-    const updatedReturn = await PurchaseReturn.findByIdAndUpdate(id, payload, {
-      new: true,
-      runValidators: true,
-      session,
-    });
+      // Update WarehouseStock
+      let warehouseStock = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+      if (!warehouseStock) warehouseStock = new WarehouseStock({ product: productId, warehouse: warehouseId, quantity: 0 });
+      warehouseStock.quantity -= diff;
+      if (warehouseStock.quantity < 0) throw new Error(`Warehouse stock cannot be negative for ${newItem.productName}`);
+      await warehouseStock.save({ session });
+
+      // Update Product total stock
+      await Product.findByIdAndUpdate(productId, { $inc: { stock: -diff } }, { session });
+
+      // Create StockTransaction for the difference
+      await StockTransaction.create([{
+        product: productId,
+        warehouse: warehouseId,
+        quantity: Math.abs(diff),
+        batchNumber: newItem.batchNumber || null,
+        type: diff > 0 ? 'out' : 'in',
+        referenceType: 'purchase-return',
+        referenceId: existingReturn._id,
+        sellingPrice: newItem.unitPrice || 0,
+        date: new Date(),
+      }], { session });
+    }
+    const updatedReturn = await PurchaseReturn.findByIdAndUpdate(id, payload, { new: true, runValidators: true, session });
 
     await session.commitTransaction();
     session.endSession();
@@ -273,69 +205,54 @@ export const updatePurchaseReturn = async (
   }
 };
 
-const deletePurchaseReturn = async (tenantDomain: string, id: string) => {
-  const { Model: PurchaseReturn } = await getTenantModel(
-    tenantDomain,
-    'PurchaseReturn',
-  );
-  const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
-  const { Model: StockTransaction } = await getTenantModel(
-    tenantDomain,
-    'StockTransaction',
-  );
-  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 
-  const session = await PurchaseReturn.startSession();
+export const deletePurchaseReturn = async (tenantDomain: string, id: string) => {
+  const { Model: PurchaseReturn, connection } = await getTenantModel(tenantDomain, 'PurchaseReturn');
+  const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
+  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
+  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
+  const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
+
+  const session = await connection.startSession();
   session.startTransaction();
 
   try {
     const purchaseReturn = await PurchaseReturn.findById(id).session(session);
-    if (!purchaseReturn) {
-      throw new Error('Purchase return not found');
-    }
+    if (!purchaseReturn) throw new Error('Purchase return not found');
 
-    // 🔹 Reverse stock changes
+    const warehouseId = Array.isArray(purchaseReturn.warehouse) ? purchaseReturn.warehouse[0] : purchaseReturn.warehouse;
+
+    //Reverse stock and warehouse stock
     for (const item of purchaseReturn.items) {
-      const stockQuery = {
-        product: item.productId,
-        warehouse: purchaseReturn.warehouse,
-      };
+      const productId = item.productId;
+      let stock = await Stocks.findOne({ product: productId, warehouse: warehouseId, type: 'in', batchNumber: item.batchNumber || undefined }).session(session);
+      if (!stock) stock = new Stocks({ product: productId, warehouse: warehouseId, quantity: 0, type: 'in', referenceType: 'purchase-return-reversal', referenceId: id });
+      stock.quantity += Number(item.quantity);
+      await stock.save({ session });
 
-      const stock = await Stocks.findOne(stockQuery).session(session);
-      if (stock) {
-        stock.quantity += item.quantity;
-        await stock.save({ session });
+      // WarehouseStock
+      let warehouseStock = await WarehouseStock.findOne({ product: productId, warehouse: warehouseId }).session(session);
+      if (!warehouseStock) warehouseStock = new WarehouseStock({ product: productId, warehouse: warehouseId, quantity: 0 });
+      warehouseStock.quantity += Number(item.quantity);
+      await warehouseStock.save({ session });
 
-        // ✅ StockTransaction IN (reversal)
-        await StockTransaction.create(
-          [
-            {
-              product: item.productId,
-              warehouse: purchaseReturn.warehouse,
-              quantity: item.quantity,
-              type: 'in',
-              referenceType: 'purchase-return-reversal',
-              referenceId: purchaseReturn._id,
-              sellingPrice: item.unitPrice,
-              date: new Date(),
-              note: 'Reversal of purchase return delete',
-            },
-          ],
-          { session },
-        );
+      await Product.findByIdAndUpdate(productId, { $inc: { stock: Number(item.quantity) } }, { session });
 
-        await Product.findByIdAndUpdate(
-          item.productId,
-          { $inc: { stock: item.quantity } },
-          { session },
-        );
-      }
+      // StockTransaction reversal
+      await StockTransaction.create([{
+        product: productId,
+        warehouse: warehouseId,
+        quantity: Number(item.quantity),
+        batchNumber: item.batchNumber || null,
+        type: 'in',
+        referenceType: 'purchase-return-reversal',
+        referenceId: id,
+        sellingPrice: item.unitPrice || 0,
+        date: new Date(),
+        note: 'Reversal of purchase return delete',
+      }], { session });
     }
-
-    // 🔹 Delete the purchase return itself
     await PurchaseReturn.deleteOne({ _id: id }, { session });
-
-    // 🔹 Recalculate all suppliers totals
     if (purchaseReturn.suppliers?.length) {
       for (const supplierId of purchaseReturn.suppliers) {
         await reCalcSupplierTotals(tenantDomain, supplierId);
@@ -349,9 +266,11 @@ const deletePurchaseReturn = async (tenantDomain: string, id: string) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    console.error('Delete purchase return failed:', error);
     throw error;
   }
 };
+
 
 const getAllPurchaseReturns = async (
   tenantDomain: string,

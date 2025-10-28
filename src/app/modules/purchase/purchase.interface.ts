@@ -8,8 +8,8 @@ export interface TPurchase {
   suppliers: ObjectId;
   shipping: number;
   purchaseStatus: string;
-paidAmount:number,
-dueAmount:number,
+  paidAmount: number,
+  dueAmount: number,
   note: string;
   paymentMethod: string;
   totalAmount: number;
@@ -26,5 +26,7 @@ dueAmount:number,
     tax: number | string;
     quantity: number | string;
     serialNumber?: string;
+    batchNumber?: string;
+    expiryDate?: Date | null;
   }[];
 }
