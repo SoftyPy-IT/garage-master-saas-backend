@@ -11,10 +11,12 @@ import jwt, { SignOptions, JwtPayload } from "jsonwebtoken";
 
 
 export const loginUser = async (payload: any) => {
-  if (payload.tenantDomain === "superadmin") {
-    const user = await User.findOne({ name: payload.name, role: "superadmin" }).select("+password");
-    if (!user) throw new AppError(httpStatus.NOT_FOUND, "Super admin not found!");
-    const match = await bcrypt.compare(payload.password, user.password);
+  const { name, password } = payload;
+
+  // Check if superadmin
+  let user = await User.findOne({ name, role: "superadmin" }).select("+password");
+  if (user) {
+    const match = await bcrypt.compare(password, user.password);
     if (!match) throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match!");
 
     const jwtPayload = {
@@ -30,46 +32,43 @@ export const loginUser = async (payload: any) => {
     return { accessToken, refreshToken, user: { userId: user._id, name: user.name, role: user.role } };
   }
 
-  // Tenant user login
-  const tenant = await Tenant.findOne({ domain: payload.tenantDomain });
-  if (!tenant || !tenant.isActive) throw new AppError(httpStatus.NOT_FOUND, "Tenant not found or inactive");
+  // Not superadmin → find user in all tenants
+  const tenants = await Tenant.find({ isActive: true });
+  for (const tenant of tenants) {
+    if (!tenant.subscription?.isPaid || !tenant.subscription?.isActive) continue;
+    if (new Date() > new Date(tenant.subscription.endDate)) continue;
 
-  if (!tenant.subscription?.isPaid || !tenant.subscription?.isActive) {
-    throw new AppError(httpStatus.FORBIDDEN, "Subscription inactive or not paid");
+    const tenantConn = await connectToTenantDatabase(tenant._id.toString(), tenant.dbUri);
+    const TenantUser = tenantConn.model("User", userSchema);
+    const tenantUser = await TenantUser.findOne({ name }).select("+password");
+
+    if (tenantUser && !tenantUser.isDeleted) {
+      const match = await bcrypt.compare(password, tenantUser.password);
+      if (!match) throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match");
+
+      const jwtPayload = {
+        userId: tenantUser._id.toString(),
+        role: tenantUser.role,
+        name: tenantUser.name,
+        tenantId: tenant._id.toString(),
+        domain: tenantUser.tenantDomain,
+      };
+
+      const accessToken = createAccessToken(jwtPayload);
+      const refreshToken = createRefreshToken(jwtPayload);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: { userId: tenantUser._id, name: tenantUser.name, role: tenantUser.role, tenantId: tenant._id, domain: tenant.domain },
+      };
+    }
   }
 
-  if (new Date() > new Date(tenant.subscription.endDate)) {
-    throw new AppError(httpStatus.FORBIDDEN, "Subscription has expired");
-  }
-
-  const tenantConn = await connectToTenantDatabase(tenant._id.toString(), tenant.dbUri);
-  const TenantUser = tenantConn.model("User", userSchema);
-  const user = await TenantUser.findOne({ name: payload.name }).select("+password");
-  if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found");
-  if (user.isDeleted) throw new AppError(httpStatus.FORBIDDEN, "Account deleted");
-
-  const match = await bcrypt.compare(payload.password, user.password);
-  if (!match) throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match");
-
-  const jwtPayload = {
-    userId: user._id.toString(),
-    role: user.role,
-    name: user.name,
-    tenantId: tenant._id.toString(),
-    domain: user.tenantDomain,
-  };
-
-  const accessToken = createAccessToken(jwtPayload);
-  const refreshToken = createRefreshToken(jwtPayload);
-
-  return {
-    accessToken,
-    refreshToken,
-    user: { userId: user._id, name: user.name, role: user.role, tenantId: tenant._id },
-  };
+  throw new AppError(httpStatus.NOT_FOUND, "User not found");
 };
 
-// Verify access token
+
 export const verifyAccessToken = (token: string) => {
   if (!config.jwt_access_secret) throw new Error("JWT access secret not defined");
   try {
@@ -92,7 +91,6 @@ export const createAccessToken = (payload: object | JwtPayload): string => {
   return jwt.sign(rest, config.jwt_access_secret, options);
 };
 
-// Refresh token
 export const createRefreshToken = (payload: object | JwtPayload): string => {
   if (!config.jwt_refresh_secret) throw new AppError(500, "JWT refresh secret not defined");
 
