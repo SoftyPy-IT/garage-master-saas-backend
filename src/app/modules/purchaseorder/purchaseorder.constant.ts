@@ -1,1 +1,1 @@
-export const purchaseOrderSearch = ['name']
+export const purchaseOrderSearch = ['referenceNo', 'status', 'paymentStatus'];
