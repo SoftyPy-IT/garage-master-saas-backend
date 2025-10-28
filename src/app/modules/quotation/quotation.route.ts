@@ -31,12 +31,4 @@ router
   .route('/delete-permanantly/:id')
   .delete(quotationController.permanantlyDeleteQuotation);
 
-router.patch(
-  '/recycle-all',
-  quotationController.moveAllToRecycledBinMoneyReceipts,
-);
-router.patch(
-  '/restore-all',
-  quotationController.restoreAllFromRecycledBinMoneyReceipts,
-);
 export const QuotationRoutes = router;

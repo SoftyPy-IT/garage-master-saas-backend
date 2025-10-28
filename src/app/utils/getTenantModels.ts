@@ -45,6 +45,7 @@ import { roleSchema } from '../modules/role/role.model';
 import { permissionSchema } from '../modules/permission/permission.model';
 import { barcodeSchema } from '../modules/barcode/barcode.model';
 import { warehouseStockSchema } from '../modules/warehouseStock/warehouseStock.model';
+import { adjustmentSchema } from '../modules/adjustment/adjustment.model';
 
 
 
@@ -94,7 +95,8 @@ const schemas: SchemaMap = {
   Role: roleSchema,
   Page: pageSchema,
   Permission: permissionSchema,
-  WarehouseStock: warehouseStockSchema
+  WarehouseStock: warehouseStockSchema,
+  Adjustment: adjustmentSchema
 };
 
 export const getTenantModel = async (

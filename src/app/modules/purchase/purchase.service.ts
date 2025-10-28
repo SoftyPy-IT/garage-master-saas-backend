@@ -129,6 +129,8 @@ export const createPurchase = async (tenantDomain: string, payload: any) => {
     throw err;
   }
 };
+
+
 export const updatePurchase = async (
   tenantDomain: string,
   id: string,

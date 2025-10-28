@@ -17,7 +17,7 @@ const productSchema = new Schema(
   { _id: false }
 );
 
-const adjustmentSchema: Schema = new Schema<TAdjustment>(
+export const adjustmentSchema: Schema = new Schema<TAdjustment>(
   {
     date: { type: Date, required: true },
     referenceNo: { type: String, required: true, unique: true },

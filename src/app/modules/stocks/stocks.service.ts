@@ -65,7 +65,7 @@ const getAllStocks = async (tenantDomain: string) => {
 
   const stocks = await Stocks.aggregate([
     {
-      $sort: { date: 1 }, // ✅ last purchase/selling ঠিকভাবে পেতে sort করা লাগবে
+      $sort: { date: 1 },
     },
     {
       $group: {
@@ -134,7 +134,7 @@ const getAllStocks = async (tenantDomain: string) => {
         },
       },
     },
-    // Product Join
+
     {
       $lookup: {
         from: Product.collection.name,
@@ -145,7 +145,7 @@ const getAllStocks = async (tenantDomain: string) => {
     },
     { $unwind: '$product' },
 
-    // ✅ Calculate minimumSalePrice correctly
+    // Calculate minimumSalePrice correctly
     {
       $addFields: {
         minimumSalePrice: {
@@ -160,7 +160,6 @@ const getAllStocks = async (tenantDomain: string) => {
       },
     },
 
-    // Warehouse join
     {
       $lookup: {
         from: Warehouse.collection.name,
@@ -171,7 +170,6 @@ const getAllStocks = async (tenantDomain: string) => {
     },
     { $unwind: '$warehouse' },
 
-    // Category join
     {
       $lookup: {
         from: Category.collection.name,
@@ -256,7 +254,6 @@ export const transferStock = async (
     expiryDate,
   } = payload;
 
-  // Use same connection for session and all model access
   const { Model: Stocks, connection: tenantConnection } = await getTenantModel(
     tenantDomain,
     'Stocks',
