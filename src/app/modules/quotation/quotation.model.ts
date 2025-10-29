@@ -27,7 +27,7 @@ export const quotationSchema: Schema<TQuotation> = new Schema<TQuotation>(
       type: Schema.ObjectId,
       ref: 'Customer',
     },
-        mileage: {
+    mileage: {
       type: Number,
     },
     company: {
@@ -42,34 +42,34 @@ export const quotationSchema: Schema<TQuotation> = new Schema<TQuotation>(
       type: Schema.ObjectId,
       ref: 'Vehicle',
     },
-input_data: [
-  {
-    product: { type: Schema.Types.ObjectId, ref: 'Product' },
-    warehouse: { type: String },
-    product_name: { type: String },
-    quantity: Number,
-    description: String,
-    unit: String,
-    rate: Number,
-    total: Number,
-    sellingPrice: Number,
-    batchNumber: String,
-  },
-],
-service_input_data: [
-  {
-    product: { type: Schema.Types.ObjectId, ref: 'Product' },
-    warehouse: { type: String },
-    product_name: { type: String },
-    quantity: Number,
-    unit: String,
-    rate: Number,
-    description: String,
-    total: Number,
-    sellingPrice: Number,
-    batchNumber: String,
-  },
-],
+    input_data: [
+      {
+        product: { type: Schema.Types.ObjectId, ref: 'Product' },
+        warehouse: { type: String },
+        product_name: { type: String },
+        quantity: Number,
+        description: String,
+        unit: String,
+        rate: Number,
+        total: Number,
+        sellingPrice: Number,
+        batchNumber: String,
+      },
+    ],
+    service_input_data: [
+      {
+        product: { type: Schema.Types.ObjectId, ref: 'Product' },
+        warehouse: { type: String },
+        product_name: { type: String },
+        quantity: Number,
+        unit: String,
+        rate: Number,
+        description: String,
+        total: Number,
+        sellingPrice: Number,
+        batchNumber: String,
+      },
+    ],
 
     total_amount: {
       type: Number,
@@ -116,7 +116,7 @@ service_input_data: [
     status: {
       type: String,
       enum: ['running', 'completed'],
-      default: 'running', 
+      default: 'running',
     },
     isRecycled: { type: Boolean, default: false },
     recycledAt: { type: Date, default: null },

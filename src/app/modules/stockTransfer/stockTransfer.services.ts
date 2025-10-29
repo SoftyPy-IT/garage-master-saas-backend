@@ -33,7 +33,6 @@ export const createStockTransfer = async (
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
   const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
-  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 
   const session = await connection.startSession();
   session.startTransaction();
@@ -46,7 +45,7 @@ export const createStockTransfer = async (
       const productId = item.product;
       const transferQty = Number(item.quantity);
 
-      // 1) check warehouse stock
+      // check warehouse stock
       const sourceWarehouseStock = await WarehouseStock.findOne({
         warehouse: fromWarehouse,
         product: productId,
@@ -60,7 +59,7 @@ export const createStockTransfer = async (
         );
       }
 
-      // 2) create StockTransfer (single doc)
+      // create StockTransfer 
       const [transfer] = await StockTransfer.create(
         [
           {
@@ -77,9 +76,9 @@ export const createStockTransfer = async (
           },
         ],
         { session }
-      ); // create with single-doc array is safe
+      );
 
-      // 3) Stocks entries (out and in) — single docs individually
+      // Stocks entries
       await Stocks.create(
         [
           {
@@ -118,7 +117,7 @@ export const createStockTransfer = async (
         { session }
       );
 
-      // 4) Update WarehouseStock -- decrease source
+      // Update WarehouseStock -- decrease source
       sourceWarehouseStock.quantity -= transferQty;
       await sourceWarehouseStock.save({ session });
 
@@ -132,7 +131,6 @@ export const createStockTransfer = async (
         destWarehouseStock.quantity += transferQty;
         await destWarehouseStock.save({ session });
       } else {
-        // create single doc
         await WarehouseStock.create(
           [
             {
@@ -145,11 +143,7 @@ export const createStockTransfer = async (
         );
       }
 
-      // 5) Product.total stock: DO NOT change (transfer keeps global stock intact)
-      // If you DID want to sync Product.stock to sum of warehouses, do it separately.
-
-      // 6) Create StockTransaction logs.
-      // <-- FIX: use insertMany with ordered: true when creating multiple docs with session
+      //Create StockTransaction logs.
       await StockTransaction.insertMany(
         [
           {
@@ -171,7 +165,7 @@ export const createStockTransfer = async (
             date: new Date(date),
           },
         ],
-        { session, ordered: true } // << important to avoid the create() session+multiple-docs error
+        { session, ordered: true }
       );
 
       transferResults.push(transfer);
@@ -312,7 +306,6 @@ export const deleteStockTransfer = async (
     return { deleted: false, message: error.message || 'Failed to delete stock transfer' };
   }
 };
-
 export const updateStockTransfer = async (
   tenantDomain: string,
   id: string,

@@ -139,7 +139,6 @@ export const createQuotationDetails = async (
       totalValue,
     } of stockUpdateMap.values()) {
       const averageSellingPrice = totalValue / totalQuantity;
-      console.log('total quantity', totalQuantity)
 
       // Find existing stock record 
       const existingStock = await Stocks.findOne({
