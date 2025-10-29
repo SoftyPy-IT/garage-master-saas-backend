@@ -33,7 +33,6 @@ export const createStockTransfer = async (
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stocks');
   const { Model: StockTransaction } = await getTenantModel(tenantDomain, 'StockTransaction');
   const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
-  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 
   const session = await connection.startSession();
   session.startTransaction();
@@ -307,7 +306,6 @@ export const deleteStockTransfer = async (
     return { deleted: false, message: error.message || 'Failed to delete stock transfer' };
   }
 };
-
 export const updateStockTransfer = async (
   tenantDomain: string,
   id: string,

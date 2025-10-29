@@ -152,7 +152,7 @@ export const updatePurchaseOrder = async (
         const existingStock = await Stocks.findOne(stockQuery).session(session);
 
         if (existingStock) {
-          existingStock.quantity += quantity;
+          // existingStock.quantity += quantity;
           await existingStock.save({ session });
         } else {
           await Stocks.create([{
