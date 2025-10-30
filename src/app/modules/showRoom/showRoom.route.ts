@@ -21,17 +21,16 @@ router
   .route('/restore/:id')
   .patch(showRoomController.restoreFromRecyledbinShowRoom);
 router
-  .route('/delete-permanantly/:id')
+  .route('/delete-permanently/:id')
   .delete(showRoomController.permanantlyDeleteShowRoom);
 
-  router.patch(
-    '/recycle-all',
-    showRoomController.moveAllToRecycledBinMoneyReceipts,
-  );
-  router.patch(
-    '/restore-all',
-    showRoomController.restoreAllFromRecycledBinMoneyReceipts,
-  );
-  
+router.patch(
+  '/recycle-all',
+  showRoomController.moveAllToRecycledBinMoneyReceipts,
+);
+router.patch(
+  '/restore-all',
+  showRoomController.restoreAllFromRecycledBinMoneyReceipts,
+);
 
 export const ShowRoomRoutes = router;

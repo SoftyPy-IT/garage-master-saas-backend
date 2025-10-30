@@ -41,21 +41,21 @@ const getAllSupplier = async (
 ) => {
   try {
     const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-
-    const supplierQuery = new QueryBuilder(Supplier.find(), query)
-      .search(['name'])
-      // .filter()
-      // .sort()
+    console.log('query ', query);
+    const suppliers = await new QueryBuilder(Supplier.find(), query)
+      .search(['full_name', 'supplierId'])
+      .filter()
+      .sort()
       .paginate()
       .fields();
-    const meta = await supplierQuery.countTotal();
-    const suppliers = await supplierQuery.modelQuery;
 
+    const meta = await suppliers.countTotal();
+    const result = await suppliers.modelQuery;
     return {
       success: true,
       message: 'Suppliers retrieved successfully',
       meta,
-      suppliers,
+      suppliers: result,
     };
   } catch (error: any) {
     throw new AppError(
@@ -621,7 +621,7 @@ export const recordSupplierPayment = async (
         err?.errorLabels?.includes('TransientTransactionError') &&
         attempt < MAX_RETRIES
       ) {
-        const delay = 100 * attempt; 
+        const delay = 100 * attempt;
         console.warn(
           `Retrying transaction (attempt ${attempt}) after ${delay}ms...`,
         );
