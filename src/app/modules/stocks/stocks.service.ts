@@ -231,6 +231,7 @@ const getAllStocks = async (tenantDomain: string) => {
   return stocks;
 };
 
+
 export const transferStock = async (
   tenantDomain: string,
   payload: {
