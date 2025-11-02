@@ -7,7 +7,6 @@ export const createAttendanceIntoDB = async (
   tenantDomain: string,
   payload: TAttendance[],
 ) => {
-  // Get Employee model and connection from tenant model getter
   const { Model: Employee, connection } = await getTenantModel(
     tenantDomain,
     'Employee',
@@ -16,8 +15,6 @@ export const createAttendanceIntoDB = async (
     tenantDomain,
     'Attendance',
   );
-
-  // Start session from tenant-specific connection
   const session = await connection.startSession();
   session.startTransaction();
 
@@ -27,8 +24,6 @@ export const createAttendanceIntoDB = async (
     for (const id of attendanceIds) {
       const data = payload.find((d) => d.employee === id);
       if (!data) continue;
-
-      // Use session on all queries
       const existingEmployee = await Employee.findById(id).session(session);
       if (!existingEmployee) continue;
 
@@ -291,6 +286,126 @@ export const deleteAttendanceFromDB = async (
   return deleted;
 };
 
+// export const getAllAttendance = async (
+//   tenantDomain: string,
+//   limit: number,
+//   page: number,
+//   searchTerm?: string,
+//   startDate?: string,
+//   endDate?: string,
+//   month?: string,
+//   year?: string,
+//   status?: string
+// ) => {
+//   const { Model: Attendance } = await getTenantModel(tenantDomain, 'Attendance');
+//   const { Model: Employee } = await getTenantModel(tenantDomain, 'Employee');
+
+//   const aggregationPipeline: any[] = [];
+
+//   // Lookup employee
+//   aggregationPipeline.push({
+//     $lookup: {
+//       from: Employee.collection.name,
+//       localField: 'employee',
+//       foreignField: '_id',
+//       as: 'employee',
+//     },
+//   });
+
+//   aggregationPipeline.push({ $unwind: '$employee' });
+
+//   aggregationPipeline.push({
+//     $addFields: {
+//       dateObj: {
+//         $cond: [
+//           { $eq: [{ $type: '$date' }, 'string'] },
+//           {
+//             $dateFromString: {
+//               dateString: '$date',
+//               timezone: 'UTC',
+//             },
+//           },
+//           '$date',
+//         ],
+//       },
+//     },
+//   });
+
+//   // Normalize date to remove time (keep only year, month, day)
+//   aggregationPipeline.push({
+//     $addFields: {
+//       dateNormalized: {
+//         $dateFromParts: {
+//           year: { $year: '$dateObj' },
+//           month: { $month: '$dateObj' },
+//           day: { $dayOfMonth: '$dateObj' },
+//         },
+//       },
+//     },
+//   });
+
+//   const matchStage: any = {};
+
+//   // Date filters (normalized)
+//   if (startDate && endDate) {
+//     const start = new Date(`${startDate}T00:00:00.000Z`);
+//     const end = new Date(`${endDate}T23:59:59.999Z`);
+//     matchStage.dateNormalized = { $gte: start, $lte: end };
+//   } else if (month) {
+//     const [y, m] = month.split('-');
+//     const start = new Date(Number(y), Number(m) - 1, 1, 0, 0, 0, 0);
+//     const end = new Date(Number(y), Number(m), 0, 23, 59, 59, 999);
+//     matchStage.dateNormalized = { $gte: start, $lte: end };
+//   } else if (year) {
+//     const start = new Date(Number(year), 0, 1, 0, 0, 0, 0);
+//     const end = new Date(Number(year), 11, 31, 23, 59, 59, 999);
+//     matchStage.dateNormalized = { $gte: start, $lte: end };
+//   }
+
+//   // Status filter
+//   if (status && status !== '') {
+//     if (status === 'present') matchStage.present = true;
+//     if (status === 'absent') matchStage.absent = true;
+//     if (status === 'late') matchStage.late_status = true;
+//   }
+
+//   // Search filter
+//   if (searchTerm && searchTerm.trim() !== '') {
+//     matchStage.$or = [
+//       { 'employee.full_name': new RegExp(searchTerm, 'i') },
+//       { 'employee.employeeId': new RegExp(searchTerm, 'i') },
+//     ];
+//   }
+
+//   // Apply match stage
+//   if (Object.keys(matchStage).length > 0) {
+//     aggregationPipeline.push({ $match: matchStage });
+//   }
+
+//   // Sort by normalized date descending
+//   aggregationPipeline.push({ $sort: { dateNormalized: -1 } });
+
+//   // Pagination
+//   aggregationPipeline.push({
+//     $facet: {
+//       metadata: [{ $count: 'totalRecords' }],
+//       data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+//     },
+//   });
+
+//   const result = await Attendance.aggregate(aggregationPipeline);
+
+//   const totalRecords = result[0]?.metadata[0]?.totalRecords || 0;
+//   const attendances = result[0]?.data || [];
+
+//   return {
+//     totalRecords,
+//     totalPages: Math.ceil(totalRecords / limit),
+//     currentPage: page,
+//     attendances,
+//   };
+// };
+
 export const getAllAttendance = async (
   tenantDomain: string,
   limit: number,
@@ -300,9 +415,12 @@ export const getAllAttendance = async (
   endDate?: string,
   month?: string,
   year?: string,
-  status?: string
+  status?: string,
 ) => {
-  const { Model: Attendance } = await getTenantModel(tenantDomain, 'Attendance');
+  const { Model: Attendance } = await getTenantModel(
+    tenantDomain,
+    'Attendance',
+  );
   const { Model: Employee } = await getTenantModel(tenantDomain, 'Employee');
 
   const aggregationPipeline: any[] = [];
@@ -319,25 +437,20 @@ export const getAllAttendance = async (
 
   aggregationPipeline.push({ $unwind: '$employee' });
 
-  // Convert date field safely and normalize to ignore time
+  // Convert string date to Date object
   aggregationPipeline.push({
     $addFields: {
       dateObj: {
         $cond: [
           { $eq: [{ $type: '$date' }, 'string'] },
-          {
-            $dateFromString: {
-              dateString: '$date',
-              timezone: 'UTC',
-            },
-          },
+          { $dateFromString: { dateString: '$date', timezone: 'UTC' } },
           '$date',
         ],
       },
     },
   });
 
-  // Normalize date to remove time (keep only year, month, day)
+  // Normalize date (year, month, day)
   aggregationPipeline.push({
     $addFields: {
       dateNormalized: {
@@ -350,9 +463,9 @@ export const getAllAttendance = async (
     },
   });
 
+  // Build match stage
   const matchStage: any = {};
 
-  // Date filters (normalized)
   if (startDate && endDate) {
     const start = new Date(`${startDate}T00:00:00.000Z`);
     const end = new Date(`${endDate}T23:59:59.999Z`);
@@ -368,14 +481,12 @@ export const getAllAttendance = async (
     matchStage.dateNormalized = { $gte: start, $lte: end };
   }
 
-  // Status filter
   if (status && status !== '') {
     if (status === 'present') matchStage.present = true;
     if (status === 'absent') matchStage.absent = true;
     if (status === 'late') matchStage.late_status = true;
   }
 
-  // Search filter
   if (searchTerm && searchTerm.trim() !== '') {
     matchStage.$or = [
       { 'employee.full_name': new RegExp(searchTerm, 'i') },
@@ -383,19 +494,29 @@ export const getAllAttendance = async (
     ];
   }
 
-  // Apply match stage
   if (Object.keys(matchStage).length > 0) {
     aggregationPipeline.push({ $match: matchStage });
   }
 
-  // Sort by normalized date descending
+  // Sort descending
   aggregationPipeline.push({ $sort: { dateNormalized: -1 } });
 
-  // Pagination
+  // Facet for pagination + totals
   aggregationPipeline.push({
     $facet: {
       metadata: [{ $count: 'totalRecords' }],
       data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+      summary: [
+        {
+          $group: {
+            _id: null,
+            totalPresent: { $sum: { $cond: ['$present', 1, 0] } },
+            totalAbsent: { $sum: { $cond: ['$absent', 1, 0] } },
+            totalLate: { $sum: { $cond: ['$late_status', 1, 0] } },
+            totalRecords: { $sum: 1 },
+          },
+        },
+      ],
     },
   });
 
@@ -403,16 +524,28 @@ export const getAllAttendance = async (
 
   const totalRecords = result[0]?.metadata[0]?.totalRecords || 0;
   const attendances = result[0]?.data || [];
+  const summary = result[0]?.summary[0] || {
+    totalPresent: 0,
+    totalAbsent: 0,
+    totalLate: 0,
+    totalRecords: 0,
+  };
+
+  const attendanceSummary = {
+    totalPresent: summary.totalPresent,
+    totalAbsent: summary.totalAbsent,
+    totalLate: summary.totalLate,
+    total: summary.totalRecords,
+  };
 
   return {
     totalRecords,
     totalPages: Math.ceil(totalRecords / limit),
     currentPage: page,
     attendances,
+    attendanceSummary,
   };
 };
-
-
 
 export const AttendanceServices = {
   createAttendanceIntoDB,

@@ -1,4 +1,5 @@
-import z from 'zod'
+import { z } from 'zod';
+
 export const stringOrArrayOrNumber = z
   .union([z.string(), z.array(z.string()), z.number()])
   .optional()
@@ -9,9 +10,8 @@ export const stringOrArrayOrNumber = z
         val === undefined ||
         val === null ||
         val === '' ||
-        (Array.isArray(val) && val.length === 0) ||
-        typeof val === 'string' ||
         typeof val === 'number' ||
+        typeof val === 'string' ||
         (Array.isArray(val) && val.every((item) => typeof item === 'string'))
       );
     },

@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { stringOrArrayOrNumber } from "../../utils/type";
+import { z } from 'zod';
+import { stringOrArrayOrNumber } from '../../utils/type';
 
 const expenseItemSchema = z.object({
   name: z.string().optional(),
@@ -24,7 +24,6 @@ export const createExpenseCategorySchema = z.object({
   body: z.object({
     name: z.string().optional(),
     code: z.string().optional(),
-    
   }),
 });
 
@@ -32,6 +31,5 @@ export const updateExpenseCategorySchema = z.object({
   body: z.object({
     name: z.string().optional(),
     code: z.string().optional(),
-   
   }),
 });
