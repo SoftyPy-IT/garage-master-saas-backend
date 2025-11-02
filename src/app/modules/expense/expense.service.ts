@@ -9,21 +9,18 @@ export const createExpense = async (tenantDomain: string, payload: any) => {
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
 
   try {
-    // validate invoice id
     if (payload.invoice_id) {
       const exists = await Expense.findOne({ invoice_id: payload.invoice_id });
       if (exists) {
         throw new Error('This invoice id already create  to another expense');
       }
     }
-    // Remove invoice_id if not provided or invalid
     if (!payload.invoice_id) {
       delete payload.invoice_id;
     } else if (!mongoose.Types.ObjectId.isValid(payload.invoice_id)) {
       throw new Error('Invalid invoice_id');
     }
 
-    // Calculate totals
     const expenseItems = payload.expense_items ?? [];
     const totalOtherExpense = expenseItems.reduce(
       (sum: number, item: any) => sum + (Number(item.amount) || 0),
@@ -33,7 +30,6 @@ export const createExpense = async (tenantDomain: string, payload: any) => {
     const invoiceCost = Number(payload.invoiceCost) || 0;
     const totalAmount = totalOtherExpense + invoiceCost;
 
-    // Create new expense
     const newExpense = await Expense.create({
       totalOtherExpense,
       totalAmount,
@@ -48,48 +44,22 @@ export const createExpense = async (tenantDomain: string, payload: any) => {
     );
   }
 };
-
-const getAllExpense = async (
-  tenantDomain: string,
-  query: Record<string, unknown>,
-) => {
-  const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
-
-  const categoryQuery = new QueryBuilder(Expense.find(), query).search(
-    SearchableFields,
-  );
-
-  const meta = await categoryQuery.countTotal();
-  const expenses = await categoryQuery.modelQuery.populate({
-    path: 'invoice_id',
-    select: 'Id invoice_no',
-  });
-
-  return {
-    meta,
-    expenses,
-  };
-};
-
-const getSinigleExpense = async (tenantDomain: string, id: string) => {
-  const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
-
-  const result = await Expense.findById(id).populate({
-    path: 'invoice_id',
-    select: 'Id invoice_no',
-  });
-
-  return result;
-};
 const updateExpense = async (
   tenantDomain: string,
   id: string,
-  payload: Partial<IExpense>,
+  payload: any,
 ) => {
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
 
   try {
+    if (!payload.invoice_id || payload.invoice_id === '') {
+      delete payload.invoice_id;
+    } else if (!mongoose.Types.ObjectId.isValid(payload.invoice_id)) {
+      throw new Error('Invalid invoice_id');
+    }
+
     let totalAmount: number | undefined;
+
     if (
       Array.isArray(payload.expense_items) ||
       payload.invoiceCost !== undefined
@@ -130,6 +100,39 @@ const updateExpense = async (
   }
 };
 
+const getAllExpense = async (
+  tenantDomain: string,
+  query: Record<string, unknown>,
+) => {
+  const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
+
+  const categoryQuery = new QueryBuilder(Expense.find(), query).search(
+    SearchableFields,
+  );
+
+  const meta = await categoryQuery.countTotal();
+  const expenses = await categoryQuery.modelQuery.populate({
+    path: 'invoice_id',
+    select: 'Id invoice_no',
+  });
+
+  return {
+    meta,
+    expenses,
+  };
+};
+
+const getSingleExpense = async (tenantDomain: string, id: string) => {
+  const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
+
+  const result = await Expense.findById(id).populate({
+    path: 'invoice_id',
+    select: 'Id invoice_no',
+  });
+
+  return result;
+};
+
 const deleteExpense = async (tenantDomain: string, id: string) => {
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
 
@@ -140,7 +143,7 @@ const deleteExpense = async (tenantDomain: string, id: string) => {
 export const expenseServices = {
   createExpense,
   getAllExpense,
-  getSinigleExpense,
+  getSingleExpense,
   updateExpense,
   deleteExpense,
 };
