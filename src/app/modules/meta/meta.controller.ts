@@ -9,8 +9,8 @@ const getAllCustomer = async (
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain = req.query.tenantDomain as string;
-    const result = await metServices.getAllCustomer(tenantDomain,req.query);
+    const tenantDomain = req.query.tenantDomain as string;
+    const result = await metServices.getAllCustomer(tenantDomain, req.query);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -29,8 +29,9 @@ const getAllMetaFromDB = async (
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain = req.query.tenantDomain as string;
-    const result = await metServices.getAllMetaFromDB(tenantDomain , req.query);
+    const tenantDomain = req.query.tenantDomain as string;
+    console.log(tenantDomain);
+    const result = await metServices.getAllMetaFromDB(tenantDomain, req.query);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -42,14 +43,17 @@ const getAllMetaFromDB = async (
     next(err);
   }
 };
-const calculateAccountingSummary  = async (
+const calculateAccountingSummary = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain = req.query.tenantDomain as string;
-    const result = await metServices.calculateAccountingSummary(tenantDomain , req.query);
+    const tenantDomain = req.query.tenantDomain as string;
+    const result = await metServices.calculateAccountingSummary(
+      tenantDomain,
+      req.query,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -64,5 +68,5 @@ const calculateAccountingSummary  = async (
 export const metaController = {
   getAllCustomer,
   getAllMetaFromDB,
-  calculateAccountingSummary
+  calculateAccountingSummary,
 };
