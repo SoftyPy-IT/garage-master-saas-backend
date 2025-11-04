@@ -91,7 +91,6 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
     },
     driver_contact: {
       type: String,
-      required: [true, 'Driver contact number is required'],
     },
     customerOwnerName: {
       type: String,
