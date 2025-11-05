@@ -77,7 +77,6 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
     },
     customer_contact: {
       type: String,
-      required: [true, 'Customer contact number is required.'],
     },
     fullCustomerNum: {
       type: String,
