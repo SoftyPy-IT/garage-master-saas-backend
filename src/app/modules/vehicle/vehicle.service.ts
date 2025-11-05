@@ -86,42 +86,205 @@ const createVehicleDetails = async (
   }
 };
 
+// const getAllVehiclesFromDB = async (
+//   tenantDomain: string,
+//   id: string,
+//   limit: number,
+//   page: number,
+//   searchTerm: string,
+// ) => {
+//   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
+
+//   let idMatchQuery: any = {};
+//   let searchQuery: any = {};
+//   idMatchQuery = {
+//     $or: [
+//       { 'customer._id': new mongoose.Types.ObjectId(id) },
+//       { 'company._id': new mongoose.Types.ObjectId(id) },
+//       { 'showRoom._id': new mongoose.Types.ObjectId(id) },
+//     ],
+//   };
+
+//   // If a search term is provided, apply regex filtering
+//   if (searchTerm) {
+//     const escapedFilteringData = searchTerm.replace(
+//       /[.*+?^${}()|[\]\\]/g,
+//       '\\$&',
+//     );
+
+//     const vehicleSearchQuery = SearchableFields.map((field) => ({
+//       [field]: { $regex: escapedFilteringData, $options: 'i' },
+//     }));
+
+//     searchQuery = {
+//       $or: [...vehicleSearchQuery],
+//     };
+//   }
+
+//   // Construct the aggregation pipeline
+//   const vehicles = await Vehicle.aggregate([
+//     {
+//       $lookup: {
+//         from: 'customers',
+//         localField: 'customer',
+//         foreignField: '_id',
+//         as: 'customer',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'companies',
+//         localField: 'company',
+//         foreignField: '_id',
+//         as: 'company',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'showrooms',
+//         localField: 'showRoom',
+//         foreignField: '_id',
+//         as: 'showRoom',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$customer',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$company',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$showRoom',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $match: {
+//         $and: [idMatchQuery, searchQuery],
+//       },
+//     },
+//     {
+//       $sort: { createdAt: -1 },
+//     },
+//     {
+//       $skip: (page - 1) * limit,
+//     },
+//     {
+//       $limit: limit,
+//     },
+//   ]);
+
+//   // Count total documents
+//   const totalData = await Vehicle.aggregate([
+//     {
+//       $lookup: {
+//         from: 'customers',
+//         localField: 'customer',
+//         foreignField: '_id',
+//         as: 'customer',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'companies',
+//         localField: 'company',
+//         foreignField: '_id',
+//         as: 'company',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'showrooms',
+//         localField: 'showRoom',
+//         foreignField: '_id',
+//         as: 'showRoom',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$customer',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$company',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$showRoom',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $match: {
+//         $and: [idMatchQuery, searchQuery],
+//       },
+//     },
+//     {
+//       $count: 'totalCount',
+//     },
+//   ]);
+
+//   const totalCount = totalData.length > 0 ? totalData[0].totalCount : 0;
+//   const totalPages = Math.ceil(totalCount / limit);
+
+//   return {
+//     vehicles,
+//     meta: {
+//       totalPages,
+//       currentPage: page,
+//     },
+//   };
+// };
+
 const getAllVehiclesFromDB = async (
   tenantDomain: string,
-  id: string,
-  limit: number,
-  page: number,
-  searchTerm: string,
+  id?: string, // optional
+  limit = 10,
+  page = 1,
+  searchTerm = '',
 ) => {
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
 
+  // Only create id filter if id is provided
   let idMatchQuery: any = {};
-  let searchQuery: any = {};
-  idMatchQuery = {
-    $or: [
+  if (id) {
+    idMatchQuery.$or = [
       { 'customer._id': new mongoose.Types.ObjectId(id) },
       { 'company._id': new mongoose.Types.ObjectId(id) },
       { 'showRoom._id': new mongoose.Types.ObjectId(id) },
-    ],
-  };
+    ];
+  }
 
-  // If a search term is provided, apply regex filtering
+  // Search filter
+  let searchQuery: any = {};
   if (searchTerm) {
     const escapedFilteringData = searchTerm.replace(
       /[.*+?^${}()|[\]\\]/g,
       '\\$&',
     );
-
-    const vehicleSearchQuery = SearchableFields.map((field) => ({
+    searchQuery.$or = SearchableFields.map((field) => ({
       [field]: { $regex: escapedFilteringData, $options: 'i' },
     }));
-
-    searchQuery = {
-      $or: [...vehicleSearchQuery],
-    };
   }
 
-  // Construct the aggregation pipeline
+  // Build final match filter
+  let finalMatchQuery: any = {};
+  const filters: any[] = [];
+  if (Object.keys(idMatchQuery).length) filters.push(idMatchQuery);
+  if (Object.keys(searchQuery).length) filters.push(searchQuery);
+  if (filters.length) finalMatchQuery = { $and: filters };
+
   const vehicles = await Vehicle.aggregate([
     {
       $lookup: {
@@ -147,38 +310,13 @@ const getAllVehiclesFromDB = async (
         as: 'showRoom',
       },
     },
-    {
-      $unwind: {
-        path: '$customer',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$company',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$showRoom',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        $and: [idMatchQuery, searchQuery],
-      },
-    },
-    {
-      $sort: { createdAt: -1 },
-    },
-    {
-      $skip: (page - 1) * limit,
-    },
-    {
-      $limit: limit,
-    },
+    { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$company', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$showRoom', preserveNullAndEmptyArrays: true } },
+    ...(filters.length ? [{ $match: finalMatchQuery }] : []), // only match if filter exists
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
   ]);
 
   // Count total documents
@@ -207,32 +345,11 @@ const getAllVehiclesFromDB = async (
         as: 'showRoom',
       },
     },
-    {
-      $unwind: {
-        path: '$customer',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$company',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$showRoom',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        $and: [idMatchQuery, searchQuery],
-      },
-    },
-    {
-      $count: 'totalCount',
-    },
+    { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$company', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$showRoom', preserveNullAndEmptyArrays: true } },
+    ...(filters.length ? [{ $match: finalMatchQuery }] : []),
+    { $count: 'totalCount' },
   ]);
 
   const totalCount = totalData.length > 0 ? totalData[0].totalCount : 0;
