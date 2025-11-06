@@ -274,6 +274,9 @@ const getAllMetaFromDB = async (
   const allCustomer = await Customer.find({ isRecycled: false });
   const allCompany = await Company.find({ isRecycled: false });
   const allShowRoom = await ShowRoom.find({ isRecycled: false });
+  const totalEntities =
+    allCustomer.length + allCompany.length + allShowRoom.length;
+
   const totalJobCard = await JobCard.find({ isRecycled: false });
   const totalQuotation = await Quotation.find({ isRecycled: false });
   const totalInvoice = await Invoice.find({ isRecycled: false });
@@ -312,7 +315,6 @@ const getAllMetaFromDB = async (
   const formattedTotalAmount = formatToBDComma(totalAmount);
   const formattedTotalAdvance = formatToBDComma(totalAdvance);
   const formattedTotalRemaining = formatToBDComma(totalRemaining);
-
 
   const totalOtherExpense = totalExpense.reduce(
     (sum, expense) => sum + (expense.totalOtherExpense || 0),
@@ -400,6 +402,7 @@ const getAllMetaFromDB = async (
     totalCustomers: allCustomer.length,
     totalCompanies: allCompany.length,
     totalShowRooms: allShowRoom.length,
+    totalEntities: totalEntities,
     totalJobCard: totalJobCard.length,
     totalQuotation: totalQuotation.length,
     totalInvoice: totalInvoice.length,
@@ -412,10 +415,9 @@ const getAllMetaFromDB = async (
   };
 };
 
-
 export const calculateAccountingSummary = async (
   tenantDomain: string,
-  query: Record<string, unknown>
+  query: Record<string, unknown>,
 ) => {
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
@@ -428,25 +430,37 @@ export const calculateAccountingSummary = async (
   const buildMatch = (month?: number, year?: number) => {
     if (!month && !year) return {};
     const expr: any[] = [];
-    if (month) expr.push({ $eq: [{ $month: "$date" }, month] });
-    if (year) expr.push({ $eq: [{ $year: "$date" }, year] });
+    if (month) expr.push({ $eq: [{ $month: '$date' }, month] });
+    if (year) expr.push({ $eq: [{ $year: '$date' }, year] });
     if (expr.length === 1) return { $expr: expr[0] };
     return { $expr: { $and: expr } };
   };
 
-  const aggregateFields = async (Model: any, fields: string[], match: any = {}) => {
+  const aggregateFields = async (
+    Model: any,
+    fields: string[],
+    match: any = {},
+  ) => {
     const groupStage: any = { _id: null };
     fields.forEach((field) => {
       groupStage[field] = { $sum: `$${field}` };
     });
-    const [result] = await Model.aggregate([{ $match: match }, { $group: groupStage }]);
+    const [result] = await Model.aggregate([
+      { $match: match },
+      { $group: groupStage },
+    ]);
     return result || fields.reduce((acc, f) => ({ ...acc, [f]: 0 }), {});
   };
 
   const aggregateDonation = async (Model: any, match: any = {}) => {
     const [result] = await Model.aggregate([
       { $match: match },
-      { $group: { _id: null, donation: { $sum: { $toDouble: "$donation_amount" } } } },
+      {
+        $group: {
+          _id: null,
+          donation: { $sum: { $toDouble: '$donation_amount' } },
+        },
+      },
     ]);
     return result?.donation || 0;
   };
@@ -456,20 +470,42 @@ export const calculateAccountingSummary = async (
   const yearlyMatch = year ? buildMatch(undefined, year) : {};
 
   // --- Income ---
-  const incomeFields = ['totalAmount', 'serviceIncomeAmount', 'partsIncomeAmount', 'totalOtherIncome', 'totalInvoiceIncome'];
-  const monthlyIncome = await aggregateFields(Income, incomeFields, monthlyMatch);
+  const incomeFields = [
+    'totalAmount',
+    'serviceIncomeAmount',
+    'partsIncomeAmount',
+    'totalOtherIncome',
+    'totalInvoiceIncome',
+  ];
+  const monthlyIncome = await aggregateFields(
+    Income,
+    incomeFields,
+    monthlyMatch,
+  );
   const yearlyIncome = await aggregateFields(Income, incomeFields, yearlyMatch);
   const totalIncome = await aggregateFields(Income, incomeFields);
 
   // --- Expense ---
   const expenseFields = ['totalAmount', 'totalOtherExpense', 'invoiceCost'];
-  const monthlyExpense = await aggregateFields(Expense, expenseFields, monthlyMatch);
-  const yearlyExpense = await aggregateFields(Expense, expenseFields, yearlyMatch);
+  const monthlyExpense = await aggregateFields(
+    Expense,
+    expenseFields,
+    monthlyMatch,
+  );
+  const yearlyExpense = await aggregateFields(
+    Expense,
+    expenseFields,
+    yearlyMatch,
+  );
   const totalExpense = await aggregateFields(Expense, expenseFields);
 
   // --- Salary ---
   const salaryFields = ['total_payment'];
-  const monthlySalary = await aggregateFields(Salary, salaryFields, monthlyMatch);
+  const monthlySalary = await aggregateFields(
+    Salary,
+    salaryFields,
+    monthlyMatch,
+  );
   const yearlySalary = await aggregateFields(Salary, salaryFields, yearlyMatch);
   const totalSalary = await aggregateFields(Salary, salaryFields);
 
@@ -479,39 +515,74 @@ export const calculateAccountingSummary = async (
   const totalDonation = await aggregateDonation(Donation);
 
   // --- Net Profit ---
-  const calcNetProfit = (income: any, expense: any, salary: any, donation: number) =>
-    (income.totalAmount || 0) - ((expense.totalAmount || 0) + (salary.total_payment || 0) + donation);
+  const calcNetProfit = (
+    income: any,
+    expense: any,
+    salary: any,
+    donation: number,
+  ) =>
+    (income.totalAmount || 0) -
+    ((expense.totalAmount || 0) + (salary.total_payment || 0) + donation);
 
   // --- Net Total Expense (sum of expense + salary + donation) ---
   const calcNetTotalExpense = (expense: any, salary: any, donation: number) =>
     (expense.totalAmount || 0) + (salary.total_payment || 0) + donation;
 
   return {
-    income: { monthly: monthlyIncome, yearly: yearlyIncome, total: totalIncome },
-    expense: { monthly: monthlyExpense, yearly: yearlyExpense, total: totalExpense },
-    salary: { monthly: monthlySalary.total_payment, yearly: yearlySalary.total_payment, total: totalSalary.total_payment },
-    donation: { monthly: monthlyDonation, yearly: yearlyDonation, total: totalDonation },
+    income: {
+      monthly: monthlyIncome,
+      yearly: yearlyIncome,
+      total: totalIncome,
+    },
+    expense: {
+      monthly: monthlyExpense,
+      yearly: yearlyExpense,
+      total: totalExpense,
+    },
+    salary: {
+      monthly: monthlySalary.total_payment,
+      yearly: yearlySalary.total_payment,
+      total: totalSalary.total_payment,
+    },
+    donation: {
+      monthly: monthlyDonation,
+      yearly: yearlyDonation,
+      total: totalDonation,
+    },
     netProfit: {
-      monthly: calcNetProfit(monthlyIncome, monthlyExpense, monthlySalary, monthlyDonation),
-      yearly: calcNetProfit(yearlyIncome, yearlyExpense, yearlySalary, yearlyDonation),
-      total: calcNetProfit(totalIncome, totalExpense, totalSalary, totalDonation),
+      monthly: calcNetProfit(
+        monthlyIncome,
+        monthlyExpense,
+        monthlySalary,
+        monthlyDonation,
+      ),
+      yearly: calcNetProfit(
+        yearlyIncome,
+        yearlyExpense,
+        yearlySalary,
+        yearlyDonation,
+      ),
+      total: calcNetProfit(
+        totalIncome,
+        totalExpense,
+        totalSalary,
+        totalDonation,
+      ),
     },
     netTotalExpense: {
-      monthly: calcNetTotalExpense(monthlyExpense, monthlySalary, monthlyDonation),
+      monthly: calcNetTotalExpense(
+        monthlyExpense,
+        monthlySalary,
+        monthlyDonation,
+      ),
       yearly: calcNetTotalExpense(yearlyExpense, yearlySalary, yearlyDonation),
       total: calcNetTotalExpense(totalExpense, totalSalary, totalDonation),
     },
   };
 };
 
-
-
-
-
-
-
 export const metServices = {
   getAllCustomer,
   getAllMetaFromDB,
-  calculateAccountingSummary
+  calculateAccountingSummary,
 };
