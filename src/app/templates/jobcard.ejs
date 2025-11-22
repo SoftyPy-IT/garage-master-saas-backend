@@ -133,8 +133,8 @@
                             style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
 
                             <% if (companyData?.companyNameBN) { %>
-                                <b class="trustAutoTitle">
-                                    <%= companyData?.companyNameBN %>
+                                <b style=" font-size: 18px; color: #333; display: block;">
+                                    (<%= companyData?.companyNameBN %>)
                                 </b>
                                 <% } %>
 
@@ -144,6 +144,8 @@
                                             (<%= companyData?.companyName %>)
                                         </b>
                                         <% } %>
+
+
                         </div>
                         <div></div>
                     </div>
@@ -368,8 +370,6 @@
                         Meter Light &
                         Others</label>
                     <small class="vehicleInterior">
-
-
                         <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts.replace(/<\/?[^>
                             ]+(>|$)/g, "") : 'N/A' %>
                     </small>
@@ -379,8 +379,8 @@
                         <div>
                             <label style="display: block; font-size: 12px; ;margin-bottom: 3px;">Reported Defect</label>
                             <small class="vehicleInterior">
-                                <%= jobcard && jobcard.vehicle_interior_parts ?
-                                    jobcard.vehicle_interior_parts.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.reported_defect ? jobcard.reported_defect.replace(/<\/?[^>
+                                    ]+(>|$)/g, "") : 'N/A' %>
                             </small>
                         </div>
                         <div>
