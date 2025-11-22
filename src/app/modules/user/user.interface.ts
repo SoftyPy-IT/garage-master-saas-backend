@@ -36,6 +36,8 @@ export interface TUser {
   passwordChangeAt: Date;
   isDeleted?: boolean;
   image: string;
+  isRecycled: boolean;
+  recycledAt: Date;
 }
 
 export interface UserModel extends Model<TUser> {

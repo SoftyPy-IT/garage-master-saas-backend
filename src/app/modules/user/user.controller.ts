@@ -16,7 +16,8 @@ const createUser = catchAsync(async (req, res) => {
 
 const getAllUser = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const result = await UserServices.getAllUser(tenantDomain);
+
+  const result = await UserServices.getAllUser(tenantDomain, req.query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -59,7 +60,11 @@ const assignRoleToUser = catchAsync(async (req, res) => {
   const { userId } = req.params;
   const { roleId } = req.body;
 
-  const result = await UserServices.assignRoleToUser(tenantDomain, userId, roleId);
+  const result = await UserServices.assignRoleToUser(
+    tenantDomain,
+    userId,
+    roleId,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -83,6 +88,48 @@ const getUserPermissions = catchAsync(async (req, res) => {
   });
 });
 
+const moveToRecycleBin = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.moveToRecycleBin(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User moved to recycle bin successfully',
+    data: result,
+  });
+});
+
+const restoreUser = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.restoreUser(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User restored successfully',
+    data: result,
+  });
+});
+
+const permanentDeleteUser = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.permanentDeleteUser(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User permanently deleted successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   createUser,
   getAllUser,
@@ -90,4 +137,7 @@ export const UserController = {
   updateUser,
   assignRoleToUser,
   getUserPermissions,
+  moveToRecycleBin,
+  restoreUser,
+  permanentDeleteUser,
 };

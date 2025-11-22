@@ -129,13 +129,22 @@
                             <img style="width: 100px; height: 100px; object-fit: contain;" src="<%= companyData.logo %>"
                                 alt="<%= companyData.companyName || 'Company Logo' %>">
                         </div>
-                        <div style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
-                            <b class="trustAutoTitle">
-                                <%= companyData?.companyNameBN %>
-                            </b>
-                            <b style=" font-size: 18px; color: #333;">
-                                (<%= companyData?.companyName %>)
-                            </b>
+                        <div
+                            style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
+
+                            <% if (companyData?.companyNameBN) { %>
+                                <b class="trustAutoTitle">
+                                    <%= companyData?.companyNameBN %>
+                                </b>
+                                <% } %>
+
+
+                                    <% if (companyData?.companyName) { %>
+                                        <b style=" font-size: 18px; color: #333; display: block;">
+                                            (<%= companyData?.companyName %>)
+                                        </b>
+                                        <% } %>
+
                         </div>
                         <div></div>
                     </div>
@@ -145,10 +154,13 @@
                     style="display: flex; font-size: 12px; justify-content: space-between; align-items: center; margin: 8px 0;">
                     <div>
                         <b>
-                            Job No: <span> <%= jobcard && jobcard.job_no ? jobcard.job_no : 'N/A' %></span>
+                            Job No: <span>
+                                <%= jobcard && jobcard.job_no ? jobcard.job_no : 'N/A' %>
+                            </span>
                         </b>
                         <div>
-                            <b> ID:</b> <%= jobcard && jobcard.Id ? jobcard.Id : 'N/A' %>
+                            <b> ID:</b>
+                            <%= jobcard && jobcard.Id ? jobcard.Id : 'N/A' %>
                         </div>
                     </div>
                     <div>
@@ -158,7 +170,9 @@
                     </div>
                     <div>
                         <b>
-                            Date: <span><%= jobcard && jobcard.date ? jobcard.date : 'N/A' %></span>
+                            Date: <span>
+                                <%= jobcard && jobcard.date ? jobcard.date : 'N/A' %>
+                            </span>
                         </b>
                     </div>
                 </div>
@@ -170,17 +184,21 @@
                                 <div>
                                     <label style="display: block; font-size: 12px;">Chassis_no </label>
                                     <small class="vehicleField " style="text-transform: uppercase;">
-                                        <%= jobcard && jobcard.vehicle.chassis_no ? jobcard.vehicle.chassis_no : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.chassis_no ? jobcard.vehicle.chassis_no : 'N/A'
+                                            %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Engine No </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.engine_no ? jobcard.vehicle.engine_no : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.engine_no ? jobcard.vehicle.engine_no : 'N/A' %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Mileage </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.mileage ? jobcard.mileage : 'N/A' %></small>
+                                        <%= jobcard && jobcard.mileage ? jobcard.mileage : 'N/A' %>
+                                    </small>
                                 </div>
                             </div>
                             <div style="display: flex;align-items: center ;gap: 5px ;margin-top:8px">
@@ -188,17 +206,22 @@
                                     <label style="display: block; font-size: 12px;">Car Registration No
                                     </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.carReg_no ? jobcard.vehicle.carReg_no : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.carReg_no ? jobcard.vehicle.carReg_no : 'N/A' %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Vehicle Name </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.vehicle_name ? jobcard.vehicle.vehicle_name : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.vehicle_name ? jobcard.vehicle.vehicle_name
+                                            : 'N/A' %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Color </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.color_code ? jobcard.vehicle.color_code : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.color_code ? jobcard.vehicle.color_code : 'N/A'
+                                            %>
+                                    </small>
                                 </div>
                             </div>
                             <div style="display: flex;align-items: center ;gap: 5px ;margin-top:8px">
@@ -206,17 +229,23 @@
                                     <label style="display: block; font-size: 12px;">Vehicle Model
                                     </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.vehicle_model ? jobcard.vehicle.vehicle_model : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.vehicle_model ? jobcard.vehicle.vehicle_model
+                                            : 'N/A' %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Vehicle Brand</label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.vehicle_brand ? jobcard.vehicle.vehicle_brand : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.vehicle_brand ? jobcard.vehicle.vehicle_brand
+                                            : 'N/A' %>
+                                    </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Vehicle Category </label>
                                     <small class="vehicleField">
-                                        <%= jobcard && jobcard.vehicle.vehicle_category ? jobcard.vehicle.vehicle_category : 'N/A' %></small>
+                                        <%= jobcard && jobcard.vehicle.vehicle_category ?
+                                            jobcard.vehicle.vehicle_category : 'N/A' %>
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -229,28 +258,33 @@
                                     <label style="display: block; font-size: 12px;">Customer Name</label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.customer_name) { %>
-                                        <%= jobcard.customer.customer_name %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.company_name) { %>
-                                        <%= jobcard.company.company_name %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.showRoom_name) { %>
-                                        <%= jobcard.showRoom.showRoom_name %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.customer_name %>
+                                                <% } else if (jobcard && jobcard.company &&
+                                                    jobcard.company.company_name) { %>
+                                                    <%= jobcard.company.company_name %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.showRoom_name) { %>
+                                                            <%= jobcard.showRoom.showRoom_name %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Phone Number </label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.customer_contact) { %>
-                                        <%= jobcard.customer.customer_country_code + jobcard.customer.customer_contact %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.fullCompanyNum) { %>
-                                        <%= jobcard.company.fullCompanyNum %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.fullCompanyNum) { %>
-                                        <%= jobcard.showRoom.fullCompanyNum %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.customer_country_code +
+                                                jobcard.customer.customer_contact %>
+                                                <% } else if (jobcard && jobcard.company &&
+                                                    jobcard.company.fullCompanyNum) { %>
+                                                    <%= jobcard.company.fullCompanyNum %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.fullCompanyNum) { %>
+                                                            <%= jobcard.showRoom.fullCompanyNum %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                             </div>
@@ -260,28 +294,32 @@
                                     </label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.driver_name) { %>
-                                        <%= jobcard.customer.driver_name %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.driver_name) { %>
-                                        <%= jobcard.company.driver_name %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.driver_name) { %>
-                                        <%= jobcard.showRoom.driver_name %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.driver_name %>
+                                                <% } else if (jobcard && jobcard.company && jobcard.company.driver_name)
+                                                    { %>
+                                                    <%= jobcard.company.driver_name %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.driver_name) { %>
+                                                            <%= jobcard.showRoom.driver_name %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                                 <div>
                                     <label style="display: block; font-size: 12px;">Driver Contact No </label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.customer_name) { %>
-                                        <%= jobcard.customer.customer_name %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.driver_contact) { %>
-                                        <%= jobcard.company.driver_contact %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.driver_contact) { %>
-                                        <%= jobcard.showRoom.driver_contact %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.customer_name %>
+                                                <% } else if (jobcard && jobcard.company &&
+                                                    jobcard.company.driver_contact) { %>
+                                                    <%= jobcard.company.driver_contact %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.driver_contact) { %>
+                                                            <%= jobcard.showRoom.driver_contact %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                             </div>
@@ -291,14 +329,16 @@
                                     </label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.reference_name) { %>
-                                        <%= jobcard.customer.reference_name %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.reference_name) { %>
-                                        <%= jobcard.company.reference_name %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.reference_name) { %>
-                                        <%= jobcard.showRoom.reference_name %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.reference_name %>
+                                                <% } else if (jobcard && jobcard.company &&
+                                                    jobcard.company.reference_name) { %>
+                                                    <%= jobcard.company.reference_name %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.reference_name) { %>
+                                                            <%= jobcard.showRoom.reference_name %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                                 <div>
@@ -306,14 +346,16 @@
                                     </label>
                                     <small class="vehicleField">
                                         <% if (jobcard && jobcard.customer && jobcard.customer.customer_email) { %>
-                                        <%= jobcard.customer.customer_email %>
-                                        <% } else if (jobcard && jobcard.company && jobcard.company.customer_email) { %>
-                                        <%= jobcard.company.customer_email %>
-                                        <% } else if (jobcard && jobcard.showRoom && jobcard.showRoom.customer_email) { %>
-                                        <%= jobcard.showRoom.customer_email %>
-                                        <% } else { %>
-                                        N/A
-                                        <% } %>
+                                            <%= jobcard.customer.customer_email %>
+                                                <% } else if (jobcard && jobcard.company &&
+                                                    jobcard.company.customer_email) { %>
+                                                    <%= jobcard.company.customer_email %>
+                                                        <% } else if (jobcard && jobcard.showRoom &&
+                                                            jobcard.showRoom.customer_email) { %>
+                                                            <%= jobcard.showRoom.customer_email %>
+                                                                <% } else { %>
+                                                                    N/A
+                                                                    <% } %>
                                     </small>
                                 </div>
                             </div>
@@ -327,7 +369,8 @@
                         Meter Light &
                         Others</label>
                     <small class="vehicleInterior">
-                        <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                        <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts.replace(/<\/?[^>
+                            ]+(>|$)/g, "") : 'N/A' %>
                     </small>
                 </div>
                 <div style="display: flex; gap: 5px ; align-items: center ;margin-top: 15px;">
@@ -335,7 +378,8 @@
                         <div>
                             <label style="display: block; font-size: 12px; ;margin-bottom: 3px;">Reported Defect</label>
                             <small class="vehicleInterior">
-                                <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.vehicle_interior_parts ?
+                                    jobcard.vehicle_interior_parts.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
                             </small>
                         </div>
                         <div>
@@ -343,7 +387,8 @@
                                 style="display: block; font-size: 12px; margin-top: 10px ;margin-bottom: 3px;">Reported
                                 Action</label>
                             <small class="reportedInput">
-                                <%= jobcard && jobcard.reported_action ? jobcard.reported_action.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.reported_action ? jobcard.reported_action.replace(/<\/?[^>
+                                    ]+(>|$)/g, "") : 'N/A' %>
                             </small>
                         </div>
                         <div>
@@ -352,18 +397,19 @@
                                 Body
                                 Report Comments</label>
                             <small class="reportedInput">
-                                <%= jobcard && jobcard.vehicle_body_report ? jobcard.vehicle_body_report.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.vehicle_body_report ?
+                                    jobcard.vehicle_body_report.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
                             </small>
                         </div>
                     </div>
                     <div>
                         <div class="carImgWrap">
                             <% if (carImageBase64) { %>
-                            <img src="data:image/jpeg;base64,<%= carImageBase64 %>" alt="Vehicle Image" />
-                            <% } else { %>
-                            <img src="<%= imageUrl %>/images/car3.jpeg" alt="Vehicle Image"
-                                onerror="this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';" />
-                            <% } %>
+                                <img src="data:image/jpeg;base64,<%= carImageBase64 %>" alt="Vehicle Image" />
+                                <% } else { %>
+                                    <img src="<%= imageUrl %>/images/car3.jpeg" alt="Vehicle Image"
+                                        onerror="this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';" />
+                                    <% } %>
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px; margin-top: 8px ;">Note</label>
@@ -378,7 +424,8 @@
                         <div>
                             <label style="display: block; font-size: 12px;">Technician Name </label>
                             <small class="vehicleField footerInput">
-                                <%= jobcard && jobcard.technician_name ? jobcard.technician_name : 'N/A' %></small>
+                                <%= jobcard && jobcard.technician_name ? jobcard.technician_name : 'N/A' %>
+                            </small>
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px;">Technician Signature </label>
@@ -388,7 +435,8 @@
                         <div>
                             <label style="display: block; font-size: 12px;">Date </label>
                             <small class="vehicleField footerInput">
-                                <%= jobcard && jobcard.technician_date ? jobcard.technician_date : 'N/A' %></small>
+                                <%= jobcard && jobcard.technician_date ? jobcard.technician_date : 'N/A' %>
+                            </small>
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px;">I Explained The Car </label>
@@ -403,11 +451,13 @@
                 <div style="text-align: center; ">
                     <p>
                         <b>Office:
-                        </b><%= companyData.address%>
+                        </b>
+                        <%= companyData.address%>
                     </p>
                     <p>
-                        <b>Mobile:</b> <%= companyData?.phone %> <b>Email:</b>
-                        <%= companyData?.email%>
+                        <b>Mobile:</b>
+                        <%= companyData?.phone %> <b>Email:</b>
+                            <%= companyData?.email%>
                     </p>
                 </div>
             </div>

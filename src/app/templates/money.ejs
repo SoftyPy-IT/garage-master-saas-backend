@@ -46,15 +46,27 @@
       </div>
 
       <div style="width: 570px; text-align: center; color: #0950a1;">
-       <div style="display:flex ; justify-content:center; align-items:center;flex-direction: column;">
-         <span style="font-size: 40px; font-family: 'Hind Siliguri', sans-serif; display: block ;">
-          <%= companyData?.companyNameBN %>
-        </span>
-        <b style=" font-size: 18px; color: #333; display: block;">
-          (<%= companyData?.companyName %>)
-        </b>
-       </div>
-        <small style="margin-top: -20px;"><%= companyData.address%></small>
+        <div style="display:flex ; justify-content:center; align-items:center;flex-direction: column;">
+
+
+          <% if (companyData?.companyNameBN) { %>
+            <span style="font-size: 40px; font-family: 'Hind Siliguri', sans-serif; display: block ;">
+              <%= companyData?.companyNameBN %>
+            </span>
+            <% } %>
+
+
+              <% if (companyData?.companyName) { %>
+                <b style=" font-size: 18px; color: #333; display: block;">
+                  (<%= companyData?.companyName %>)
+                </b>
+                <% } %>
+
+
+        </div>
+        <small style="margin-top: -20px;">
+          <%= companyData.address%>
+        </small>
       </div>
 
 
@@ -65,11 +77,15 @@
         </div>
         <div style="display: flex; align-items: center; gap: 5px;">
           <i class="fa-solid fa-phone"></i>
-          <small><%= companyData?.phone %></small>
+          <small>
+            <%= companyData?.phone %>
+          </small>
         </div>
         <div style="display: flex; align-items: center; gap: 5px;">
           <i class="fa-solid fa-envelope"></i>
-          <small><%= companyData?.email %></small>
+          <small>
+            <%= companyData?.email %>
+          </small>
         </div>
       </div>
 
@@ -99,16 +115,16 @@
         <div style="display: flex; align-items: center; width:50% ">
           <small style="font-style: italic; width:350px">
             <% if (money && money.against_bill_no_method) { %>
-            <% if (money.against_bill_no_method === 'Final payment against bill no') { %>
-            <%= 'Final payment against bill no' %>
-            <% } else if (money.against_bill_no_method === 'Advance against bill no') { %>
-            <%= 'Advance against bill no' %>
-            <% } else { %>
-            <%= money.against_bill_no_method %>
-            <% } %>
-            <% } else { %>
-            N/A
-            <% } %> :
+              <% if (money.against_bill_no_method==='Final payment against bill no' ) { %>
+                <%= 'Final payment against bill no' %>
+                  <% } else if (money.against_bill_no_method==='Advance against bill no' ) { %>
+                    <%= 'Advance against bill no' %>
+                      <% } else { %>
+                        <%= money.against_bill_no_method %>
+                          <% } %>
+                            <% } else { %>
+                              N/A
+                              <% } %> :
           </small>
           <span style="font-size: small;font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
             <%= money && money.job_no ? money.job_no : 'N/A' %>
@@ -126,92 +142,92 @@
           <small style="font-style: italic; width:150px">Payment Method :</small>
           <span style="font-size: small;font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
             <% if (money && money.payment_method) { %>
-            <% if (money.payment_method === 'Bkash') { %>
-            <%= 'Bkash' %>
-            <% } else if (money.payment_method === 'Nagad') { %>
-            <%= 'Nagad' %>
+              <% if (money.payment_method==='Bkash' ) { %>
+                <%= 'Bkash' %>
+                  <% } else if (money.payment_method==='Nagad' ) { %>
+                    <%= 'Nagad' %>
 
-            <% } else if (money.payment_method === 'Rocket') { %>
-            <%= 'Rocket' %>
+                      <% } else if (money.payment_method==='Rocket' ) { %>
+                        <%= 'Rocket' %>
 
-            <% } else if (money.payment_method === 'Cash') { %>
-            <%= 'Cash' %>
+                          <% } else if (money.payment_method==='Cash' ) { %>
+                            <%= 'Cash' %>
 
-            <% }else if (money.payment_method === 'Check') { %>
-            <%= 'Check' %>
+                              <% }else if (money.payment_method==='Check' ) { %>
+                                <%= 'Check' %>
 
-            <% }else if (money.payment_method === 'Bank Transfer') { %>
-            <%= 'Bank Transfer' %>
+                                  <% }else if (money.payment_method==='Bank Transfer' ) { %>
+                                    <%= 'Bank Transfer' %>
 
-            <% } else { %>
-            <%= money.payment_method %>
-            <% } %>
-            <% } else { %>
-            N/A
-            <% } %>
+                                      <% } else { %>
+                                        <%= money.payment_method %>
+                                          <% } %>
+                                            <% } else { %>
+                                              N/A
+                                              <% } %>
           </span>
         </div>
         <% if (money && money.default_date) { %>
-        <div style="display: flex; align-items: center; width:50%">
-          <small style="font-style: italic; width:50px">Date :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= new Date(money.default_date).toLocaleDateString('en-GB') %>
-            <!-- Formats as day/month/year -->
-          </span>
-        </div>
-        <% } %>
+          <div style="display: flex; align-items: center; width:50%">
+            <small style="font-style: italic; width:50px">Date :</small>
+            <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+              <%= new Date(money.default_date).toLocaleDateString('en-GB') %>
+                <!-- Formats as day/month/year -->
+            </span>
+          </div>
+          <% } %>
 
 
 
       </div>
       <div style="display: flex; align-items: center;  width:100% ;gap:10px">
         <% if (money && money.account_number) { %>
-        <div style="display: flex; margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:160px">Account Number :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money.account_number %>
-          </span>
-        </div>
-        <% } %>
+          <div style="display: flex; margin-top:20px; align-items: center; width:50% ">
+            <small style="font-style: italic; width:160px">Account Number :</small>
+            <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+              <%= money.account_number %>
+            </span>
+          </div>
+          <% } %>
 
-        <% if (money && money.transaction_id) { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:120px">Transition ID :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.transaction_id %>
-          </span>
-        </div>
-        <% } %>
+            <% if (money && money.transaction_id) { %>
+              <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+                <small style="font-style: italic; width:120px">Transition ID :</small>
+                <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+                  <%= money && money.transaction_id %>
+                </span>
+              </div>
+              <% } %>
       </div>
       <div style="display: flex; align-items: center; width:100% ;gap:10px">
         <% if (money && money.cash_by) { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:120px">Cash By :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.cash_by %>
-          </span>
-        </div>
-        <% } %>
+          <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+            <small style="font-style: italic; width:120px">Cash By :</small>
+            <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+              <%= money && money.cash_by %>
+            </span>
+          </div>
+          <% } %>
       </div>
       <div style="display: flex; align-items: center; width:100% ;gap:10px">
 
         <% if (money && money.check_number) { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:140px">Check Number :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.check_number %>
-          </span>
-        </div>
-        <% } %>
+          <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+            <small style="font-style: italic; width:140px">Check Number :</small>
+            <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+              <%= money && money.check_number %>
+            </span>
+          </div>
+          <% } %>
 
-        <% if (money && money.bank_name) { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:120px">Bank Name :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.bank_name %>
-          </span>
-        </div>
-        <% } %>
+            <% if (money && money.bank_name) { %>
+              <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+                <small style="font-style: italic; width:120px">Bank Name :</small>
+                <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+                  <%= money && money.bank_name %>
+                </span>
+              </div>
+              <% } %>
 
 
 
@@ -220,25 +236,25 @@
 
       <div style="display: flex; align-items: center; width:100% ;gap:10px">
 
-        <% if (money && money.check_date && money.check_date !== 'NaN-NaN-NaN') { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:120px">Check Date :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.check_date%>
-          </span>
-        </div>
-        <% } %>
+        <% if (money && money.check_date && money.check_date !=='NaN-NaN-NaN' ) { %>
+          <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+            <small style="font-style: italic; width:120px">Check Date :</small>
+            <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+              <%= money && money.check_date%>
+            </span>
+          </div>
+          <% } %>
 
 
 
-        <% if (money && money.payment_date && money.payment_date !== 'NaN-NaN-NaN') { %>
-        <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
-          <small style="font-style: italic; width:140px">Payment Date :</small>
-          <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
-            <%= money && money.payment_date %>
-          </span>
-        </div>
-        <% } %>
+            <% if (money && money.payment_date && money.payment_date !=='NaN-NaN-NaN' ) { %>
+              <div style="display: flex;  margin-top:20px; align-items: center; width:50% ">
+                <small style="font-style: italic; width:140px">Payment Date :</small>
+                <span style="font-size: small; font-style: italic; border-bottom: 1px dashed #81027e; width:100%">
+                  <%= money && money.payment_date %>
+                </span>
+              </div>
+              <% } %>
 
 
       </div>
@@ -247,32 +263,34 @@
       <div style="margin-top: 20px; display: flex; align-items: center;gap: 30px;">
         <div style="display: flex; align-items: center; justify-content: center;">
           <small style="width: 120px;font-style: italic;">Total Amount Tk :</small>
-          <span
-            style="font-weight: bold; font-style: italic; font-size:12px"><%= money && money.total_amount ? formatToIndianCurrency(money.total_amount) : 'N/A' %></span>
+          <span style="font-weight: bold; font-style: italic; font-size:12px">
+            <%= money && money.total_amount ? formatToIndianCurrency(money.total_amount) : 'N/A' %>
+          </span>
         </div>
 
 
         <% if (money && money.advance) { %>
-        <div style="width: 130px; display: flex; align-items: center; justify-content: space-between;">
-          <small style="font-style: italic;">
-            <%= money.total_amount === money.advance ? "Paid" : "Advance" %> :
-          </small>
-          <span style="font-style: italic; font-size:12px; font-weight: bold;">
-            <%= formatToIndianCurrency(money.advance) %>
-          </span>
-        </div>
-        <% } %>
+          <div style="width: 130px; display: flex; align-items: center; justify-content: space-between;">
+            <small style="font-style: italic;">
+              <%= money.total_amount===money.advance ? "Paid" : "Advance" %> :
+            </small>
+            <span style="font-style: italic; font-size:12px; font-weight: bold;">
+              <%= formatToIndianCurrency(money.advance) %>
+            </span>
+          </div>
+          <% } %>
 
 
-        <% if (money && money.remaining) { %>
-        <div style="width: 120px; display: flex; align-items: center; justify-content: space-between;">
-          <small style="font-style: italic;">
-            <%= money && money.against_bill_no_method === 'Final payment against bill no' ? 'Paid' : 'Remaining' %>
-          </small> :
-          <span
-            style="font-style: italic; font-size:12px; font-weight: bold;"><%= money && formatToIndianCurrency(money.remaining) %></span>
-        </div>
-        <% } %>
+            <% if (money && money.remaining) { %>
+              <div style="width: 120px; display: flex; align-items: center; justify-content: space-between;">
+                <small style="font-style: italic;">
+                  <%= money && money.against_bill_no_method==='Final payment against bill no' ? 'Paid' : 'Remaining' %>
+                </small> :
+                <span style="font-style: italic; font-size:12px; font-weight: bold;">
+                  <%= money && formatToIndianCurrency(money.remaining) %>
+                </span>
+              </div>
+              <% } %>
 
       </div>
 

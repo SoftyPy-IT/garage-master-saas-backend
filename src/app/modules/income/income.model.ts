@@ -19,7 +19,7 @@ export const incomeSchema = new Schema<IIncome>(
     note: { type: String },
     totalAmount: { type: Number },
     totalOtherIncome: { type: Number },
-    referanceNo: { type: Number },
+    referenceNo: { type: Number },
   },
   { timestamps: true },
 );

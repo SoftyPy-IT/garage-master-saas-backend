@@ -78,7 +78,7 @@ export const userSchema = new Schema<TUser>(
     role: {
       type: String,
       required: [true, 'Role is required'],
-      default:'user'
+      default: 'user',
     },
     lastLogin: {
       type: Date,
@@ -88,6 +88,8 @@ export const userSchema = new Schema<TUser>(
       type: Date,
       default: null,
     },
+    isRecycled: { type: Boolean, default: false },
+    recycledAt: { type: Date, default: null },
   },
   {
     timestamps: true,
