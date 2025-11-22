@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jobcard</title>
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <style>
     @page {
@@ -28,9 +27,7 @@
         font-size: 45px;
         font-weight: 900;
         color: #4671A1;
-
     }
-
 
     .imgWrap {
         width: 150px;
@@ -39,9 +36,6 @@
 
     .logoWrap {
         text-align: center;
-        border-bottom-width: 2px;
-        border-bottom-style: solid;
-        border-bottom-color: #110255;
         border-bottom: 2px solid #110255;
         height: 110px;
         display: flex;
@@ -131,21 +125,16 @@
                         </div>
                         <div
                             style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
-
                             <% if (companyData?.companyNameBN) { %>
                                 <b style=" font-size: 18px; color: #333; display: block;">
                                     (<%= companyData?.companyNameBN %>)
                                 </b>
                                 <% } %>
-
-
                                     <% if (companyData?.companyName) { %>
                                         <b style=" font-size: 18px; color: #333; display: block;">
                                             (<%= companyData?.companyName %>)
                                         </b>
                                         <% } %>
-
-
                         </div>
                         <div></div>
                     </div>
@@ -370,8 +359,7 @@
                         Meter Light &
                         Others</label>
                     <small class="vehicleInterior">
-                        <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts.replace(/<\/?[^>
-                            ]+(>|$)/g, "") : 'N/A' %>
+                        <%= jobcard && jobcard.vehicle_interior_parts ? jobcard.vehicle_interior_parts : 'N/A' %>
                     </small>
                 </div>
                 <div style="display: flex; gap: 5px ; align-items: center ;margin-top: 15px;">
@@ -379,8 +367,7 @@
                         <div>
                             <label style="display: block; font-size: 12px; ;margin-bottom: 3px;">Reported Defect</label>
                             <small class="vehicleInterior">
-                                <%= jobcard && jobcard.reported_defect ? jobcard.reported_defect.replace(/<\/?[^>
-                                    ]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.reported_defect ? jobcard.reported_defect : 'N/A' %>
                             </small>
                         </div>
                         <div>
@@ -388,8 +375,7 @@
                                 style="display: block; font-size: 12px; margin-top: 10px ;margin-bottom: 3px;">Reported
                                 Action</label>
                             <small class="reportedInput">
-                                <%= jobcard && jobcard.reported_action ? jobcard.reported_action.replace(/<\/?[^>
-                                    ]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.reported_action ? jobcard.reported_action : 'N/A' %>
                             </small>
                         </div>
                         <div>
@@ -398,8 +384,7 @@
                                 Body
                                 Report Comments</label>
                             <small class="reportedInput">
-                                <%= jobcard && jobcard.vehicle_body_report ?
-                                    jobcard.vehicle_body_report.replace(/<\/?[^>]+(>|$)/g, "") : 'N/A' %>
+                                <%= jobcard && jobcard.vehicle_body_report ? jobcard.vehicle_body_report : 'N/A' %>
                             </small>
                         </div>
                     </div>
