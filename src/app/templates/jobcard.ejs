@@ -133,8 +133,8 @@
                             style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
 
                             <% if (companyData?.companyNameBN) { %>
-                                <b class="trustAutoTitle">
-                                    <%= companyData?.companyNameBN %>
+                                <b style=" font-size: 18px; color: #333; display: block;">
+                                    (<%= companyData?.companyNameBN %>)
                                 </b>
                                 <% } %>
 
@@ -144,6 +144,7 @@
                                             (<%= companyData?.companyName %>)
                                         </b>
                                         <% } %>
+
 
                         </div>
                         <div></div>
