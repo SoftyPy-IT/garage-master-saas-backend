@@ -1,4 +1,3 @@
-
 import bcrypt from 'bcrypt';
 import httpStatus from 'http-status';
 import { TUser } from './user.interface';
@@ -78,57 +77,53 @@ export const createUser = async (payload: TUser) => {
     },
   };
 };
+const getAllUser = async (tenantDomain: string, query: any) => {
+  const { isRecycled } = query;
 
-const getAllUser = async (tenantDomain: string) => {
-  if (tenantDomain) {
+  const { Model: User } = await getTenantModel(
+    tenantDomain || 'default',
+    'User',
+  );
+  const { Model: Permission } = await getTenantModel(
+    tenantDomain || 'default',
+    'Permission',
+  );
+  const { Model: Page } = await getTenantModel(
+    tenantDomain || 'default',
+    'Page',
+  );
+  const { Model: Role } = await getTenantModel(
+    tenantDomain || 'default',
+    'Role',
+  );
 
-    const { Model: User } = await getTenantModel(tenantDomain, 'User');
-    const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
-    const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
-    const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const filter: any = {};
 
-    // Deep populate permission → pageId & roleId
-    const result = await User.find()
-      .populate([
-        {
-          path: 'permission',
-          model: Permission,
-          populate: [
-            { path: 'pageId', model: Page },
-            { path: 'roleId', model: Role },
-          ],
-        },
-        { path: 'pageId', model: Page },
-        { path: 'roleId', model: Role },
-      ])
-      .lean();
-
-    return result;
-  } else {
-    const { Model: User } = await getTenantModel('default', 'User');
-    const { Model: Role } = await getTenantModel('default', 'Role');
-    const { Model: Page } = await getTenantModel('default', 'Page');
-    const { Model: Permission } = await getTenantModel('default', 'Permission');
-
-    const result = await User.find()
-      .populate([
-        {
-          path: 'permission',
-          model: Permission,
-          populate: [
-            { path: 'pageId', model: Page },
-            { path: 'roleId', model: Role },
-          ],
-        },
-        { path: 'pageId', model: Page },
-        { path: 'roleId', model: Role },
-      ])
-      .lean();
-
-    return result;
+  if (isRecycled !== undefined) {
+    if (isRecycled === 'true' || isRecycled === true) {
+      filter.isRecycled = true;
+    } else {
+      filter.$or = [{ isRecycled: false }, { isRecycled: { $exists: false } }];
+    }
   }
-};
 
+  const result = await User.find(filter)
+    .populate([
+      {
+        path: 'permission',
+        model: Permission,
+        populate: [
+          { path: 'pageId', model: Page },
+          { path: 'roleId', model: Role },
+        ],
+      },
+      { path: 'pageId', model: Page },
+      { path: 'roleId', model: Role },
+    ])
+    .lean();
+
+  return result;
+};
 
 const deleteUser = async (tenantDomain: string, id: string) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
@@ -179,7 +174,11 @@ const updateUser = async (
   return updatedUser;
 };
 
-const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: string) => {
+const assignRoleToUser = async (
+  tenantDomain: string,
+  userId: string,
+  roleId: string,
+) => {
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
 
@@ -197,15 +196,70 @@ const assignRoleToUser = async (tenantDomain: string, userId: string, roleId: st
   const updatedUser = await User.findByIdAndUpdate(
     userId,
     { $addToSet: { roleId: new Types.ObjectId(roleId) } },
-    { new: true }
+    { new: true },
   ).populate('roleId');
 
   return updatedUser;
 };
 
 const getUserPermissions = async (tenantDomain: string, userId: string) => {
-  const permissions = await PermissionService.getUserPermissions(tenantDomain, userId);
+  const permissions = await PermissionService.getUserPermissions(
+    tenantDomain,
+    userId,
+  );
   return permissions;
+};
+
+const moveToRecycleBin = async (tenantDomain: string, id: string) => {
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    id,
+    {
+      isRecycled: true,
+      recycledAt: new Date(),
+    },
+    { new: true },
+  );
+
+  return updated;
+};
+
+const restoreUser = async (tenantDomain: string, id: string) => {
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    id,
+    {
+      isRecycled: false,
+      recycledAt: null,
+    },
+    { new: true },
+  );
+
+  return updated;
+};
+
+const permanentDeleteUser = async (tenantDomain: string, id: string) => {
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
+  }
+
+  const result = await User.deleteOne({ _id: id });
+  return result;
 };
 
 export const UserServices = {
@@ -215,4 +269,7 @@ export const UserServices = {
   updateUser,
   assignRoleToUser,
   getUserPermissions,
+  moveToRecycleBin,
+  restoreUser,
+  permanentDeleteUser,
 };

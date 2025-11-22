@@ -1,4 +1,4 @@
-import type { Document, ObjectId } from "mongoose";
+import type { Document, ObjectId } from 'mongoose';
 
 export interface IIncomeItem {
   name: string;
@@ -13,6 +13,6 @@ export interface IIncome extends Document {
   transactionNumber?: string;
   note?: string;
   totalAmount?: number;
-  totalOtherIncome:number
-  referanceNo:number
+  totalOtherIncome: number;
+  referenceNo: number;
 }

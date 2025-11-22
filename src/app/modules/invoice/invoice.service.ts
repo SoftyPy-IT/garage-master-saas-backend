@@ -442,10 +442,8 @@ const removeInvoiceFromUpdate = async (
   index: number,
   invoice_name: string,
 ) => {
-  // Get the Invoice model for the tenant
   const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
 
-  // Find the existing invoice
   const existingInvoice = await Invoice.findById(id);
   if (!existingInvoice) {
     throw new AppError(StatusCodes.NOT_FOUND, 'No invoice exists.');
@@ -565,7 +563,7 @@ const deleteInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const permanantlyDeleteInvoice = async (tenantDomain: string, id: string) => {
+const permanentlyDeleteInvoice = async (tenantDomain: string, id: string) => {
   // Get tenant-specific models and connection
   const { Model: Invoice, connection: tenantConnection } = await getTenantModel(
     tenantDomain,
@@ -629,12 +627,12 @@ const permanantlyDeleteInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const moveToRecycledbinInvoice = async (tenantDomain: string, id: string) => {
+const moveToRecycledBinInvoice = async (tenantDomain: string, id: string) => {
   const { Model: Invoice, connection } = await getTenantModel(
     tenantDomain,
     'Invoice',
   );
-  const session = await connection.startSession(); // <-- use tenant connection here
+  const session = await connection.startSession();
   session.startTransaction();
 
   try {
@@ -665,7 +663,7 @@ const moveToRecycledbinInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const restoreFromRecycledbinInvoice = async (
+const restoreFromRecycledBinInvoice = async (
   tenantDomain: string,
   id: string,
 ) => {
@@ -817,9 +815,9 @@ export const InvoiceServices = {
   deleteInvoice,
   removeInvoiceFromUpdate,
   generateInvoicePDF,
-  moveToRecycledbinInvoice,
-  restoreFromRecycledbinInvoice,
-  permanantlyDeleteInvoice,
+  moveToRecycledBinInvoice,
+  restoreFromRecycledBinInvoice,
+  permanentlyDeleteInvoice,
   moveAllToRecycledBin,
   restoreAllFromRecycledBin,
 };
