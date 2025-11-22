@@ -125,11 +125,15 @@
                         </div>
                         <div
                             style="text-align: center; display: flex; flex-direction: column;justify-content: center; align-items: center;">
+
                             <% if (companyData?.companyNameBN) { %>
-                                <b style=" font-size: 18px; color: #333; display: block;">
-                                    (<%= companyData?.companyNameBN %>)
-                                </b>
+                                <small
+                                    style="font-size: 36px; color: #4671A1;display: block;font-weight: 800; font-family: 'Hind Siliguri', sans-serif">
+                                    <%= companyData?.companyNameBN %>
+                                </small>
                                 <% } %>
+
+
                                     <% if (companyData?.companyName) { %>
                                         <b style=" font-size: 18px; color: #333; display: block;">
                                             (<%= companyData?.companyName %>)
