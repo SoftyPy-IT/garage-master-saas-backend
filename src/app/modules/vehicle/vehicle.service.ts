@@ -249,14 +249,13 @@ const createVehicleDetails = async (
 
 const getAllVehiclesFromDB = async (
   tenantDomain: string,
-  id?: string, // optional
+  id?: string,
   limit = 10,
   page = 1,
   searchTerm = '',
 ) => {
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
 
-  // Only create id filter if id is provided
   let idMatchQuery: any = {};
   if (id) {
     idMatchQuery.$or = [
@@ -376,23 +375,24 @@ const getSingleVehicleDetails = async (tenantDomain: string, id: string) => {
 };
 
 const deleteVehicle = async (tenantDomain: string, id: string) => {
-  const session = await mongoose.startSession();
+  const { Model: Vehicle, connection } = await getTenantModel(
+    tenantDomain,
+    'Vehicle',
+  );
+  const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
+  const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
+  const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
+
+  const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-    const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
-    const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
-    const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
-
-    // Find and delete the vehicle
     const vehicle = await Vehicle.findByIdAndDelete(id, { session });
 
     if (!vehicle) {
       throw new AppError(StatusCodes.NOT_FOUND, 'No vehicle available');
     }
 
-    // Remove reference from customer if exists
     if (vehicle.customer) {
       await Customer.findByIdAndUpdate(
         vehicle.customer,
@@ -401,7 +401,6 @@ const deleteVehicle = async (tenantDomain: string, id: string) => {
       );
     }
 
-    // Remove reference from company if exists
     if (vehicle.company) {
       await Company.findByIdAndUpdate(
         vehicle.company,
@@ -410,7 +409,6 @@ const deleteVehicle = async (tenantDomain: string, id: string) => {
       );
     }
 
-    // Remove reference from showroom if exists
     if (vehicle.showRoom) {
       await ShowRoom.findByIdAndUpdate(
         vehicle.showRoom,
