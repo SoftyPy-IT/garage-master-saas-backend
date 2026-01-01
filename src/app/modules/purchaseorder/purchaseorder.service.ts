@@ -32,7 +32,7 @@ export const createPurchaseOrder = async (
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-      'An unexpected error occurred while creating the purchase order',
+        'An unexpected error occurred while creating the purchase order',
     );
   }
 };
@@ -52,7 +52,10 @@ export const updatePurchaseOrder = async (
   const { Model: Stocks } = await getTenantModel(tenantDomain, 'Stock');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-  const { Model: WarehouseStock } = await getTenantModel(tenantDomain, 'WarehouseStock');
+  const { Model: WarehouseStock } = await getTenantModel(
+    tenantDomain,
+    'WarehouseStock',
+  );
   const { Model: StockTransaction } = await getTenantModel(
     tenantDomain,
     'StockTransaction',
@@ -62,7 +65,6 @@ export const updatePurchaseOrder = async (
   session.startTransaction();
 
   try {
-
     const existingOrder = await PurchaseOrder.findById(id).session(session);
     if (!existingOrder) {
       throw new AppError(httpStatus.NOT_FOUND, 'Purchase Order not found');
@@ -123,7 +125,9 @@ export const updatePurchaseOrder = async (
         })),
       };
 
-      const [newPurchase] = await Purchase.create([purchasePayload], { session });
+      const [newPurchase] = await Purchase.create([purchasePayload], {
+        session,
+      });
 
       // Supplier update
       if (updatedOrder.suppliers?.length) {
@@ -131,9 +135,11 @@ export const updatePurchaseOrder = async (
           const supplier = await Supplier.findById(supplierId).session(session);
           if (!supplier) continue;
 
-          const due = (newPurchase.grandTotal || 0) - (newPurchase.paidAmount || 0);
+          const due =
+            (newPurchase.grandTotal || 0) - (newPurchase.paidAmount || 0);
           supplier.totalDue = (supplier.totalDue || 0) + due;
-          supplier.balance = (supplier.totalDue || 0) - (supplier.totalPaid || 0);
+          supplier.balance =
+            (supplier.totalDue || 0) - (supplier.totalPaid || 0);
 
           if (!supplier.purchases.includes(newPurchase._id)) {
             supplier.purchases.push(newPurchase._id);
@@ -155,53 +161,72 @@ export const updatePurchaseOrder = async (
           // existingStock.quantity += quantity;
           await existingStock.save({ session });
         } else {
-          await Stocks.create([{
-            product: productId,
-            warehouse: warehouseId,
-            quantity,
-            batchNumber: item.batchNumber || null,
-            expiryDate: item.expiryDate || null,
-            type: 'in',
-            referenceType: 'purchase',
-            referenceId: newPurchase._id,
-            purchasePrice: item.unit_price,
-            date: new Date(),
-          }], { session });
+          await Stocks.create(
+            [
+              {
+                product: productId,
+                warehouse: warehouseId,
+                quantity,
+                batchNumber: item.batchNumber || null,
+                expiryDate: item.expiryDate || null,
+                type: 'in',
+                referenceType: 'purchase',
+                referenceId: newPurchase._id,
+                purchasePrice: item.unit_price,
+                date: new Date(),
+              },
+            ],
+            { session },
+          );
         }
 
         // Update WarehouseStock
         const wsQuery = { product: productId, warehouse: warehouseId };
-        const warehouseStock = await WarehouseStock.findOne(wsQuery).session(session);
+        const warehouseStock =
+          await WarehouseStock.findOne(wsQuery).session(session);
 
         if (warehouseStock) {
           warehouseStock.quantity += quantity;
           await warehouseStock.save({ session });
         } else {
-          await WarehouseStock.create([{
-            product: productId,
-            warehouse: warehouseId,
-            quantity,
-          }], { session });
+          await WarehouseStock.create(
+            [
+              {
+                product: productId,
+                warehouse: warehouseId,
+                quantity,
+              },
+            ],
+            { session },
+          );
         }
 
         // Update Product total stock
-        await Product.findByIdAndUpdate(productId, { $inc: { stock: quantity } }, { session });
+        await Product.findByIdAndUpdate(
+          productId,
+          { $inc: { stock: quantity } },
+          { session },
+        );
 
         // Create StockTransaction
-        await StockTransaction.create([{
-          product: productId,
-          warehouse: warehouseId,
-          quantity,
-          batchNumber: item.batchNumber || null,
-          type: 'in',
-          referenceType: 'purchase',
-          referenceId: newPurchase._id,
-          sellingPrice: item.unit_price,
-          date: new Date(),
-        }], { session });
+        await StockTransaction.create(
+          [
+            {
+              product: productId,
+              warehouse: warehouseId,
+              quantity,
+              batchNumber: item.batchNumber || null,
+              type: 'in',
+              referenceType: 'purchase',
+              referenceId: newPurchase._id,
+              sellingPrice: item.unit_price,
+              date: new Date(),
+            },
+          ],
+          { session },
+        );
       }
     }
-
 
     await session.commitTransaction();
     session.endSession();
@@ -213,7 +238,7 @@ export const updatePurchaseOrder = async (
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-      'An unexpected error occurred while updating the purchase order',
+        'An unexpected error occurred while updating the purchase order',
     );
   }
 };
@@ -270,7 +295,7 @@ const deletePurchaseOrder = async (tenantDomain: string, id: string) => {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       error.message ||
-      'An unexpected error occurred while deleting the purchase order',
+        'An unexpected error occurred while deleting the purchase order',
     );
   }
 };
@@ -283,7 +308,7 @@ const getAllPurchaseOrders = async (
     tenantDomain,
     'PurchaseOrder',
   );
-  console.log(query)
+  console.log(query);
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 

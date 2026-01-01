@@ -44,15 +44,12 @@ import { pageSchema } from '../modules/page/page.model';
 import { roleSchema } from '../modules/role/role.model';
 import { permissionSchema } from '../modules/permission/permission.model';
 import { barcodeSchema } from '../modules/barcode/barcode.model';
-import { warehouseStockSchema } from '../modules/warehouseStock/warehouseStock.model';
 import { adjustmentSchema } from '../modules/adjustment/adjustment.model';
-
-
+import { warehouseStockSchema } from '../modules/warehouseStock/warehouseStock.model';
 
 type SchemaMap = {
   [key: string]: mongoose.Schema;
 };
-
 
 const schemas: SchemaMap = {
   User: userSchema,
@@ -96,7 +93,7 @@ const schemas: SchemaMap = {
   Page: pageSchema,
   Permission: permissionSchema,
   WarehouseStock: warehouseStockSchema,
-  Adjustment: adjustmentSchema
+  Adjustment: adjustmentSchema,
 };
 
 export const getTenantModel = async (

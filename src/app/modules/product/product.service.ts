@@ -11,11 +11,14 @@ import httpStatus from 'http-status';
 export const createProduct = async (
   tenantDomain: string,
   payload: any,
-  file?: Express.Multer.File
+  file?: Express.Multer.File,
 ) => {
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-  const { Model: ProductType } = await getTenantModel(tenantDomain, 'ProductType');
+  const { Model: ProductType } = await getTenantModel(
+    tenantDomain,
+    'ProductType',
+  );
   const { Model: Category } = await getTenantModel(tenantDomain, 'Category');
   const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty');
   const { Model: Brand } = await getTenantModel(tenantDomain, 'Brand');
@@ -43,7 +46,7 @@ export const createProduct = async (
     if (payload.suppliers && payload.suppliers.length) {
       await Supplier.updateMany(
         { _id: { $in: payload.suppliers } },
-        { $push: { products: newProduct._id } }
+        { $push: { products: newProduct._id } },
       );
     }
 
@@ -84,12 +87,11 @@ export const createProduct = async (
     console.error('Error creating product:', error.message);
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      error.message || 'An unexpected error occurred while creating the product'
+      error.message ||
+        'An unexpected error occurred while creating the product',
     );
   }
 };
-
-
 
 const getAllProduct = async (
   tenantDomain: string,
@@ -98,10 +100,10 @@ const getAllProduct = async (
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const categoryQuery = new QueryBuilder(Product.find(), query)
     .search(productSearch)
-    // .filter()
-    // .sort()
-    // .paginate()
-    // .fields();
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
 
   const meta = await categoryQuery.countTotal();
   const products = await categoryQuery.modelQuery.populate([
@@ -168,11 +170,14 @@ export const updateProduct = async (
   tenantDomain: string,
   id: string,
   payload: Partial<TProduct>,
-  file?: Express.Multer.File
+  file?: Express.Multer.File,
 ) => {
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-  const { Model: ProductType } = await getTenantModel(tenantDomain, 'ProductType');
+  const { Model: ProductType } = await getTenantModel(
+    tenantDomain,
+    'ProductType',
+  );
   const { Model: Category } = await getTenantModel(tenantDomain, 'Category');
   const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty');
   const { Model: Brand } = await getTenantModel(tenantDomain, 'Brand');
@@ -209,7 +214,7 @@ export const updateProduct = async (
     const updateRelation = async (
       Model: any,
       newId: string | undefined,
-      oldId: string | undefined
+      oldId: string | undefined,
     ) => {
       if (oldId && oldId !== newId) {
         await Model.findByIdAndUpdate(oldId, { $pull: { products: id } });
@@ -220,30 +225,60 @@ export const updateProduct = async (
     };
 
     // Update all relations
-    await updateRelation(Supplier, payload.suppliers?.toString(), existingProduct.suppliers?.toString());
-    await updateRelation(ProductType, payload.product_type?.toString(), existingProduct.product_type?.toString());
-    await updateRelation(Category, payload.category?.toString(), existingProduct.category?.toString());
-    await updateRelation(Warranty, payload.warranties?.toString(), existingProduct.warranties?.toString());
-    await updateRelation(Brand, payload.brand?.toString(), existingProduct.brand?.toString());
-    await updateRelation(Unit, payload.unit?.toString(), existingProduct.unit?.toString());
-    await updateRelation(Warehouse, payload.warehouse?.toString(), existingProduct.warehouse?.toString());
+    await updateRelation(
+      Supplier,
+      payload.suppliers?.toString(),
+      existingProduct.suppliers?.toString(),
+    );
+    await updateRelation(
+      ProductType,
+      payload.product_type?.toString(),
+      existingProduct.product_type?.toString(),
+    );
+    await updateRelation(
+      Category,
+      payload.category?.toString(),
+      existingProduct.category?.toString(),
+    );
+    await updateRelation(
+      Warranty,
+      payload.warranties?.toString(),
+      existingProduct.warranties?.toString(),
+    );
+    await updateRelation(
+      Brand,
+      payload.brand?.toString(),
+      existingProduct.brand?.toString(),
+    );
+    await updateRelation(
+      Unit,
+      payload.unit?.toString(),
+      existingProduct.unit?.toString(),
+    );
+    await updateRelation(
+      Warehouse,
+      payload.warehouse?.toString(),
+      existingProduct.warehouse?.toString(),
+    );
 
     return updatedProduct;
   } catch (error: any) {
     console.error('Error updating product:', error.message);
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      error.message || 'An unexpected error occurred while updating the product'
+      error.message ||
+        'An unexpected error occurred while updating the product',
     );
   }
 };
 
-
-
 export const deleteProduct = async (tenantDomain: string, id: string) => {
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-  const { Model: ProductType } = await getTenantModel(tenantDomain, 'ProductType');
+  const { Model: ProductType } = await getTenantModel(
+    tenantDomain,
+    'ProductType',
+  );
   const { Model: Category } = await getTenantModel(tenantDomain, 'Category');
   const { Model: Warranty } = await getTenantModel(tenantDomain, 'Warranty');
   const { Model: Brand } = await getTenantModel(tenantDomain, 'Brand');
@@ -269,11 +304,10 @@ export const deleteProduct = async (tenantDomain: string, id: string) => {
   return result;
 };
 
-
 export const productServices = {
   createProduct,
   getAllProduct,
-   getSingleProduct,
+  getSingleProduct,
   updateProduct,
   deleteProduct,
 };
