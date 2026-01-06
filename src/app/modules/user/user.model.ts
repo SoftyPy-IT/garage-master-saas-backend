@@ -95,10 +95,10 @@ export const userSchema = new Schema<TUser>(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function (doc, ret) {
-        delete ret.password;
-        return ret;
-      },
+      // transform: function (doc, ret) {
+      //   delete ret.password;
+      //   return ret;
+      // },
     },
   },
 );
