@@ -208,11 +208,11 @@ employeeSchema.pre('findOneAndUpdate', function (next) {
   next();
 });
 
-employeeSchema.set('toJSON', {
-  transform: function (_doc, ret) {
-    delete ret.password;
-    delete ret.confirm_password;
-    return ret;
-  },
-});
+// employeeSchema.set('toJSON', {
+//   transform: function (_doc, ret) {
+//     delete ret.password;
+//     delete ret.confirm_password;
+//     return ret;
+//   },
+// });
 export const Employee = mongoose.model<TEmployee>('Employee', employeeSchema);
