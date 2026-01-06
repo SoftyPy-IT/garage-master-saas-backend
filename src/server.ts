@@ -8,7 +8,7 @@ const tenantConnections: Record<string, mongoose.Connection> = {};
 export const connectToCentralDatabase = async () => {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(config.database_url as string);
-    console.log('✅ Connected to Central DB');
+    console.log(' Connected to Central DB');
   }
 };
 
