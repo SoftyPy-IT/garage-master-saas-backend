@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "concurrently \"tsc\" \"npm run copy-files\" ",
-    "start": "cross-env PORT=7000 node ./dist/server.js",
-    "dev": "cross-env PORT=7000 ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "cross-env PORT=8000 node ./dist/server.js",
+    "dev": "cross-env PORT=8000 ts-node-dev --respawn --transpile-only src/server.ts",
     "lint": "npx eslint src --ignore-pattern .ts",
     "lint:fix": "npx eslint src --fix",
     "prettier": "prettier --ignore-path .gitignore --write \"./src/**/*.+(js|ts|json)\"",
