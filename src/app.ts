@@ -150,7 +150,7 @@ app.get('/api/v1/backup-logs', (req, res) => {
     logs.sort(
       (a: any, b: any) =>
         new Date(b.backupEndTime).getTime() -
-        new Date(a.backupEndTime).getTime()
+        new Date(a.backupEndTime).getTime(),
     );
     res.json(logs);
   } else {
@@ -160,7 +160,6 @@ app.get('/api/v1/backup-logs', (req, res) => {
 
 app.use(globalErrorHandler);
 app.use(notFound);
-
 
 redisClient.connect().catch(console.error);
 
