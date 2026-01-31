@@ -5,7 +5,6 @@ import { IPage, IPageFilters } from './page.interface';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 
-
 const createPage = async (tenantDomain: string, payload: IPage) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
@@ -21,9 +20,10 @@ const createPage = async (tenantDomain: string, payload: IPage) => {
 };
 
 // Get all pages with filters
-const getAllPages = async (tenantDomain: string, filters: IPageFilters = {}) => {
-
-  console.log('tenant domain check', tenantDomain)
+const getAllPages = async (
+  tenantDomain: string,
+  filters: IPageFilters = {},
+) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { searchTerm, category, status } = filters;
 
@@ -52,7 +52,11 @@ const getPageById = async (tenantDomain: string, id: string) => {
   return result;
 };
 
-const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPage>) => {
+const updatePage = async (
+  tenantDomain: string,
+  id: string,
+  payload: Partial<IPage>,
+) => {
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
   const page = await Page.findById(id);
@@ -60,10 +64,15 @@ const updatePage = async (tenantDomain: string, id: string, payload: Partial<IPa
 
   if (payload.path && payload.path !== page.path) {
     const pageExists = await Page.findOne({ path: payload.path });
-    if (pageExists) throw new AppError(httpStatus.BAD_REQUEST, 'Page path already exists!');
+    if (pageExists)
+      throw new AppError(httpStatus.BAD_REQUEST, 'Page path already exists!');
   }
 
-  const result = await Page.findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true });
+  const result = await Page.findByIdAndUpdate(
+    id,
+    { $set: payload },
+    { new: true, runValidators: true },
+  );
   if (!result) throw new AppError(httpStatus.NOT_FOUND, 'Page not found!');
   return result;
 };
@@ -76,9 +85,14 @@ const deletePage = async (tenantDomain: string, id: string) => {
   if (!page) throw new AppError(httpStatus.NOT_FOUND, 'Page not found!');
 
   // Check if any role uses this page
-  const rolesUsingPage = await Role.countDocuments({ 'permissions.pageId': new Types.ObjectId(id) });
+  const rolesUsingPage = await Role.countDocuments({
+    'permissions.pageId': new Types.ObjectId(id),
+  });
   if (rolesUsingPage > 0) {
-    throw new AppError(httpStatus.BAD_REQUEST, `Cannot delete page. It is used in ${rolesUsingPage} roles.`);
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Cannot delete page. It is used in ${rolesUsingPage} roles.`,
+    );
   }
 
   const result = await Page.findByIdAndDelete(id);

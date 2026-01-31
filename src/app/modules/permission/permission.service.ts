@@ -1,12 +1,18 @@
-
 import httpStatus from 'http-status';
 import mongoose, { Types } from 'mongoose';
 import AppError from '../../errors/AppError';
 import { getTenantModel } from '../../utils/getTenantModels';
 import { redisClient } from '../../utils/redis';
-import { getAllPermissionsCacheKey, getSinglePermissionCacheKey, getUserPermissionsCacheKey } from '../../utils/generateCashKey';
+import {
+  getAllPermissionsCacheKey,
+  getSinglePermissionCacheKey,
+  getUserPermissionsCacheKey,
+} from '../../utils/generateCashKey';
 
-export const getUserPermissions = async (tenantDomain: string, userId: string) => {
+export const getUserPermissions = async (
+  tenantDomain: string,
+  userId: string,
+) => {
   const cacheKey = getUserPermissionsCacheKey(tenantDomain, userId);
 
   // firstly check from redis
@@ -15,7 +21,10 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
     return JSON.parse(cachedPermissions);
   }
 
-  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
@@ -74,7 +83,7 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
           delete: permission.delete ?? false,
         });
       } else {
-        // Merge permissions 
+        // Merge permissions
         permissionMap.set(pageIdStr, {
           ...existing,
           create: existing.create || permission.create,
@@ -87,12 +96,13 @@ export const getUserPermissions = async (tenantDomain: string, userId: string) =
   });
 
   const permissionsArray = Array.from(permissionMap.values());
-  const [totalPages, totalRoles, totalUsers, totalPermissions] = await Promise.all([
-    Page.countDocuments(),
-    Role.countDocuments(),
-    User.countDocuments(),
-    Permission.countDocuments(),
-  ]);
+  const [totalPages, totalRoles, totalUsers, totalPermissions] =
+    await Promise.all([
+      Page.countDocuments(),
+      Role.countDocuments(),
+      User.countDocuments(),
+      Permission.countDocuments(),
+    ]);
   const result = {
     summary: {
       totalPages,
@@ -112,7 +122,10 @@ export const createUserPermission = async (
   userId: string,
   permissionData: any,
 ) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission, connection } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const session = await connection.startSession();
   session.startTransaction();
 
@@ -122,14 +135,16 @@ export const createUserPermission = async (
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
     // Convert IDs properly
-    const roleIds = (Array.isArray(permissionData.roleId)
-      ? permissionData.roleId
-      : [permissionData.roleId]
+    const roleIds = (
+      Array.isArray(permissionData.roleId)
+        ? permissionData.roleId
+        : [permissionData.roleId]
     ).map((id: string) => new Types.ObjectId(id));
 
-    const pageIds = (Array.isArray(permissionData.pageId)
-      ? permissionData.pageId
-      : [permissionData.pageId]
+    const pageIds = (
+      Array.isArray(permissionData.pageId)
+        ? permissionData.pageId
+        : [permissionData.pageId]
     ).map((id: string) => new Types.ObjectId(id));
 
     // Validate user existence
@@ -138,11 +153,13 @@ export const createUserPermission = async (
 
     // Validate roles
     const roles = await Role.find({ _id: { $in: roleIds } }).session(session);
-    if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+    if (!roles.length)
+      throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
 
     // Validate pages
     const pages = await Page.find({ _id: { $in: pageIds } }).session(session);
-    if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
+    if (!pages.length)
+      throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
     // Create permission safely
     const [newPermission] = await Permission.create(
@@ -157,17 +174,14 @@ export const createUserPermission = async (
           delete: !!permissionData.delete,
         },
       ],
-      { session }
+      { session },
     );
 
-    // Link permission to user — transaction-safe, atomic
     const afterUser = await User.findByIdAndUpdate(
       userId,
       { $addToSet: { permission: newPermission._id } },
-      { session, new: true }
+      { session, new: true },
     );
-
-    console.log('user data this ', afterUser)
     await session.commitTransaction();
     const populatedPermission = await Permission.findById(newPermission._id)
       .populate('userId')
@@ -179,7 +193,10 @@ export const createUserPermission = async (
     return populatedPermission;
   } catch (error: any) {
     if (session.inTransaction()) await session.abortTransaction();
-    throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to create permission');
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      error.message || 'Failed to create permission',
+    );
   } finally {
     await session.endSession();
   }
@@ -189,13 +206,16 @@ const updateUserPermission = async (
   tenantDomain: string,
   userId: string,
   permissionId: string,
-  permissionData: any
+  permissionData: any,
 ) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+    const { Model: Permission } = await getTenantModel(
+      tenantDomain,
+      'Permission',
+    );
     const { Model: User } = await getTenantModel(tenantDomain, 'User');
     const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
     const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
@@ -218,10 +238,12 @@ const updateUserPermission = async (
     if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
 
     const roles = await Role.find({ _id: { $in: roleIds } });
-    if (!roles.length) throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+    if (!roles.length)
+      throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
 
     const pages = await Page.find({ _id: { $in: pageIds } });
-    if (!pages.length) throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
+    if (!pages.length)
+      throw new AppError(httpStatus.NOT_FOUND, 'Page not found');
 
     // Update Permission document
     const updatedPermission = await Permission.findByIdAndUpdate(
@@ -251,7 +273,7 @@ const updateUserPermission = async (
     await session.commitTransaction();
     session.endSession();
 
-    //clear 
+    //clear
     await redisClient.invalidateUserCache(tenantDomain, userId);
     await redisClient.invalidatePermissionCache(tenantDomain, permissionId);
     return await Permission.findById(updatedPermission._id)
@@ -260,7 +282,10 @@ const updateUserPermission = async (
   } catch (error: any) {
     await session.abortTransaction();
     session.endSession();
-    throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to update permission');
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      error.message || 'Failed to update permission',
+    );
   }
 };
 
@@ -273,8 +298,10 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
     return JSON.parse(cachedPermission);
   }
 
-
-  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
@@ -289,7 +316,7 @@ const getSinglePermission = async (tenantDomain: string, id: string) => {
   }
 
   return result;
-}
+};
 
 const updateMultiplePermissions = async (
   tenantDomain: string,
@@ -302,9 +329,12 @@ const updateMultiplePermissions = async (
     edit?: boolean;
     view?: boolean;
     delete?: boolean;
-  }>
+  }>,
 ) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission, connection } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const session = await connection.startSession();
   session.startTransaction();
 
@@ -316,41 +346,54 @@ const updateMultiplePermissions = async (
 
     const updatedPermissions = [];
     const affectedUsers = new Set<string>();
-    console.log('permission check', permissionUpdates)
 
     for (const update of permissionUpdates) {
-      const { permissionId, userId, roleId, pageId, ...permissionData } = update;
+      const { permissionId, userId, roleId, pageId, ...permissionData } =
+        update;
 
       // Find existing permission
-      const existingPermission = await Permission.findById(permissionId).session(session);
+      const existingPermission =
+        await Permission.findById(permissionId).session(session);
       if (!existingPermission) {
-        throw new AppError(httpStatus.NOT_FOUND, `Permission with ID ${permissionId} not found`);
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          `Permission with ID ${permissionId} not found`,
+        );
       }
       const userIds = userId
         ? Array.isArray(userId)
-          ? userId.map(id => new Types.ObjectId(id))
+          ? userId.map((id) => new Types.ObjectId(id))
           : [new Types.ObjectId(userId)]
         : existingPermission.userId;
 
       const roleIds = roleId
         ? Array.isArray(roleId)
-          ? roleId.map(id => new Types.ObjectId(id))
+          ? roleId.map((id) => new Types.ObjectId(id))
           : [new Types.ObjectId(roleId)]
         : existingPermission.roleId;
 
       const pageIds = pageId
         ? Array.isArray(pageId)
-          ? pageId.map(id => new Types.ObjectId(id))
+          ? pageId.map((id) => new Types.ObjectId(id))
           : [new Types.ObjectId(pageId)]
         : existingPermission.pageId;
-      const userDocs = await User.find({ _id: { $in: userIds } }).session(session);
-      if (!userDocs.length) throw new AppError(httpStatus.NOT_FOUND, 'User(s) not found');
+      const userDocs = await User.find({ _id: { $in: userIds } }).session(
+        session,
+      );
+      if (!userDocs.length)
+        throw new AppError(httpStatus.NOT_FOUND, 'User(s) not found');
 
-      const roleDocs = await Role.find({ _id: { $in: roleIds } }).session(session);
-      if (!roleDocs.length) throw new AppError(httpStatus.NOT_FOUND, 'Role(s) not found');
+      const roleDocs = await Role.find({ _id: { $in: roleIds } }).session(
+        session,
+      );
+      if (!roleDocs.length)
+        throw new AppError(httpStatus.NOT_FOUND, 'Role(s) not found');
 
-      const pageDocs = await Page.find({ _id: { $in: pageIds } }).session(session);
-      if (!pageDocs.length) throw new AppError(httpStatus.NOT_FOUND, 'Page(s) not found');
+      const pageDocs = await Page.find({ _id: { $in: pageIds } }).session(
+        session,
+      );
+      if (!pageDocs.length)
+        throw new AppError(httpStatus.NOT_FOUND, 'Page(s) not found');
       const updatedPermission = await Permission.findByIdAndUpdate(
         permissionId,
         {
@@ -362,7 +405,7 @@ const updateMultiplePermissions = async (
           view: permissionData.view ?? existingPermission.view,
           delete: permissionData.delete ?? existingPermission.delete,
         },
-        { new: true, runValidators: true, session }
+        { new: true, runValidators: true, session },
       )
         .populate('userId')
         .populate('roleId')
@@ -378,14 +421,16 @@ const updateMultiplePermissions = async (
                 permission: {
                   $cond: {
                     if: { $isArray: '$permission' },
-                    then: { $concatArrays: ['$permission', [updatedPermission._id]] },
+                    then: {
+                      $concatArrays: ['$permission', [updatedPermission._id]],
+                    },
                     else: [updatedPermission._id],
                   },
                 },
               },
             },
           ],
-          { session }
+          { session },
         );
         affectedUsers.add(uid.toString());
       }
@@ -400,7 +445,10 @@ const updateMultiplePermissions = async (
       await redisClient.invalidateUserCache(tenantDomain, userId);
     }
     for (const update of permissionUpdates) {
-      await redisClient.invalidatePermissionCache(tenantDomain, update.permissionId);
+      await redisClient.invalidatePermissionCache(
+        tenantDomain,
+        update.permissionId,
+      );
     }
 
     await redisClient.invalidateAllPermissionCache(tenantDomain);
@@ -409,7 +457,10 @@ const updateMultiplePermissions = async (
   } catch (error: any) {
     await session.abortTransaction();
     session.endSession();
-    throw new AppError(httpStatus.BAD_REQUEST, error.message || 'Failed to update permissions');
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      error.message || 'Failed to update permissions',
+    );
   }
 };
 
@@ -423,9 +474,12 @@ export const createMultipleUserPermissions = async (
     edit?: boolean;
     view?: boolean;
     delete?: boolean;
-  }>
+  }>,
 ) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission, connection } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const session = await connection.startSession();
   session.startTransaction();
 
@@ -439,22 +493,37 @@ export const createMultipleUserPermissions = async (
 
     for (const permissionData of permissionDataArray) {
       // Normalize possible arrays ([id])
-      const userId =
-        Array.isArray(permissionData.userId) ? permissionData.userId[0] : permissionData.userId;
-      const pageId =
-        Array.isArray(permissionData.pageId) ? permissionData.pageId[0] : permissionData.pageId;
-      const roleId =
-        Array.isArray(permissionData.roleId) ? permissionData.roleId[0] : permissionData.roleId;
+      const userId = Array.isArray(permissionData.userId)
+        ? permissionData.userId[0]
+        : permissionData.userId;
+      const pageId = Array.isArray(permissionData.pageId)
+        ? permissionData.pageId[0]
+        : permissionData.pageId;
+      const roleId = Array.isArray(permissionData.roleId)
+        ? permissionData.roleId[0]
+        : permissionData.roleId;
 
       const { create, edit, view, delete: del } = permissionData;
       const user = await User.findById(userId).session(session);
-      if (!user) throw new AppError(httpStatus.NOT_FOUND, `User with ID ${userId} not found`);
+      if (!user)
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          `User with ID ${userId} not found`,
+        );
       const page = await Page.findById(pageId).session(session);
-      if (!page) throw new AppError(httpStatus.NOT_FOUND, `Page with ID ${pageId} not found`);
+      if (!page)
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          `Page with ID ${pageId} not found`,
+        );
       let roleObjectId;
       if (roleId) {
         const role = await Role.findById(roleId).session(session);
-        if (!role) throw new AppError(httpStatus.NOT_FOUND, `Role with ID ${roleId} not found`);
+        if (!role)
+          throw new AppError(
+            httpStatus.NOT_FOUND,
+            `Role with ID ${roleId} not found`,
+          );
         roleObjectId = new Types.ObjectId(roleId);
       }
 
@@ -476,7 +545,7 @@ export const createMultipleUserPermissions = async (
               ...(roleObjectId && { roleId: [roleObjectId] }),
             },
           },
-          { new: true, runValidators: true, session }
+          { new: true, runValidators: true, session },
         )
           .populate('userId')
           .populate('roleId')
@@ -500,14 +569,14 @@ export const createMultipleUserPermissions = async (
               delete: del ?? false,
             },
           ],
-          { session }
+          { session },
         );
 
         // Link permission to user
         await User.findByIdAndUpdate(
           userId,
           { $addToSet: { permission: newPermission._id } },
-          { session }
+          { session },
         );
 
         const populatedPermission = await Permission.findById(newPermission._id)
@@ -540,20 +609,23 @@ export const createMultipleUserPermissions = async (
     session.endSession();
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      error.message || 'Failed to process permissions'
+      error.message || 'Failed to process permissions',
     );
   }
 };
 
-export const getAllPermissions = async (tenantDomain: string, options?: {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  role?: string;
-  user?: string;
-  searchTerm?: string;
-}) => {
+export const getAllPermissions = async (
+  tenantDomain: string,
+  options?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    role?: string;
+    user?: string;
+    searchTerm?: string;
+  },
+) => {
   const cacheKey = getAllPermissionsCacheKey(tenantDomain, options);
 
   // check from redis
@@ -562,7 +634,10 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
     return JSON.parse(cachedPermissions);
   }
 
-  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
   const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
@@ -574,7 +649,7 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
     sortOrder = 'desc',
     role = '',
     user = '',
-    searchTerm = ''
+    searchTerm = '',
   } = options || {};
 
   const skip = (page - 1) * limit;
@@ -585,8 +660,10 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
   const query: any = {};
 
   if (role) {
-    const roles = await Role.find({ name: { $regex: role, $options: 'i' } }).select('_id');
-    const roleIds = roles.map(r => r._id);
+    const roles = await Role.find({
+      name: { $regex: role, $options: 'i' },
+    }).select('_id');
+    const roleIds = roles.map((r) => r._id);
     query.roleId = { $in: roleIds };
   }
 
@@ -594,10 +671,10 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
     const users = await User.find({
       $or: [
         { name: { $regex: user, $options: 'i' } },
-        { email: { $regex: user, $options: 'i' } }
-      ]
+        { email: { $regex: user, $options: 'i' } },
+      ],
     }).select('_id');
-    const userIds = users.map(u => u._id);
+    const userIds = users.map((u) => u._id);
     query.userId = { $in: userIds };
   }
 
@@ -605,31 +682,28 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
     const pages = await Page.find({
       $or: [
         { name: { $regex: searchTerm, $options: 'i' } },
-        { path: { $regex: searchTerm, $options: 'i' } }
-      ]
+        { path: { $regex: searchTerm, $options: 'i' } },
+      ],
     }).select('_id');
 
     const users = await User.find({
       $or: [
         { name: { $regex: searchTerm, $options: 'i' } },
-        { email: { $regex: searchTerm, $options: 'i' } }
-      ]
+        { email: { $regex: searchTerm, $options: 'i' } },
+      ],
     }).select('_id');
 
-    const pageIds = pages.map(p => p._id);
-    const userIds = users.map(u => u._id);
+    const pageIds = pages.map((p) => p._id);
+    const userIds = users.map((u) => u._id);
 
-    query.$or = [
-      { pageId: { $in: pageIds } },
-      { userId: { $in: userIds } }
-    ];
+    query.$or = [{ pageId: { $in: pageIds } }, { userId: { $in: userIds } }];
   }
 
   const permissions = await Permission.find(query)
     .populate([
       { path: 'userId', model: User },
       { path: 'roleId', model: Role },
-      { path: 'pageId', model: Page }
+      { path: 'pageId', model: Page },
     ])
     .sort(sort)
     .skip(skip)
@@ -644,8 +718,8 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
       total,
       page,
       limit,
-      pages: Math.ceil(total / limit)
-    }
+      pages: Math.ceil(total / limit),
+    },
   };
   await redisClient.set(cacheKey, JSON.stringify(result), 180);
 
@@ -655,9 +729,12 @@ export const getAllPermissions = async (tenantDomain: string, options?: {
 export const deleteUserPermission = async (
   tenantDomain: string,
   userId: string,
-  permissionId: string
+  permissionId: string,
 ) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission, connection } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const session = await connection.startSession();
 
@@ -677,12 +754,15 @@ export const deleteUserPermission = async (
     }
 
     // Check if the permission is associated with the user
-    const isUserPermission = permission.userId.some((id: any) =>
-      id.toString() === userId.toString()
+    const isUserPermission = permission.userId.some(
+      (id: any) => id.toString() === userId.toString(),
     );
 
     if (!isUserPermission) {
-      throw new AppError(httpStatus.FORBIDDEN, 'Permission does not belong to this user');
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        'Permission does not belong to this user',
+      );
     }
 
     // Check if permission is associated with multiple users
@@ -691,7 +771,7 @@ export const deleteUserPermission = async (
       await Permission.findByIdAndUpdate(
         permissionId,
         { $pull: { userId: new Types.ObjectId(userId) } },
-        { session }
+        { session },
       );
     } else {
       await Permission.findByIdAndDelete(permissionId, { session });
@@ -701,7 +781,7 @@ export const deleteUserPermission = async (
     await User.findByIdAndUpdate(
       userId,
       { $pull: { permission: new Types.ObjectId(permissionId) } },
-      { session }
+      { session },
     );
 
     await session.commitTransaction();
@@ -715,8 +795,8 @@ export const deleteUserPermission = async (
       data: {
         permissionId,
         userId,
-        wasFullyDeleted: permission.userId.length === 1
-      }
+        wasFullyDeleted: permission.userId.length === 1,
+      },
     };
   } catch (error: any) {
     await session.abortTransaction();
@@ -726,7 +806,7 @@ export const deleteUserPermission = async (
 
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || 'Failed to delete permission'
+      error.message || 'Failed to delete permission',
     );
   } finally {
     session.endSession();
@@ -736,9 +816,12 @@ export const deleteUserPermission = async (
 export const deleteMultipleUserPermissions = async (
   tenantDomain: string,
   userId: string,
-  permissionIds: string[]
+  permissionIds: string[],
 ) => {
-  const { Model: Permission, connection } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: Permission, connection } = await getTenantModel(
+    tenantDomain,
+    'Permission',
+  );
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
   const session = await connection.startSession();
 
@@ -756,12 +839,15 @@ export const deleteMultipleUserPermissions = async (
     }
 
     // Filter out invalid ObjectIds and "batch" value
-    const validPermissionIds = permissionIds.filter(id =>
-      id !== 'batch' && Types.ObjectId.isValid(id)
+    const validPermissionIds = permissionIds.filter(
+      (id) => id !== 'batch' && Types.ObjectId.isValid(id),
     );
 
     if (validPermissionIds.length === 0) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'No valid permission IDs provided');
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'No valid permission IDs provided',
+      );
     }
 
     const results = [];
@@ -770,26 +856,27 @@ export const deleteMultipleUserPermissions = async (
     for (const permissionId of validPermissionIds) {
       try {
         // Find the permission
-        const permission = await Permission.findById(permissionId).session(session);
+        const permission =
+          await Permission.findById(permissionId).session(session);
         if (!permission) {
           results.push({
             permissionId,
             success: false,
-            message: 'Permission not found'
+            message: 'Permission not found',
           });
           continue;
         }
 
         // Check if the permission is associated with the user
-        const isUserPermission = permission.userId.some((id: any) =>
-          id.toString() === userId.toString()
+        const isUserPermission = permission.userId.some(
+          (id: any) => id.toString() === userId.toString(),
         );
 
         if (!isUserPermission) {
           results.push({
             permissionId,
             success: false,
-            message: 'Permission does not belong to this user'
+            message: 'Permission does not belong to this user',
           });
           continue;
         }
@@ -800,13 +887,13 @@ export const deleteMultipleUserPermissions = async (
           await Permission.findByIdAndUpdate(
             permissionId,
             { $pull: { userId: new Types.ObjectId(userId) } },
-            { session }
+            { session },
           );
           results.push({
             permissionId,
             success: true,
             message: 'User removed from permission',
-            wasFullyDeleted: false
+            wasFullyDeleted: false,
           });
         } else {
           // If only this user, delete the entire permission
@@ -815,14 +902,14 @@ export const deleteMultipleUserPermissions = async (
             permissionId,
             success: true,
             message: 'Permission fully deleted',
-            wasFullyDeleted: true
+            wasFullyDeleted: true,
           });
         }
       } catch (error: any) {
         results.push({
           permissionId,
           success: false,
-          message: error.message || 'Failed to process permission'
+          message: error.message || 'Failed to process permission',
         });
       }
     }
@@ -830,10 +917,13 @@ export const deleteMultipleUserPermissions = async (
     // Remove all permission references from the user document
     await User.findByIdAndUpdate(
       userId,
-      { $pullAll: { permission: validPermissionIds.map(id => new Types.ObjectId(id)) } },
-      { session }
+      {
+        $pullAll: {
+          permission: validPermissionIds.map((id) => new Types.ObjectId(id)),
+        },
+      },
+      { session },
     );
-
 
     await session.commitTransaction();
     await redisClient.invalidateUserCache(tenantDomain, userId);
@@ -852,9 +942,9 @@ export const deleteMultipleUserPermissions = async (
         results,
         totalProcessed: permissionIds.length,
         validProcessed: validPermissionIds.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
-      }
+        successful: results.filter((r) => r.success).length,
+        failed: results.filter((r) => !r.success).length,
+      },
     };
   } catch (error: any) {
     await session.abortTransaction();
@@ -863,7 +953,7 @@ export const deleteMultipleUserPermissions = async (
     }
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || 'Failed to delete permissions'
+      error.message || 'Failed to delete permissions',
     );
   } finally {
     session.endSession();
@@ -879,5 +969,5 @@ export const PermissionService = {
   createMultipleUserPermissions,
   getAllPermissions,
   deleteMultipleUserPermissions,
-  deleteUserPermission
+  deleteUserPermission,
 };

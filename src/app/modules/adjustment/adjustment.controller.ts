@@ -10,8 +10,10 @@ const createAdjustment = async (
 ) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
-    console.log('tenant check', tenantDomain)
-    const result = await adjustmentServices.createAdjustment(tenantDomain, req.body);
+    const result = await adjustmentServices.createAdjustment(
+      tenantDomain,
+      req.body,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -32,7 +34,10 @@ const getAllAdjustment = async (
 ) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
-    const result = await adjustmentServices.getAllAdjustment(tenantDomain, req.query);
+    const result = await adjustmentServices.getAllAdjustment(
+      tenantDomain,
+      req.query,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -52,7 +57,10 @@ const getSingleAdjustment = async (
   try {
     const { id } = req.params;
     const tenantDomain = req.query.tenantDomain as string;
-    const result = await adjustmentServices.getSinigleAdjustment(tenantDomain, id);
+    const result = await adjustmentServices.getSinigleAdjustment(
+      tenantDomain,
+      id,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -93,7 +101,11 @@ const updateAdjustment = async (
   try {
     const { id } = req.params;
     const tenantDomain = req.query.tenantDomain as string;
-    const result = await adjustmentServices.updateAdjustment(tenantDomain, id, req.body);
+    const result = await adjustmentServices.updateAdjustment(
+      tenantDomain,
+      id,
+      req.body,
+    );
 
     sendResponse(res, {
       statusCode: httpStatus.OK,

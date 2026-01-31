@@ -41,7 +41,6 @@ const getAllSupplier = async (
 ) => {
   try {
     const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
-    console.log('query ', query);
     const suppliers = await new QueryBuilder(Supplier.find(), query)
       .search(['full_name', 'supplierId'])
       .filter()

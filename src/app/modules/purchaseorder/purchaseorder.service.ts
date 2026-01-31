@@ -308,7 +308,6 @@ const getAllPurchaseOrders = async (
     tenantDomain,
     'PurchaseOrder',
   );
-  console.log(query);
   const { Model: Supplier } = await getTenantModel(tenantDomain, 'Supplier');
   const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
 

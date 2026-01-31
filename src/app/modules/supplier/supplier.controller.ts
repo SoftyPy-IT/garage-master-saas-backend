@@ -36,9 +36,7 @@ export const getAllSupplier = async (
   next: NextFunction,
 ) => {
   try {
-    const tenantDomain = req.query.tenantDomain as string 
-    console.log('tenant domain', tenantDomain)
-
+    const tenantDomain = req.query.tenantDomain as string;
     const suppliers = await supplierServices.getAllSupplier(
       tenantDomain,
       req.query,
@@ -215,12 +213,10 @@ export const restoreFromRecycledSupplier = async (
 export const recordSupplierPayment = catchAsync(async (req, res, next) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
-    
-
 
     const result = await supplierServices.recordSupplierPayment(
       tenantDomain,
-      req.body
+      req.body,
     );
 
     sendResponse(res, {
@@ -238,10 +234,10 @@ export const getSupplierPayments = catchAsync(async (req, res, next) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
     const { supplierId } = req.params;
-    
+
     const result = await supplierServices.getSupplierPayments(
       tenantDomain,
-      supplierId
+      supplierId,
     );
 
     sendResponse(res, {
@@ -259,7 +255,10 @@ export const recalcSupplierTotals = catchAsync(async (req, res, next) => {
   const tenantDomain = req.query.tenantDomain as string;
   const supplierId = req.params.supplierId;
 
-  const result = await supplierServices.reCalcSupplierTotals(tenantDomain, supplierId);
+  const result = await supplierServices.reCalcSupplierTotals(
+    tenantDomain,
+    supplierId,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -269,8 +268,6 @@ export const recalcSupplierTotals = catchAsync(async (req, res, next) => {
   });
 });
 
-
-  
 export const supplierController = {
   getAllSupplier,
   getSingleSupplier,
@@ -282,5 +279,5 @@ export const supplierController = {
   getSupplierProfile,
   recordSupplierPayment,
   getSupplierPayments,
-  recalcSupplierTotals
+  recalcSupplierTotals,
 };

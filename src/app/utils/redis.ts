@@ -1,6 +1,6 @@
-
 import Redis from 'ioredis';
-import config from '../config'; class RedisClient {
+import config from '../config';
+class RedisClient {
   private client: Redis;
   private isConnected: boolean = false;
 
@@ -87,8 +87,11 @@ import config from '../config'; class RedisClient {
     }
   }
 
-  // cache invalidation function 
-  async invalidateUserCache(tenantDomain: string, userId: string): Promise<void> {
+  // cache invalidation function
+  async invalidateUserCache(
+    tenantDomain: string,
+    userId: string,
+  ): Promise<void> {
     const patterns = [
       `user:${tenantDomain}:${userId}:data`,
       `permission:${tenantDomain}:user:${userId}:*`,
@@ -99,7 +102,10 @@ import config from '../config'; class RedisClient {
     }
   }
 
-  async invalidatePermissionCache(tenantDomain: string, permissionId: string): Promise<void> {
+  async invalidatePermissionCache(
+    tenantDomain: string,
+    permissionId: string,
+  ): Promise<void> {
     const patterns = [
       `permission:${tenantDomain}:single:${permissionId}`,
       `permission:${tenantDomain}:all:*`,
@@ -118,7 +124,6 @@ import config from '../config'; class RedisClient {
   async invalidateAllUserCache(tenantDomain: string): Promise<void> {
     const pattern = `user:${tenantDomain}:*`;
     await this.delPattern(pattern);
-    console.log(`All user cache cleared for ${tenantDomain}`);
   }
 
   async disconnect(): Promise<void> {

@@ -26,7 +26,6 @@ import ejs from 'ejs';
 import { amountInWords } from '../../middlewares/taka-in-words';
 import { getTenantModel } from '../../utils/getTenantModels';
 
-
 export const createQuotationDetails = async (
   tenantDomain: string,
   payload: {
@@ -52,7 +51,9 @@ export const createQuotationDetails = async (
     const StockTransaction = (
       await getTenantModel(tenantDomain, 'StockTransaction')
     ).Model;
-    const WarehouseStock = (await getTenantModel(tenantDomain, 'WarehouseStock')).Model;
+    const WarehouseStock = (
+      await getTenantModel(tenantDomain, 'WarehouseStock')
+    ).Model;
     const sanitizeCustomer = sanitizePayload(customer);
     const sanitizeCompany = sanitizePayload(company);
     const sanitizeShowroom = sanitizePayload(showroom);
@@ -140,15 +141,17 @@ export const createQuotationDetails = async (
     } of stockUpdateMap.values()) {
       const averageSellingPrice = totalValue / totalQuantity;
 
-      // Find existing stock record 
+      // Find existing stock record
       const existingStock = await Stocks.findOne({
         product,
         warehouse,
       }).session(session);
-      console.log('existing quantity check', existingStock)
 
       if (!existingStock) {
-        throw new AppError(404, `Stock for product "${product_name}" not found in warehouse.`);
+        throw new AppError(
+          404,
+          `Stock for product "${product_name}" not found in warehouse.`,
+        );
       }
 
       if (existingStock.quantity < totalQuantity) {
@@ -175,22 +178,22 @@ export const createQuotationDetails = async (
       });
       await stockTransaction.save({ session });
 
-
       // NEW: Update WarehouseStock
       const wsQuery = { product, warehouse };
-      const warehouseStock = await WarehouseStock.findOne(wsQuery).session(session);
+      const warehouseStock =
+        await WarehouseStock.findOne(wsQuery).session(session);
 
       if (!warehouseStock) {
         throw new AppError(
           404,
-          `WarehouseStock record not found for product "${product_name}" in this warehouse.`
+          `WarehouseStock record not found for product "${product_name}" in this warehouse.`,
         );
       }
 
       if (warehouseStock.quantity < totalQuantity) {
         throw new AppError(
           400,
-          `Insufficient warehouse stock for "${product_name}". Warehouse available: ${warehouseStock.quantity}, Required: ${totalQuantity}`
+          `Insufficient warehouse stock for "${product_name}". Warehouse available: ${warehouseStock.quantity}, Required: ${totalQuantity}`,
         );
       }
 
@@ -276,15 +279,21 @@ const updateQuotationIntoDB = async (
     vehicle: TVehicle;
   },
 ) => {
-  const { Model: Quotation, connection } = await getTenantModel(tenantDomain, 'Quotation');
+  const { Model: Quotation, connection } = await getTenantModel(
+    tenantDomain,
+    'Quotation',
+  );
   const Customer = (await getTenantModel(tenantDomain, 'Customer')).Model;
   const Company = (await getTenantModel(tenantDomain, 'Company')).Model;
   const ShowRoom = (await getTenantModel(tenantDomain, 'ShowRoom')).Model;
   const Vehicle = (await getTenantModel(tenantDomain, 'Vehicle')).Model;
   const Stocks = (await getTenantModel(tenantDomain, 'Stocks')).Model;
-  const StockTransaction = (await getTenantModel(tenantDomain, 'StockTransaction')).Model;
+  const StockTransaction = (
+    await getTenantModel(tenantDomain, 'StockTransaction')
+  ).Model;
   const Product = (await getTenantModel(tenantDomain, 'Product')).Model;
-  const WarehouseStock = (await getTenantModel(tenantDomain, 'WarehouseStock')).Model;
+  const WarehouseStock = (await getTenantModel(tenantDomain, 'WarehouseStock'))
+    .Model;
 
   const session = await connection.startSession();
   session.startTransaction();
@@ -298,8 +307,12 @@ const updateQuotationIntoDB = async (
     const sanitizeVehicle = sanitizePayload(vehicle);
 
     const partsInWords = amountInWords(sanitizeQuotation.parts_total as number);
-    const serviceInWords = amountInWords(sanitizeQuotation.service_total as number);
-    const netTotalInWords = amountInWords(sanitizeQuotation.net_total as number);
+    const serviceInWords = amountInWords(
+      sanitizeQuotation.service_total as number,
+    );
+    const netTotalInWords = amountInWords(
+      sanitizeQuotation.net_total as number,
+    );
 
     const oldQuotation = await Quotation.findById(id).session(session);
     if (!oldQuotation)
@@ -319,7 +332,8 @@ const updateQuotationIntoDB = async (
         await stock.save({ session });
       }
 
-      const warehouseStock = await WarehouseStock.findOne(stockQuery).session(session);
+      const warehouseStock =
+        await WarehouseStock.findOne(stockQuery).session(session);
       if (warehouseStock) {
         warehouseStock.quantity += tx.quantity;
         await warehouseStock.save({ session });
@@ -327,7 +341,8 @@ const updateQuotationIntoDB = async (
 
       const product = await Product.findById(tx.product).session(session);
       if (product) {
-        product.product_quantity = (product.product_quantity || 0) + tx.quantity;
+        product.product_quantity =
+          (product.product_quantity || 0) + tx.quantity;
         await product.save({ session });
       }
     }
@@ -370,7 +385,13 @@ const updateQuotationIntoDB = async (
       >();
 
       for (const item of input_data) {
-        const { product, quantity = 0, warehouse, product_name, sellingPrice = 0 } = item;
+        const {
+          product,
+          quantity = 0,
+          warehouse,
+          product_name,
+          sellingPrice = 0,
+        } = item;
         if (!product || !warehouse) continue;
 
         const key = `${product}-${warehouse}`;
@@ -394,7 +415,10 @@ const updateQuotationIntoDB = async (
         product_name,
         sellingPrice,
       } of stockUpdateMap.values()) {
-        const existingStock = await Stocks.findOne({ product, warehouse }).session(session);
+        const existingStock = await Stocks.findOne({
+          product,
+          warehouse,
+        }).session(session);
         if (!existingStock)
           throw new AppError(404, `Stock not found for "${product_name}".`);
 
@@ -408,9 +432,15 @@ const updateQuotationIntoDB = async (
         await existingStock.save({ session });
 
         // Update WarehouseStock
-        const warehouseStock = await WarehouseStock.findOne({ product, warehouse }).session(session);
+        const warehouseStock = await WarehouseStock.findOne({
+          product,
+          warehouse,
+        }).session(session);
         if (!warehouseStock)
-          throw new AppError(404, `WarehouseStock not found for "${product_name}".`);
+          throw new AppError(
+            404,
+            `WarehouseStock not found for "${product_name}".`,
+          );
         if (warehouseStock.quantity < totalQuantity)
           throw new AppError(
             400,
@@ -450,17 +480,35 @@ const updateQuotationIntoDB = async (
 
     // --- STEP 4: Update user + vehicle data (same as before) ---
     if (quotation.user_type === 'customer') {
-      const existingCustomer = await Customer.findOne({ customerId: quotation.Id }).session(session);
+      const existingCustomer = await Customer.findOne({
+        customerId: quotation.Id,
+      }).session(session);
       if (existingCustomer)
-        await Customer.findByIdAndUpdate(existingCustomer._id, { $set: sanitizeCustomer }, { session });
+        await Customer.findByIdAndUpdate(
+          existingCustomer._id,
+          { $set: sanitizeCustomer },
+          { session },
+        );
     } else if (quotation.user_type === 'company') {
-      const existingCompany = await Company.findOne({ companyId: quotation.Id }).session(session);
+      const existingCompany = await Company.findOne({
+        companyId: quotation.Id,
+      }).session(session);
       if (existingCompany)
-        await Company.findByIdAndUpdate(existingCompany._id, { $set: sanitizeCompany }, { session });
+        await Company.findByIdAndUpdate(
+          existingCompany._id,
+          { $set: sanitizeCompany },
+          { session },
+        );
     } else if (quotation.user_type === 'showRoom') {
-      const existingShowRoom = await ShowRoom.findOne({ showRoomId: quotation.Id }).session(session);
+      const existingShowRoom = await ShowRoom.findOne({
+        showRoomId: quotation.Id,
+      }).session(session);
       if (existingShowRoom)
-        await ShowRoom.findByIdAndUpdate(existingShowRoom._id, { $set: sanitizeShowroom }, { session });
+        await ShowRoom.findByIdAndUpdate(
+          existingShowRoom._id,
+          { $set: sanitizeShowroom },
+          { session },
+        );
     }
 
     if (vehicle?.chassis_no) {
@@ -668,8 +716,6 @@ const getSingleQuotationDetails = async (tenantDomain: string, id: string) => {
 
   return formattedInvoice;
 };
-
-
 
 const generateQuotationPdf = async (
   tenantDomain: string,
@@ -958,8 +1004,6 @@ const restoreFromRecyclebinQuotation = async (
 
   return restoredQuotation;
 };
-
-
 
 export const QuotationServices = {
   createQuotationDetails,
