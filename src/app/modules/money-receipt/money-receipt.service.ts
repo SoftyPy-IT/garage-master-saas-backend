@@ -4,11 +4,8 @@ import AppError from '../../errors/AppError';
 import sanitizePayload from '../../middlewares/updateDataValidation';
 import { TMoneyReceipt } from './money-receipt.interface';
 import { MoneyReceipt, moneyReceiptSchema } from './money-receipt.model';
-import {  customerSchema } from '../customer/customer.model';
-import {  companySchema } from '../company/company.model';
-import {  showRoomSchema } from '../showRoom/showRoom.model';
 import mongoose from 'mongoose';
-import {  vehicleSchema } from '../vehicle/vehicle.model';
+import { vehicleSchema } from '../vehicle/vehicle.model';
 import { SearchableFields } from './money-receipt.const';
 import { generateMoneyReceiptId } from './money-receipt.utils';
 import { amountInWords } from '../../middlewares/taka-in-words';
@@ -21,18 +18,11 @@ import { Tenant } from '../tenant/tenant.model';
 import { connectToTenantDatabase } from '../../../server';
 import { invoiceSchema } from '../invoice/invoice.model';
 
-const schemas = {
-  Customer: customerSchema,
-  Company: companySchema,
-  ShowRoom: showRoomSchema,
-  Vehicle: vehicleSchema,
-};
 
 const createMoneyReceiptDetails = async (
   tenantDomain: string,
   payload: TMoneyReceipt,
 ) => {
-  // Get all needed models and tenant connection
   const { Model: MoneyReceipt, connection } = await getTenantModel(
     tenantDomain,
     'MoneyReceipt',
@@ -58,7 +48,7 @@ const createMoneyReceiptDetails = async (
     } = payload;
 
     const sanitizeData = sanitizePayload(payload);
-    const moneyReceiptId = await generateMoneyReceiptId();
+    const moneyReceiptId = await generateMoneyReceiptId(tenantDomain);
 
     const totalAmountInWords = amountInWords(
       sanitizeData.total_amount as number,
@@ -184,6 +174,161 @@ const createMoneyReceiptDetails = async (
     throw error;
   }
 };
+
+const updateMoneyReceiptDetails = async (
+  tenantDomain: string,
+  id: string,
+  payload: TMoneyReceipt,
+) => {
+  const { connection, Model: MoneyReceipt } = await getTenantModel(
+    tenantDomain,
+    'MoneyReceipt',
+  );
+
+  const session = await connection.startSession();
+  session.startTransaction();
+
+  try {
+
+    const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
+    const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
+    const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
+    const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
+    const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
+
+    const { user_type, Id, chassis_no, full_reg_number, invoice: invoiceNo, job_no } = payload;
+    const sanitizeData = sanitizePayload(payload);
+    const totalAmountInWords = amountInWords(sanitizeData.total_amount as number);
+    const advanceInWords =
+      sanitizeData.advance !== undefined
+        ? amountInWords(sanitizeData.advance)
+        : 'Zero';
+    const remainingInWords =
+      sanitizeData.remaining !== undefined
+        ? amountInWords(sanitizeData.remaining)
+        : '';
+    const paymentStatus =
+      sanitizeData.against_bill_no_method === 'Final payment against bill no'
+        ? 'final'
+        : 'advance';
+
+    const moneyReceiptData = await MoneyReceipt.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          ...sanitizeData,
+          total_amount_in_words: totalAmountInWords,
+          advance_in_words: advanceInWords,
+          remaining_in_words: remainingInWords,
+          payment_status: paymentStatus,
+        },
+      },
+      { new: true, runValidators: true, session },
+    );
+
+    if (!moneyReceiptData) {
+      throw new AppError(StatusCodes.NOT_FOUND, 'Money receipt not found.');
+    }
+
+    if (user_type === 'customer') {
+      const existingCustomer = await Customer.findOne({ customerId: Id }).session(session);
+      if (
+        existingCustomer &&
+        !existingCustomer.money_receipts.includes(moneyReceiptData._id)
+      ) {
+        await Customer.findByIdAndUpdate(
+          existingCustomer._id,
+          { $push: { money_receipts: moneyReceiptData._id } },
+          { new: true, runValidators: true, session },
+        );
+        moneyReceiptData.customer = existingCustomer._id;
+      }
+    } else if (user_type === 'company') {
+      const existingCompany = await Company.findOne({ companyId: Id }).session(session);
+      if (
+        existingCompany &&
+        !existingCompany.money_receipts.includes(moneyReceiptData._id)
+      ) {
+        await Company.findByIdAndUpdate(
+          existingCompany._id,
+          { $push: { money_receipts: moneyReceiptData._id } },
+          { new: true, runValidators: true, session },
+        );
+        moneyReceiptData.company = existingCompany._id;
+      }
+    } else if (user_type === 'showRoom') {
+      const existingShowRoom = await ShowRoom.findOne({ showRoomId: Id }).session(session);
+      if (
+        existingShowRoom &&
+        !existingShowRoom.money_receipts.includes(moneyReceiptData._id)
+      ) {
+        await ShowRoom.findByIdAndUpdate(
+          existingShowRoom._id,
+          { $push: { money_receipts: moneyReceiptData._id } },
+          { new: true, runValidators: true, session },
+        );
+        moneyReceiptData.showRoom = existingShowRoom._id;
+      }
+    }
+
+    // Re-link vehicle if needed
+    if (chassis_no) {
+      const vehicleData = await Vehicle.findOne({ chassis_no }).session(session);
+      if (vehicleData) {
+        moneyReceiptData.vehicle = vehicleData._id;
+        moneyReceiptData.full_reg_number = full_reg_number;
+      }
+    }
+
+    // Recalculate invoice relationship (core logic)
+    const existingInvoice = await Invoice.findOne({
+      $or: [{ invoice_no: invoiceNo }, { job_no }],
+    }).session(session);
+
+    if (existingInvoice) {
+      const totalAmount = Number(existingInvoice.net_total) || 0;
+      const prevAdvance = Number(existingInvoice.advance) || 0;
+
+      // Determine new payment
+      const currentPayment =
+        sanitizeData.against_bill_no_method === 'Advance against bill no'
+          ? Number(sanitizeData.advance)
+          : paymentStatus === 'final'
+            ? Number(existingInvoice.due + existingInvoice.advance)
+            : Number(sanitizeData.total_amount);
+
+      const updatedAdvance =
+        sanitizeData.against_bill_no_method === 'Advance against bill no'
+          ? prevAdvance + currentPayment
+          : currentPayment;
+
+      const updatedDue = Math.max(totalAmount - updatedAdvance, 0);
+
+      await Invoice.findByIdAndUpdate(
+        existingInvoice._id,
+        {
+          $set: { advance: updatedAdvance, due: updatedDue },
+        },
+        { new: true, runValidators: true, session },
+      );
+
+      moneyReceiptData.invoice = existingInvoice._id;
+      moneyReceiptData.job_no = existingInvoice.job_no;
+    }
+    await moneyReceiptData.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return moneyReceiptData;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+
 
 const getAllMoneyReceiptsFromDB = async (
   tenantDomain: string,
@@ -383,7 +528,6 @@ const getSingleMoneyReceiptDetails = async (
   tenantDomain: string,
   id: string,
 ) => {
-  // First register all referenced schemas into the tenant connection
   const tenant = await Tenant.findOne({
     domain: { $regex: new RegExp(`^${tenantDomain}$`, 'i') },
   });
@@ -397,7 +541,6 @@ const getSingleMoneyReceiptDetails = async (
     tenant.dbUri,
   );
 
-  // Register dependent models (Vehicle and Invoice) if not already registered
   const VehicleModel =
     connection.models.Vehicle || connection.model('Vehicle', vehicleSchema);
   const InvoiceModel =
@@ -407,7 +550,7 @@ const getSingleMoneyReceiptDetails = async (
     connection.model('MoneyReceipt', moneyReceiptSchema);
 
   const singleMoneyReceipt = await MoneyReceipt.findById(id)
-    .populate('vehicle') // will now work because model is registered
+    .populate('vehicle')
     .populate('invoice');
 
   if (!singleMoneyReceipt) {
@@ -424,138 +567,7 @@ const getSingleMoneyReceiptDetails = async (
   return formattedInvoice;
 };
 
-const updateMoneyReceiptDetails = async (
-  tenantDomain: string,
-  id: string,
-  payload: TMoneyReceipt,
-) => {
-  // ✅ Get tenant connection
-  const { connection, Model: MoneyReceipt } = await getTenantModel(
-    tenantDomain,
-    'MoneyReceipt',
-  );
 
-  // ✅ Use session from the tenant-specific connection
-  const session = await connection.startSession();
-  session.startTransaction();
-
-  try {
-    // Get all models from same tenant connection
-    const Customer =
-      connection.models.Customer ||
-      connection.model('Customer', schemas.Customer);
-    const Company =
-      connection.models.Company || connection.model('Company', schemas.Company);
-    const ShowRoom =
-      connection.models.ShowRoom ||
-      connection.model('ShowRoom', schemas.ShowRoom);
-    const Vehicle =
-      connection.models.Vehicle || connection.model('Vehicle', schemas.Vehicle);
-
-    const { user_type, Id, chassis_no, full_reg_number } = payload;
-    const sanitizeData = sanitizePayload(payload);
-
-    const totalAmountInWords = amountInWords(
-      sanitizeData.total_amount as number,
-    );
-    const advanceInWords =
-      sanitizeData.advance !== undefined
-        ? amountInWords(sanitizeData.advance)
-        : 'Zero';
-    const remainingInWords =
-      sanitizeData.remaining !== undefined
-        ? amountInWords(sanitizeData.remaining)
-        : '';
-
-    // ✅ Update money receipt with tenant session
-    const moneyReceiptData = await MoneyReceipt.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          ...sanitizeData,
-          total_amount_in_words: totalAmountInWords,
-          advance_in_words: advanceInWords,
-          remaining_in_words: remainingInWords,
-        },
-      },
-      { new: true, runValidators: true, session },
-    );
-
-    if (!moneyReceiptData) {
-      throw new AppError(StatusCodes.NOT_FOUND, 'Money receipt not found.');
-    }
-
-    if (user_type === 'customer') {
-      const existingCustomer = await Customer.findOne({
-        customerId: Id,
-      }).session(session);
-
-      if (
-        existingCustomer &&
-        !existingCustomer.money_receipts.includes(moneyReceiptData._id)
-      ) {
-        await Customer.findByIdAndUpdate(
-          existingCustomer._id,
-          { $push: { money_receipts: moneyReceiptData._id } },
-          { new: true, runValidators: true, session },
-        );
-        moneyReceiptData.customer = existingCustomer._id;
-      }
-    } else if (user_type === 'company') {
-      const existingCompany = await Company.findOne({ companyId: Id }).session(
-        session,
-      );
-
-      if (
-        existingCompany &&
-        !existingCompany.money_receipts.includes(moneyReceiptData._id)
-      ) {
-        await Company.findByIdAndUpdate(
-          existingCompany._id,
-          { $push: { money_receipts: moneyReceiptData._id } },
-          { new: true, runValidators: true, session },
-        );
-        moneyReceiptData.company = existingCompany._id;
-      }
-    } else if (user_type === 'showRoom') {
-      const existingShowRoom = await ShowRoom.findOne({
-        showRoomId: Id,
-      }).session(session);
-
-      if (
-        existingShowRoom &&
-        !existingShowRoom.money_receipts.includes(moneyReceiptData._id)
-      ) {
-        await ShowRoom.findByIdAndUpdate(
-          existingShowRoom._id,
-          { $push: { money_receipts: moneyReceiptData._id } },
-          { new: true, runValidators: true, session },
-        );
-        moneyReceiptData.showRoom = existingShowRoom._id;
-      }
-    }
-
-    if (chassis_no) {
-      const vehicleData = await Vehicle.findOne({ chassis_no }).session(
-        session,
-      );
-      if (vehicleData) {
-        moneyReceiptData.vehicle = vehicleData._id;
-        moneyReceiptData.full_reg_number = full_reg_number;
-      }
-    }
-
-    await moneyReceiptData.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-    return moneyReceiptData;
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
-};
 
 const deleteMoneyReceipt = async (tenantDomain: string, id: string) => {
   const session = await mongoose.startSession();
@@ -627,14 +639,17 @@ const deleteMoneyReceipt = async (tenantDomain: string, id: string) => {
   return null;
 };
 
-
 export const generateMoneyPdf = async (
   tenantDomain: string,
   id: string,
   imageUrl: string,
+  companyData: string,
 ): Promise<Buffer> => {
-  const { Model: MoneyReceipt } = await getTenantModel(tenantDomain, 'MoneyReceipt');
-
+  const { Model: MoneyReceipt } = await getTenantModel(
+    tenantDomain,
+    'MoneyReceipt',
+  );
+  const companyProfile = JSON.parse(companyData || '{}');
   const money = await MoneyReceipt.findById(id).populate('vehicle');
   if (!money) {
     throw new Error('Money receipt not found');
@@ -655,7 +670,13 @@ export const generateMoneyPdf = async (
   const html = await new Promise<string>((resolve, reject) => {
     ejs.renderFile(
       filePath,
-      { money, imageUrl, formatToIndianCurrency, logoBase64 },
+      {
+        money,
+        imageUrl,
+        formatToIndianCurrency,
+        logoBase64,
+        companyData: companyProfile,
+      },
       (err, str) => {
         if (err) return reject(err);
         resolve(str);
@@ -695,21 +716,17 @@ const permanantlyDeleteMoneyReceipt = async (
   tenantDomain: string,
   id: string,
 ) => {
-  // ✅ Get model and connection from tenant
-  const { Model: MoneyReceipt, connection: tenantConnection } = await getTenantModel(
-    tenantDomain,
-    'MoneyReceipt',
-  );
+  const { Model: MoneyReceipt, connection: tenantConnection } =
+    await getTenantModel(tenantDomain, 'MoneyReceipt');
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
   const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
   const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
-
-  // ✅ Use tenant-specific session
   const session = await tenantConnection.startSession();
   session.startTransaction();
 
   try {
-    const existingMoneyReceipt = await MoneyReceipt.findById(id).session(session);
+    const existingMoneyReceipt =
+      await MoneyReceipt.findById(id).session(session);
 
     if (!existingMoneyReceipt) {
       throw new AppError(StatusCodes.NOT_FOUND, 'Money receipt not available.');
@@ -729,7 +746,8 @@ const permanantlyDeleteMoneyReceipt = async (
       showRoom: { model: ShowRoom, queryKey: 'showRoomId' },
     };
 
-    const userTypeHandler = userTypeMap[existingMoneyReceipt.user_type as UserType];
+    const userTypeHandler =
+      userTypeMap[existingMoneyReceipt.user_type as UserType];
 
     if (userTypeHandler) {
       const { model, queryKey } = userTypeHandler;
@@ -757,7 +775,7 @@ const permanantlyDeleteMoneyReceipt = async (
 
     await session.commitTransaction();
     session.endSession();
-    return deleteMoneyReceipt; // ✅ Return the deleted object if needed
+    return deleteMoneyReceipt;
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -837,7 +855,7 @@ const restoreFromRecyledbinMoneyReceipt = async (
 };
 const moveAllToRecycledBin = async () => {
   const result = await MoneyReceipt.updateMany(
-    {}, // Match all documents
+    {},
     { $set: { isRecycled: true, recycledAt: new Date() } },
     { runValidators: true },
   );
@@ -869,7 +887,6 @@ const getDueAllMoneyReceipts = async (
 
   let idMatchQuery: any = {};
   let searchQuery: { [key: string]: any } = {};
-console.log('due all money ', tenantDomain)
   if (id) {
     idMatchQuery = {
       $or: [

@@ -1,48 +1,48 @@
+// src/modules/role/role.routes.ts
 import express from 'express';
-
-
-import validateRequest from '../../middlewares/validateRequest';
-import { auth } from '../../middlewares/auth';
 import { RoleController } from './role.controller';
-import { RoleValidation } from './role.validation';
+import { auth } from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
+import { createRoleValidationSchema, updateRoleValidationSchema } from './role.validation';
 
 const router = express.Router();
 
-
 router.post(
   '/',
-//   validateRequest(RoleValidation.createRoleZodSchema),
-//   auth('admin'),
+  auth('admin', 'superadmin'),
+  // validateRequest(createRoleValidationSchema),
   RoleController.createRole
 );
 
-
 router.get(
   '/',
-//   auth('admin', 'manager'),
+  auth('admin', 'superadmin'),
   RoleController.getAllRoles
 );
 
-
 router.get(
   '/:id',
-//   auth('admin', 'manager'),
+  auth('admin', 'superadmin'),
   RoleController.getRoleById
 );
 
-
-router.put(
+router.patch(
   '/:id',
-//   validateRequest(RoleValidation.updateRoleZodSchema),
-//   auth('admin'),
+  auth('admin', 'superadmin'),
+  validateRequest(updateRoleValidationSchema),
   RoleController.updateRole
 );
 
-
 router.delete(
   '/:id',
-//   auth('admin'),
+  auth('admin', 'superadmin'),
   RoleController.deleteRole
+);
+
+router.post(
+  '/:roleId/permissions',
+  auth('admin', 'superadmin'),
+  RoleController.assignPermissionsToRole
 );
 
 export const RoleRoutes = router;

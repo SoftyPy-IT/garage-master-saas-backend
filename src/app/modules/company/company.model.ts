@@ -92,6 +92,9 @@ export const companySchema: Schema<TCompany> = new Schema<TCompany>(
     reference_name: {
       type: String,
     },
+        whatsappNumber: {
+      type: Number,
+    },
     isRecycled: { type: Boolean, default: false },
     recycledAt: { type: Date, default: null },
   },

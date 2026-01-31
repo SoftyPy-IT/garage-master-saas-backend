@@ -25,27 +25,28 @@ export const stockSchema = new Schema<IStock>(
     },
     referenceType: {
       type: String,
-      enum: ['purchase', 'sale', 'repair', 'opening', 'return','transfer','adjustment'],
+      enum: ['purchase', 'sale', 'repair', 'opening', 'return', 'transfer', 'adjustment'],
+      required: true,
     },
     referenceId: {
       type: Schema.Types.ObjectId,
-      refPath: 'referenceType',
+      ref: 'Purchase',
     },
     purchasePrice: {
       type: Number,
-      required: function (this: IStock) {
-        return this.type === 'in';
-      },
     },
     sellingPrice: {
       type: Number,
-      required: function (this: IStock) {
-        return this.type === 'out';
-      },
     },
-    batchNumber: String,
-    expiryDate: Date,
-    note: String,
+    batchNumber: {
+      type: String,
+    },
+    expiryDate: {
+      type: Date,
+    },
+    note: {
+      type: String,
+    },
     date: {
       type: Date,
       required: true,
@@ -58,6 +59,7 @@ export const stockSchema = new Schema<IStock>(
     toObject: { virtuals: true },
   },
 );
+
 
 stockSchema.virtual('stockValue').get(function () {
   if (this.type === 'in' && this.purchasePrice != null) {

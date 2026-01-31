@@ -15,7 +15,6 @@ const createEmployeeOvertime = async (
     tenantDomain,
     'EmployeeOvertime',
   );
-  console.log(tenantDomain, payload )
 
   try {
     const employee = await Employee.findById(payload.employee);

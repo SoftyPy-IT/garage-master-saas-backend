@@ -7,6 +7,14 @@ const createIncome = async (tenantDomain: string, payload: any) => {
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
 
   try {
+    // validate income id
+    if (payload.invoice_id) {
+      const exists = await Income.findOne({ invoice_id: payload.invoice_id });
+      if (exists) {
+        throw new Error('This invoice id already create  to another expense');
+      }
+    }
+
     // Filter only valid income items
     const validIncomeItems = Array.isArray(payload?.income_items)
       ? payload.income_items.filter(
@@ -19,23 +27,16 @@ const createIncome = async (tenantDomain: string, payload: any) => {
       (sum: number, item: any) => sum + Number(item.amount),
       0,
     );
-
-    // Convert partsIncomeAmount and serviceIncomeAmount safely to number
-    const partsIncomeAmount = Number(payload.partsIncomeAmount || 0);
-    const serviceIncomeAmount = Number(payload.serviceIncomeAmount || 0);
-
-    // Calculate totalInvoiceIncome
-    const totalInvoiceIncome = partsIncomeAmount + serviceIncomeAmount;
+ 
 
     // Calculate totalAmount
-    const totalAmount = totalOtherIncome + totalInvoiceIncome;
+    const totalAmount = totalOtherIncome ;
 
     // Create new income record
     const newIncome = await Income.create({
       ...payload,
       income_items: validIncomeItems.length > 0 ? validIncomeItems : undefined,
       totalOtherIncome,
-      totalInvoiceIncome,
       totalAmount,
     });
 
@@ -56,11 +57,7 @@ const getAllIncome = async (
   const incomeQuery = new QueryBuilder(Income.find(), query).search(['name']);
 
   const meta = await incomeQuery.countTotal();
-  const incomes = await incomeQuery.modelQuery.populate({
-    path: 'invoice_id',
-    select: 'Id invoice_no',
-  });
-
+  const incomes = await incomeQuery.modelQuery
   return {
     meta,
     incomes,
@@ -70,10 +67,7 @@ const getAllIncome = async (
 const getSingleIncome = async (tenantDomain: string, id: string) => {
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
 
-  const result = await Income.findById(id).populate({
-    path: 'invoice_id',
-    select: 'Id invoice_no',
-  });
+  const result = await Income.findById(id)
 
   return result;
 };
@@ -99,18 +93,13 @@ const updateIncome = async (
       0,
     );
 
-    const serviceIncomeAmount = Number(payload.serviceIncomeAmount || 0);
-    const partsIncomeAmount = Number(payload.partsIncomeAmount || 0);
-    const totalInvoiceIncome = serviceIncomeAmount + partsIncomeAmount;
-
-    const totalAmount = totalOtherIncome + totalInvoiceIncome;
+    const totalAmount = totalOtherIncome;
 
     // Build updated payload
     const updatedPayload = {
       ...payload,
       income_items: validIncomeItems.length > 0 ? validIncomeItems : undefined,
       totalOtherIncome,
-      totalInvoiceIncome,
       totalAmount,
     };
 

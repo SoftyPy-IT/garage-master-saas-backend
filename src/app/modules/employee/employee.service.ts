@@ -22,18 +22,13 @@ const getAllEmployeesFromDB = async (
   let searchQuery = {};
 
   if (searchTerm) {
-    const escapedFilteringData = searchTerm.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      '\\$&',
-    );
+    const escapedFilteringData = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const employeeSearchQuery = SearchableFields.map((field) => ({
       [field]: { $regex: escapedFilteringData, $options: 'i' },
     }));
 
-    searchQuery = {
-      $or: [...employeeSearchQuery],
-    };
+    searchQuery = { $or: [...employeeSearchQuery] };
   }
 
   const employees = await Employee.aggregate([
@@ -53,30 +48,85 @@ const getAllEmployeesFromDB = async (
         as: 'salary',
       },
     },
+    { $match: searchQuery },
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+
+    // 🔹 Calculate employee-wise overtime summary
     {
-      $match: searchQuery,
-    },
-    {
-      $sort: { createdAt: -1 },
-    },
-    {
-      $skip: (page - 1) * limit,
-    },
-    {
-      $limit: limit,
+      $addFields: {
+        overtimeSummary: {
+          $map: {
+            input: {
+              $setUnion: [
+                {
+                  $map: {
+                    input: "$attendance",
+                    as: "att",
+                    in: {
+                      year: { $year: { $toDate: "$$att.createdAt" } },
+                      month: { $month: { $toDate: "$$att.createdAt" } },
+                    },
+                  },
+                },
+              ],
+            },
+            as: "ym",
+            in: {
+              year: "$$ym.year",
+              month: "$$ym.month",
+              totalOvertime: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$attendance",
+                        as: "att2",
+                        cond: {
+                          $and: [
+                            { $eq: [{ $year: { $toDate: "$$att2.createdAt" } }, "$$ym.year"] },
+                            { $eq: [{ $month: { $toDate: "$$att2.createdAt" } }, "$$ym.month"] },
+                          ],
+                        },
+                      },
+                    },
+                    as: "filteredAtt",
+                    in: "$$filteredAtt.overtime",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   ]);
 
   const totalData = await Employee.countDocuments(searchQuery);
   const totalPages = Math.ceil(totalData / limit);
 
+  // 🔹 Convert month numbers → names in Node.js layer
+  const monthNames = [
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const formattedEmployees = employees.map((emp) => ({
+    ...emp,
+    overtimeSummary: emp.overtimeSummary.map((o:any) => ({
+      month: monthNames[o.month],
+      year: o.year,
+      totalOvertime: `${o.totalOvertime}`,
+    })),
+  }));
+
   return {
-    employees,
-    meta: {
-      totalPages,
-    },
+    employees: formattedEmployees,
+    meta: { totalPages },
   };
 };
+
 
 const createEmployeeIntoDB = async (
   tenantDomain: string,

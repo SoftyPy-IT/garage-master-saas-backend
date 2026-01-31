@@ -20,16 +20,14 @@ import { TVehicle } from '../vehicle/vehicle.interface';
 import { Customer, customerSchema } from '../customer/customer.model';
 import { Company, companySchema } from '../company/company.model';
 import { ShowRoom, showRoomSchema } from '../showRoom/showRoom.model';
-import { Vehicle, vehicleSchema } from '../vehicle/vehicle.model';
 import { Model } from 'mongoose';
 import { generateInvoiceNo } from './invoice.utils';
-import puppeteer from 'puppeteer';
 import { join } from 'path';
 import ejs from 'ejs';
+import puppeteer from 'puppeteer';
 import { amountInWords } from '../../middlewares/taka-in-words';
 import { formatToIndianCurrency } from '../quotation/quotation.utils';
 import { getTenantModel } from '../../utils/getTenantModels';
-
 
 const createInvoiceDetails = async (
   tenantDomain: string,
@@ -63,7 +61,7 @@ const createInvoiceDetails = async (
     const sanitizeVehicle = sanitizePayload(vehicle);
     const sanitizeInvoice = sanitizePayload(invoice);
 
-    const invoiceNumber = await generateInvoiceNo();
+    const invoiceNumber = await generateInvoiceNo(tenantDomain);
 
     const partsInWords = amountInWords(sanitizeInvoice.parts_total as number);
     const serviceInWords = amountInWords(
@@ -438,17 +436,14 @@ const updateInvoiceIntoDB = async (
     throw error;
   }
 };
-
-export const removeInvoiceFromUpdate = async (
+const removeInvoiceFromUpdate = async (
   tenantDomain: string,
   id: string,
   index: number,
   invoice_name: string,
 ) => {
-  // Get the Invoice model for the tenant
   const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
 
-  // Find the existing invoice
   const existingInvoice = await Invoice.findById(id);
   if (!existingInvoice) {
     throw new AppError(StatusCodes.NOT_FOUND, 'No invoice exists.');
@@ -568,13 +563,11 @@ const deleteInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const permanantlyDeleteInvoice = async (tenantDomain: string, id: string) => {
-  console.log('permanently delete', tenantDomain);
-
+const permanentlyDeleteInvoice = async (tenantDomain: string, id: string) => {
   // Get tenant-specific models and connection
   const { Model: Invoice, connection: tenantConnection } = await getTenantModel(
     tenantDomain,
-    'Invoice'
+    'Invoice',
   );
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
   const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
@@ -613,7 +606,7 @@ const permanantlyDeleteInvoice = async (tenantDomain: string, id: string) => {
         await model.findByIdAndUpdate(
           existingEntity._id,
           { $pull: { invoices: id } },
-          { new: true, runValidators: true, session }
+          { new: true, runValidators: true, session },
         );
       }
     }
@@ -634,12 +627,12 @@ const permanantlyDeleteInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const moveToRecycledbinInvoice = async (tenantDomain: string, id: string) => {
+const moveToRecycledBinInvoice = async (tenantDomain: string, id: string) => {
   const { Model: Invoice, connection } = await getTenantModel(
     tenantDomain,
     'Invoice',
   );
-  const session = await connection.startSession(); // <-- use tenant connection here
+  const session = await connection.startSession();
   session.startTransaction();
 
   try {
@@ -670,7 +663,7 @@ const moveToRecycledbinInvoice = async (tenantDomain: string, id: string) => {
   }
 };
 
-const restoreFromRecycledbinInvoice = async (
+const restoreFromRecycledBinInvoice = async (
   tenantDomain: string,
   id: string,
 ) => {
@@ -739,13 +732,14 @@ const generateInvoicePDF = async (
   tenantDomain: string,
   id: string,
   imageUrl: string,
+  companyData: string,
 ): Promise<Buffer> => {
   const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
   const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
   const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-
+  const companyProfile = JSON.parse(companyData || '{}');
   const invoice = await Invoice.findById(id)
     .populate({ path: 'customer', model: Customer })
     .populate({ path: 'company', model: Company })
@@ -771,7 +765,13 @@ const generateInvoicePDF = async (
   const html = await new Promise<string>((resolve, reject) => {
     ejs.renderFile(
       filePath,
-      { invoice, imageUrl, formatToIndianCurrency, logoBase64 },
+      {
+        invoice,
+        imageUrl,
+        formatToIndianCurrency,
+        logoBase64,
+        companyData: companyProfile,
+      },
       (err, str) => {
         if (err) return reject(err);
         resolve(str);
@@ -815,9 +815,9 @@ export const InvoiceServices = {
   deleteInvoice,
   removeInvoiceFromUpdate,
   generateInvoicePDF,
-  moveToRecycledbinInvoice,
-  restoreFromRecycledbinInvoice,
-  permanantlyDeleteInvoice,
+  moveToRecycledBinInvoice,
+  restoreFromRecycledBinInvoice,
+  permanentlyDeleteInvoice,
   moveAllToRecycledBin,
   restoreAllFromRecycledBin,
 };

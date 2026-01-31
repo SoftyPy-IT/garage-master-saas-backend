@@ -8,5 +8,6 @@ export interface TCompanyProfile {
   website: string;
   address: string;
   description: string;
+  officeTime:string;
   logo: string[]
 }

@@ -1,108 +1,132 @@
+// src/modules/role/role.service.ts
 import httpStatus from 'http-status';
-import { IRole, IRoleDocument } from './role.interface';
-import Role from './role.model';
+import { IRole } from './role.interface';
 import AppError from '../../errors/AppError';
-import Page from '../page/page.model';
-import { User } from '../user/user.model';
+import { getTenantModel } from '../../utils/getTenantModels';
+import { PermissionService } from '../permission/permission.service';
 
-
-const createRole = async (payload: IRole): Promise<IRoleDocument> => {
-  // Check if the role name already exists
-  const roleExists = await Role.isRoleExistsByName(payload.name);
+const createRole = async (tenantDomain: string, payload: IRole) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const roleExists = await Role.findOne({ name: payload.name });
   if (roleExists) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Role name already exists!');
   }
-
-  // Validate permissions
-  if (payload.permissions && payload.permissions.length > 0) {
-    // Check if all pages exist
-    const pageIds = payload.permissions.map(permission => permission.pageId);
-    const pages = await Page.find({ _id: { $in: pageIds } });
-    
-    if (pages.length !== pageIds.length) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Some pages do not exist!');
-    }
-  }
-
-  // Create the role
-  const result = await Role.create(payload);
-  return result;
+  const role = await Role.create(payload);
+  return role;
 };
 
-const getAllRoles = async ()=>{
+const getAllRoles = async (tenantDomain: string) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const { Model: Permission } = await getTenantModel(tenantDomain, 'Permission');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+  const { Model: Page } = await getTenantModel(tenantDomain, 'Page');
 
-}
-const getRoleById = async (id: string): Promise<IRoleDocument> => {
-  const result = await Role.findById(id);
+  return Role.find().populate([
+    {
+      path: 'permissions',
+      model: Permission,
+      populate: [
+        { path: 'userId', model: User, },
+        { path: 'roleId', model: Role,  },
+        { path: 'pageId', model: Page, }
+      ]
+    }
+  ]);
+};
+
+
+const getRoleById = async (tenantDomain: string, id: string) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const result = await Role.findById(id).populate('permissions');
+
   if (!result) {
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found!');
   }
   return result;
 };
 
-const updateRole = async (id: string, payload: Partial<IRole>): Promise<IRoleDocument> => {
-  // Check if the role exists
+const updateRole = async (
+  tenantDomain: string,
+  id: string,
+  payload: Partial<IRole>,
+) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+
+  // Check if role exists
   const role = await Role.findById(id);
   if (!role) {
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found!');
   }
-  
-  // Check if the role name already exists (if name is being updated)
+
+  // Check for duplicate name
   if (payload.name && payload.name !== role.name) {
-    const roleExists = await Role.isRoleExistsByName(payload.name);
+    const roleExists = await Role.findOne({ name: payload.name });
     if (roleExists) {
       throw new AppError(httpStatus.BAD_REQUEST, 'Role name already exists!');
     }
   }
-  
-  // Validate permissions
-  if (payload.permissions && payload.permissions.length > 0) {
-    // Check if all pages exist
-    const pageIds = payload.permissions.map(permission => permission.pageId);
-    const pages = await Page.find({ _id: { $in: pageIds } });
-    
-    if (pages.length !== pageIds.length) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Some pages do not exist!');
-    }
-  }
-  
-  // Update the role
+
+  // Update role
   const result = await Role.findByIdAndUpdate(id, payload, {
     new: true,
     runValidators: true,
-  });
-  
+  }).populate('permissions');
+
   if (!result) {
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found!');
   }
-  
+
   return result;
 };
 
-const deleteRole = async (id: string): Promise<IRoleDocument> => {
-  // Check if the role exists
+const deleteRole = async (tenantDomain: string, id: string) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+  const { Model: User } = await getTenantModel(tenantDomain, 'User');
+
+  // Check if role exists
   const role = await Role.findById(id);
   if (!role) {
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found!');
   }
-  
-  // Check if any users are using this role
+
+  // Check if role is assigned to users
   const usersWithRole = await User.countDocuments({ roleId: id });
   if (usersWithRole > 0) {
     throw new AppError(
-      httpStatus.BAD_REQUEST, 
-      `Cannot delete role. ${usersWithRole} users are assigned to this role.`
+      httpStatus.BAD_REQUEST,
+      `Cannot delete role. ${usersWithRole} users are assigned to this role.`,
     );
   }
-  
-  // Delete the role
+
   const result = await Role.findByIdAndDelete(id);
-  
   if (!result) {
     throw new AppError(httpStatus.NOT_FOUND, 'Role not found!');
   }
-  
+
   return result;
+};
+
+// Assign permissions to a role
+const assignPermissionsToRole = async (
+  tenantDomain: string,
+  roleId: string,
+  permissions: any[],
+) => {
+  const { Model: Role } = await getTenantModel(tenantDomain, 'Role');
+
+  const role = await Role.findById(roleId);
+  if (!role) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Role not found');
+  }
+
+  // Update role with permissions
+  const updatedRole = await Role.findByIdAndUpdate(
+    roleId,
+    { permissions },
+    { new: true },
+  ).populate('permissions');
+
+  return updatedRole;
 };
 
 export const RoleService = {
@@ -111,4 +135,5 @@ export const RoleService = {
   getRoleById,
   updateRole,
   deleteRole,
+  assignPermissionsToRole,
 };

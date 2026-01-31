@@ -7,36 +7,24 @@ const employeeValidationSchema = z.object({
     phone_number: z.string({
       required_error: 'Phone number is required.',
     }),
-    email: z.string({ required_error: 'Email is required.' }),
+    email: z.string(),
     nid_number: z.number().optional(),
     gender: z.string({ required_error: 'Gender is required.' }),
     join_date: z.string({ required_error: 'Join date is required.' }),
-    designation: z.string({ required_error: 'Designation is required.' }),
-    status: z.string({ required_error: 'Status is required.' }),
-    father_name: z.string({
-      required_error: 'Father name is required.',
-    }),
-    mother_name: z.string({
-      required_error: 'Mother name is required.',
-    }),
-    guardian_name: z.string({
-      required_error: 'Guardian name is required.',
-    }),
+    designation: z.string().optional(),
+    status: z.string().optional(),
+    father_name: z.string().optional(),
+    mother_name: z.string().optional(),
+    guardian_name: z.string().optional(),
     guardian_contact: z.string().optional(),
-    relationship: z.string({
-      required_error: 'Relationship is required.',
-    }),
+    relationship: z.string().optional(),
     nationality: z.string().optional(),
     religion: z.string().optional(),
     country: z.string().optional(),
     city: z.string().optional(),
 
-    present_address: z.string({
-      required_error: 'Present address is required.',
-    }),
-    permanent_address: z.string({
-      required_error: 'Permanent address is required.',
-    }),
+    present_address: z.string().optional(),
+    permanent_address: z.string().optional(),
   }),
 });
 

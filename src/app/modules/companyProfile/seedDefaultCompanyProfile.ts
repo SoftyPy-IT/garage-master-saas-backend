@@ -9,7 +9,7 @@ export const seedDefaultCompanyProfile = async (tenantId: string) => {
     const existing = await CompanyProfile.findOne();
  
     if (existing) {
-      console.log(`[Seeder] Company profile already exists for tenant: ${tenantId}`);
+     
       return;
     }
 

@@ -10,7 +10,6 @@ export const ProductSchema = new Schema<TProduct>(
     product_type: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductType',
-      required: true,
     },
     image: {
       type: String,
@@ -25,6 +24,10 @@ export const ProductSchema = new Schema<TProduct>(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Supplier',
       required: true,
+    },
+    warranties: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Warranty',
     },
     product_code: {
       type: String,
@@ -127,7 +130,6 @@ export const ProductSchema = new Schema<TProduct>(
     },
     shelfLifeUnit: {
       type: String,
-      enum: ['days', 'weeks', 'months', 'years'],
     },
     expiryAlertDays: {
       type: Number,

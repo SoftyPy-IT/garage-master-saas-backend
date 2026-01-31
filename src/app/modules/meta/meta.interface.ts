@@ -69,6 +69,7 @@ export interface UnifiedData {
     recycledAt?: Date;
     company_contact?: string;
     [key: string]: any;
+    
   }
 
  export  interface ShowRoomType {

@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invoice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet">
   <style>
     @page {
       margin: 15px 5px 15px 5px;
@@ -46,7 +47,6 @@
       padding: 8px;
       text-align: left;
     }
-
 
     .serialNo {
       width: 5%;
@@ -97,23 +97,44 @@
           style="display: flex; align-items: center; justify-content: space-between; width: 100%; ; margin-bottom: 8px;">
 
           <div style="display: flex; align-items: center; justify-content: space-between;  margin-bottom: 8px;">
-            <% if (logoBase64) { %>
-            <img style="width: 120px;" src="data:image/png;base64,<%= logoBase64 %>" alt="SofyPy Garages" />
-            <% } else { %>
-            <img style="width: 120px;" src="<%= imageUrl %>/images/logo.png" alt="SofyPy Garages"
-              onerror="this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';" />
-            <% } %>
+            <img style="width: 100px; height: 100px; object-fit: contain;" src="<%= companyData.logo %>"
+              alt="<%= companyData.companyName || 'Company Logo' %>">
+
 
           </div>
           <div>
-            <small style="font-size: 36px; color: #4671A1;display: block;font-weight: 800;">SofyPy Garage</small>
-            <small style="margin-top: -20px;">Office: Ka-93/4/C, Kuril Bishawroad, Dhaka-1229</small>
+
+            <% if (companyData?.companyNameBN) { %>
+              <small
+                style="font-size: 36px; color: #4671A1;display: block;font-weight: 800; font-family: 'Hind Siliguri', sans-serif">
+                <%= companyData?.companyNameBN %>
+              </small>
+              <% } %>
+
+
+
+                <% if (companyData?.companyName) { %>
+                  <b style=" font-size: 18px; color: #333; display: block;">
+                    (<%= companyData?.companyName %>)
+                  </b>
+                  <% } %>
+
+
+
+                    <small style="margin-top: -20px;">
+                      <%= companyData.address%>
+                    </small>
           </div>
           <div style="text-align: left;">
-            <small style="display: block;"><small style="font-weight: bold;">Mobile:</small> +88 01821-216465</small>
+            <small style="display: block;"><small style="font-weight: bold;">Mobile:</small>
+              <%= companyData?.phone %>
+            </small>
             <small style="display: block;"><small style="font-weight: bold;">Email:</small>
-              trustautosolution@gmail.com</small>
-            <small style="display: block; font-weight: bold;">www.trustautosolution.com</small>
+              <%= companyData?.email%>
+            </small>
+            <small style="display: block; font-weight: bold;">
+              <%= companyData?.website %>
+            </small>
           </div>
         </div>
       </div>
@@ -122,7 +143,9 @@
       <div style="padding-left: 8px; padding-right: 8px;">
         <div
           style="display: flex; font-size: 12px; align-items: center; justify-content: space-between; border-bottom: 2px solid #351E98; padding-bottom: 4px;">
-          <span style="width: 200px;"><b>ID:</b> <%= invoice && invoice.Id ? invoice.Id : 'N/A' %></span>
+          <span style="width: 200px;"><b>ID:</b>
+            <%= invoice && invoice.Id ? invoice.Id : 'N/A' %>
+          </span>
           <b style="margin-right: 88px; text-transform: uppercase;">Invoice</b>
           <b>Date: <%= invoice && invoice.date ? invoice.date : 'N/A' %></b>
         </div>
@@ -133,46 +156,46 @@
             <div style="display: flex;flex-direction: column; width:140px;  row-gap: 3px;">
               <b style="font-size: 10px;">Invoice No</b>
               <% if (invoice?.customer?.customer_name) { %>
-              <b style="font-size: 10px;">Customer Name</b>
-              <% } %>
+                <b style="font-size: 10px;">Customer Name</b>
+                <% } %>
 
-              <% if (invoice?.company?.company_name) { %>
-              <b style="font-size: 10px;">Company Name</b>
-              <% } %>
+                  <% if (invoice?.company?.company_name) { %>
+                    <b style="font-size: 10px;">Company Name</b>
+                    <% } %>
 
-              <% if (invoice?.showRoom?.showRoom_name) { %>
-              <b style="font-size: 10px;">Showroom Name</b>
-              <% } %>
-              <% if (invoice?.customer?.company_name) { %>
-              <b style="font-size: 10px;">Company Name</b>
-              <% } %>
+                      <% if (invoice?.showRoom?.showRoom_name) { %>
+                        <b style="font-size: 10px;">Showroom Name</b>
+                        <% } %>
+                          <% if (invoice?.customer?.company_name) { %>
+                            <b style="font-size: 10px;">Company Name</b>
+                            <% } %>
 
-              <% if (invoice?.company?.vehicle_username) { %>
-              <b style="font-size: 10px;">Vehicle User Name</b>
-              <% } %>
+                              <% if (invoice?.company?.vehicle_username) { %>
+                                <b style="font-size: 10px;">Vehicle User Name</b>
+                                <% } %>
 
-              <% if (invoice?.showRoom?.vehicle_username) { %>
-              <b style="font-size: 10px;">Show Room Owner Name</b>
-              <% } %>
+                                  <% if (invoice?.showRoom?.vehicle_username) { %>
+                                    <b style="font-size: 10px;">Show Room Owner Name</b>
+                                    <% } %>
 
-              <% if (invoice?.customer?.fullCustomerNum) { %>
-              <b style="font-size: 10px;">Phone</b>
-              <% } %>
-              <% if (invoice?.company?.fullCompanyNum) { %>
-              <b style="font-size: 10px;">Phone</b>
-              <% } %>
-              <% if (invoice?.showRoom?.fullCompanyNum) { %>
-              <b style="font-size: 10px;">Phone</b>
-              <% } %>
-              <% if (invoice?.customer?.customer_address) { %>
-              <b style="font-size: 10px;">Address</b>
-              <% } %>
-              <% if (invoice?.company?.company_address) { %>
-              <b style="font-size: 10px;">Address</b>
-              <% } %>
-              <% if (invoice?.showRoom?.showRoom_address) { %>
-              <b style="font-size: 10px;">Address</b>
-              <% } %>
+                                      <% if (invoice?.customer?.fullCustomerNum) { %>
+                                        <b style="font-size: 10px;">Phone</b>
+                                        <% } %>
+                                          <% if (invoice?.company?.fullCompanyNum) { %>
+                                            <b style="font-size: 10px;">Phone</b>
+                                            <% } %>
+                                              <% if (invoice?.showRoom?.fullCompanyNum) { %>
+                                                <b style="font-size: 10px;">Phone</b>
+                                                <% } %>
+                                                  <% if (invoice?.customer?.customer_address) { %>
+                                                    <b style="font-size: 10px;">Address</b>
+                                                    <% } %>
+                                                      <% if (invoice?.company?.company_address) { %>
+                                                        <b style="font-size: 10px;">Address</b>
+                                                        <% } %>
+                                                          <% if (invoice?.showRoom?.showRoom_address) { %>
+                                                            <b style="font-size: 10px;">Address</b>
+                                                            <% } %>
             </div>
             <div style="display: flex;flex-direction: column; row-gap: 3px;">
               <small style="font-size: 10px;"><span class="dot">:</span>
@@ -180,76 +203,74 @@
                 <%= invoice && invoice.invoice_no ? invoice.invoice_no : 'N/A' %>
 
               </small>
-              <% if ((invoice.customer && invoice.customer.customer_name) || 
-              (invoice.company && invoice.company.company_name) || 
-              (invoice.showRoom && invoice.showRoom.showRoom_name)) { %>
-              <small style="font-size: 10px;">
-                <span class="dot">:</span>
-                <% if (invoice.customer && invoice.customer.customer_name) { %>
-                <%= invoice.customer.customer_name %>
-                <% } else if (invoice.company && invoice.company.company_name) { %>
-                <%= invoice.company.company_name %>
-                <% } else if (invoice.showRoom && invoice.showRoom.showRoom_name) { %>
-                <%= invoice.showRoom.showRoom_name %>
-                <% } %>
-              </small>
-              <% } else { %>
+              <% if ((invoice.customer && invoice.customer.customer_name) || (invoice.company &&
+                invoice.company.company_name) || (invoice.showRoom && invoice.showRoom.showRoom_name)) { %>
+                <small style="font-size: 10px;">
+                  <span class="dot">:</span>
+                  <% if (invoice.customer && invoice.customer.customer_name) { %>
+                    <%= invoice.customer.customer_name %>
+                      <% } else if (invoice.company && invoice.company.company_name) { %>
+                        <%= invoice.company.company_name %>
+                          <% } else if (invoice.showRoom && invoice.showRoom.showRoom_name) { %>
+                            <%= invoice.showRoom.showRoom_name %>
+                              <% } %>
+                </small>
+                <% } else { %>
 
-              <% } %>
+                  <% } %>
 
 
-              <% if ((invoice.customer && invoice.customer.company_name) || 
-              (invoice.company && invoice.company.vehicle_username) || 
-              (invoice.showRoom && invoice.showRoom.vehicle_username)) { %>
-              <small style="font-size: 10px;">
-                <span class="dot">:</span>
-                <% if (invoice.customer && invoice.customer.company_name) { %>
-                <%= invoice.customer.company_name %>
-                <% } else if (invoice.company && invoice.company.vehicle_username) { %>
-                <%= invoice.company.vehicle_username %>
-                <% } else if (invoice.showRoom && invoice.showRoom.vehicle_username) { %>
-                <%= invoice.showRoom.vehicle_username %>
-                <% } %>
-              </small>
-              <% } else { %>
+                    <% if ((invoice.customer && invoice.customer.company_name) || (invoice.company &&
+                      invoice.company.vehicle_username) || (invoice.showRoom && invoice.showRoom.vehicle_username)) { %>
+                      <small style="font-size: 10px;">
+                        <span class="dot">:</span>
+                        <% if (invoice.customer && invoice.customer.company_name) { %>
+                          <%= invoice.customer.company_name %>
+                            <% } else if (invoice.company && invoice.company.vehicle_username) { %>
+                              <%= invoice.company.vehicle_username %>
+                                <% } else if (invoice.showRoom && invoice.showRoom.vehicle_username) { %>
+                                  <%= invoice.showRoom.vehicle_username %>
+                                    <% } %>
+                      </small>
+                      <% } else { %>
 
-              <% } %>
+                        <% } %>
 
 
 
-              <% if ((invoice.customer && invoice.customer.fullCustomerNum) || 
-       (invoice.company && invoice.company.fullCompanyNum) || 
-       (invoice.showRoom && invoice.showRoom.fullCompanyNum)) { %>
-              <small style="font-size: 10px;">
-                <span class="dot">:</span>
-                <% if (invoice.customer && invoice.customer.fullCustomerNum) { %>
-                <%= invoice.customer.fullCustomerNum %>
-                <% } else if (invoice.company && invoice.company.fullCompanyNum) { %>
-                <%= invoice.company.fullCompanyNum %>
-                <% } else if (invoice.showRoom && invoice.showRoom.fullCompanyNum) { %>
-                <%= invoice.showRoom.fullCompanyNum %>
-                <% } %>
-              </small>
-              <% } else { %>
+                          <% if ((invoice.customer && invoice.customer.fullCustomerNum) || (invoice.company &&
+                            invoice.company.fullCompanyNum) || (invoice.showRoom && invoice.showRoom.fullCompanyNum)) {
+                            %>
+                            <small style="font-size: 10px;">
+                              <span class="dot">:</span>
+                              <% if (invoice.customer && invoice.customer.fullCustomerNum) { %>
+                                <%= invoice.customer.fullCustomerNum %>
+                                  <% } else if (invoice.company && invoice.company.fullCompanyNum) { %>
+                                    <%= invoice.company.fullCompanyNum %>
+                                      <% } else if (invoice.showRoom && invoice.showRoom.fullCompanyNum) { %>
+                                        <%= invoice.showRoom.fullCompanyNum %>
+                                          <% } %>
+                            </small>
+                            <% } else { %>
 
-              <% } %>
+                              <% } %>
 
-              <% if ((invoice.customer && invoice.customer.customer_address) || 
-       (invoice.company && invoice.company.company_address) || 
-       (invoice.showRoom && invoice.showRoom.showRoom_address)) { %>
-              <small style="font-size: 10px;">
-                <span class="dot">:</span>
-                <% if (invoice.customer && invoice.customer.customer_address) { %>
-                <%= invoice.customer.customer_address %>
-                <% } else if (invoice.company && invoice.company.company_address) { %>
-                <%= invoice.company.company_address %>
-                <% } else if (invoice.showRoom && invoice.showRoom.showRoom_address) { %>
-                <%= invoice.showRoom.showRoom_address %>
-                <% } %>
-              </small>
-              <% } else { %>
+                                <% if ((invoice.customer && invoice.customer.customer_address) || (invoice.company &&
+                                  invoice.company.company_address) || (invoice.showRoom &&
+                                  invoice.showRoom.showRoom_address)) { %>
+                                  <small style="font-size: 10px;">
+                                    <span class="dot">:</span>
+                                    <% if (invoice.customer && invoice.customer.customer_address) { %>
+                                      <%= invoice.customer.customer_address %>
+                                        <% } else if (invoice.company && invoice.company.company_address) { %>
+                                          <%= invoice.company.company_address %>
+                                            <% } else if (invoice.showRoom && invoice.showRoom.showRoom_address) { %>
+                                              <%= invoice.showRoom.showRoom_address %>
+                                                <% } %>
+                                  </small>
+                                  <% } else { %>
 
-              <% } %>
+                                    <% } %>
 
             </div>
           </div>
@@ -265,18 +286,23 @@
             </div>
             <div style="display: flex; column-gap: 10px; flex-direction: column;  row-gap: 3px;">
               <small style="font-size: 10px;"><span class="dot">:</span>
-                <%= invoice.vehicle && invoice.vehicle.car_registration_no ? invoice.vehicle.car_registration_no : 'N/A' %></small>
+
+                <%= invoice.vehicle && invoice.vehicle.carReg_no ? invoice.vehicle.carReg_no : 'N/A' %>
+                  <%= invoice.vehicle && invoice.vehicle.car_registration_no ? invoice.vehicle.car_registration_no
+                    : 'N/A' %>
+              </small>
               <small style="font-size: 10px;"><span class="dot">:</span>
                 <%= invoice.vehicle && invoice.vehicle.chassis_no ? invoice.vehicle.chassis_no : 'N/A' %>
               </small>
               <small style="font-size: 10px;"><span class="dot">:</span>
-                <%= invoice.vehicle && invoice.vehicle.engine_no ? invoice.vehicle.engine_no : 'N/A' %></small>
+                <%= invoice.vehicle && invoice.vehicle.engine_no ? invoice.vehicle.engine_no : 'N/A' %>
+              </small>
               <small style="font-size: 10px;"><span class="dot">:</span>
                 <%= invoice.vehicle && invoice.vehicle.vehicle_name ? invoice.vehicle.vehicle_name : 'N/A' %>
               </small>
               <small style="font-size: 10px;"><span class="dot">:</span>
 
-                <%= invoice.vehicle && invoice?.vehicle?.mileageHistory && invoice.vehicle.mileageHistory.length > 0 ? invoice.vehicle.mileageHistory[0].mileage : 'N/A' %>
+                <%= invoice?.mileage %>
               </small>
             </div>
           </div>
@@ -299,40 +325,43 @@
           </tr>
         </thead>
         <tbody>
-          <% if (invoice && invoice.service_input_data && invoice.service_input_data.length > 0) { %>
-          <% invoice.service_input_data.forEach((item, index) => { %>
-          <tr>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= index + 1 %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.description ? item.description : 'N/A' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.quantity ? item.quantity : 'N/A' %> <%= item.unit ? item.unit : '' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.rate ? formatToIndianCurrency(item.rate) : 'N/A' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
-            </td>
-          </tr>
-          <% }); %>
-          <% } else { %>
-          <tr>
-            <td colspan="5" style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
-              No data available
-            </td>
-          </tr>
-          <% } %>
+          <% if (invoice && invoice.service_input_data && invoice.service_input_data.length> 0) { %>
+            <% invoice.service_input_data.forEach((item, index)=> { %>
+              <tr>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= index + 1 %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.description ? item.description : 'N/A' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.quantity ? item.quantity : 'N/A' %>
+                    <%= item.unit ? item.unit : '' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.rate ? formatToIndianCurrency(item.rate) : 'N/A' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
+                </td>
+              </tr>
+              <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5"
+                      style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
+                      No data available
+                    </td>
+                  </tr>
+                  <% } %>
         </tbody>
       </table>
 
 
       <div style="display: flex; align-items: center; justify-content: flex-end; font-size: 12px; margin-top: 8px;">
         <span>Total Amount:</span>
-        <b style="margin-left: 12px;margin-right: 5px;"><%= formatToIndianCurrency(invoice.service_total) %> tk
+        <b style="margin-left: 12px;margin-right: 5px;">
+          <%= formatToIndianCurrency(invoice.service_total) %> tk
         </b>
       </div>
 
@@ -353,38 +382,41 @@
           </tr>
         </thead>
         <tbody>
-          <% if (invoice && invoice.input_data && invoice.input_data.length > 0) { %>
-          <% invoice.input_data.forEach((item, index) => { %>
-          <tr>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= index + 1 %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;">
-              <%= item.description ? item.description : 'N/A' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.quantity ? item.quantity : 'N/A' %> <%= item.unit ? item.unit : '' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.rate ? formatToIndianCurrency(item.rate) : 'N/A' %>
-            </td>
-            <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-              <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
-            </td>
-          </tr>
-          <% }); %>
-          <% } else { %>
-          <tr>
-            <td colspan="5" style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
-              No data available
-            </td>
-          </tr>
-          <% } %>
+          <% if (invoice && invoice.input_data && invoice.input_data.length> 0) { %>
+            <% invoice.input_data.forEach((item, index)=> { %>
+              <tr>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= index + 1 %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;">
+                  <%= item.description ? item.description : 'N/A' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.quantity ? item.quantity : 'N/A' %>
+                    <%= item.unit ? item.unit : '' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.rate ? formatToIndianCurrency(item.rate) : 'N/A' %>
+                </td>
+                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                  <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
+                </td>
+              </tr>
+              <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5"
+                      style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
+                      No data available
+                    </td>
+                  </tr>
+                  <% } %>
         </tbody>
       </table>
       <div style="display: flex; align-items: center; justify-content: flex-end; font-size: 12px; margin-top: 8px;">
         <span>Total Amount:</span>
-        <b style="margin-left: 12px;"> <%= formatToIndianCurrency(invoice.parts_total) %> tk
+        <b style="margin-left: 12px;">
+          <%= formatToIndianCurrency(invoice.parts_total) %> tk
         </b>
       </div>
 
@@ -395,67 +427,78 @@
           style="display: flex;margin-top: 15px; width:200px;justify-content: space-between; align-items: center;margin-right: 5px;">
           <div style="display: flex;flex-direction: column;">
             <b style="font-size: 12px;">Sub Total</b>
-            <% if (invoice && invoice.discount && invoice.discount !== 0) { %>
-            <b style="font-size: 12px;">Discount</b>
-            <% } %>
-            <% if (invoice && invoice.vat && invoice.vat !== 0) { %>
-            <b style="font-size: 12px;">VAT</b>
-            <% } %>
-            <b style="font-size: 12px;">Grand Total</b>
-            <% if (invoice.advance !== undefined) { %>
-            <% if (invoice && invoice.advance && invoice.advance !== 0) { %>
-            <% if (invoice.advance === invoice.net_total) { %>
-            <b style="font-size: 12px;">Paid</b>
-            <% } else { %>
-            <b style="font-size: 12px;">Advance</b>
-            <% } %>
-            <% } %>
-
-
-            <% } %>
-            <% if (invoice && invoice.due && invoice.due !== 0) { %>
-
-            <% if (invoice && invoice.advance && invoice.advance !==0) { %>
-            <b style="font-size: 12px;">Due</b>
-            <% } %>
-
-            <% } %>
+            <% if (invoice && invoice.discount && invoice.discount !==0) { %>
+              <b style="font-size: 12px;">Discount</b>
+              <% } %>
+                <% if (invoice && invoice.vat && invoice.vat !==0) { %>
+                  <b style="font-size: 12px;">VAT</b>
+                  <% } %>
+                    <% if (invoice && invoice.tax && invoice.tax !==0) { %>
+                      <b style="font-size: 12px;">Tax included (<%= invoice.tax %>%)</b>
+                      <% } %>
+                        <b style="font-size: 12px;">Grand Total</b>
+                        <% if (invoice.advance !==undefined) { %>
+                          <% if (invoice && invoice.advance && invoice.advance !==0) { %>
+                            <% if (invoice.advance===invoice.net_total) { %>
+                              <b style="font-size: 12px;">Paid</b>
+                              <% } else { %>
+                                <b style="font-size: 12px;">Advance</b>
+                                <% } %>
+                                  <% } %>
+                                    <% } %>
+                                      <% if (invoice && invoice.due && invoice.due !==0) { %>
+                                        <% if (invoice && invoice.advance && invoice.advance !==0) { %>
+                                          <b style="font-size: 12px;">Due</b>
+                                          <% } %>
+                                            <% } %>
           </div>
           <div style="display: flex; flex-direction: column;">
             <small>: <%= formatToIndianCurrency(invoice.parts_total + invoice.service_total) %> tk
             </small>
-            <% if (invoice && invoice.discount && invoice.discount !== 0) { %>
-            <small>: <%=invoice.discount %> tk
-            </small>
-            <% } %>
-            <% if (invoice && invoice.vat && invoice.vat !== 0) { %>
-            <small>: <%= invoice.vat %>%</small>
-            <% } %>
-
-            <small>: <%= invoice.net_total !== undefined ? formatToIndianCurrency(invoice.net_total) : 0 %> tk
-            </small>
-            <% if (invoice.advance !== undefined) { %>
-            <% if (invoice && invoice.advance && invoice.advance !== 0) { %>
-            <small>: <%= invoice.advance%> tk
-            </small>
-            <% } %>
-            <% } %>
-            <% if (invoice && invoice.due && invoice.due !== 0) { %>
-            <% if (invoice && invoice.advance && invoice.advance !==0) { %>
-            <small>: <%= invoice.due%> tk </small>
-            <% } %>
-
-
-            <% } %>
-
+            <% if (invoice && invoice.discount && invoice.discount !==0) { %>
+              <small>: <%=invoice.discount %> tk
+              </small>
+              <% } %>
+                <% if (invoice && invoice.vat && invoice.vat !==0) { %>
+                  <small>: <%= invoice.vat %>%</small>
+                  <% } %>
+                    <% if (invoice && invoice.tax && invoice.tax !==0) { %>
+                      <small>: <%= invoice.tax %>%</small>
+                      <% } %>
+                        <small>: <%= invoice.net_total !==undefined ? formatToIndianCurrency(invoice.net_total) : 0 %>
+                            tk
+                        </small>
+                        <% if (invoice.advance !==undefined) { %>
+                          <% if (invoice && invoice.advance && invoice.advance !==0) { %>
+                            <small>: <%= invoice.advance%> tk
+                            </small>
+                            <% } %>
+                              <% } %>
+                                <% if (invoice && invoice.due && invoice.due !==0) { %>
+                                  <% if (invoice && invoice.advance && invoice.advance !==0) { %>
+                                    <small>: <%= invoice.due%> tk </small>
+                                    <% } %>
+                                      <% } %>
           </div>
-
-
         </div>
       </div>
 
       <div style="margin-top: 20px; font-size: 12px;">
-        <b>In words:</b> <span style="font-size: 12px"><%= invoice.net_total_in_words %> </span>
+        <b>In words:</b> <span style="font-size: 12px">
+          <%= invoice.net_total_in_words %>
+        </span>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 64px; margin-bottom: 20px; font-size: 12px;">
+      <div style="text-align: center;">
+        <div style="border-top: 1px solid black; padding-top: 4px; margin: 0 auto; width: 192px;">
+          Client Signature
+        </div>
+      </div>
+      <div style="text-align: center;">
+        <div style="border-top: 1px solid black; padding-top: 4px; margin: 0 auto; width: 192px;">
+          Authorized Signature
+        </div>
       </div>
     </div>
   </div>

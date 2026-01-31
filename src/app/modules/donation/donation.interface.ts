@@ -1,11 +1,12 @@
 export type TDonation = {
+  _id?: string;
   name: string;
   mobile_number: string;
-  address: string;
   email: string;
-  donation_purpose: string;
-  donation_amount: string;
   donation_country: string;
+  address: string;
+  donation_purpose: string;
+  donation_amount: number;
   payment_method?: string;
   bank_account_no?: string;
   check_no?: string;
@@ -14,10 +15,14 @@ export type TDonation = {
   card_transaction_no?: string;
   card_type?: string;
   month_first?: string;
-  year?: string;
   month_second?: string;
+  year?: string;
   security_code?: string;
-  transaction_no?: string;
-  transactionId?: string;
+  referenceNo?: string;
+  transactionId: string;
+  transaction_no: string;
   description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 };

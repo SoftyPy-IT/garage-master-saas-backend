@@ -12,6 +12,7 @@ router
 router.route('/remove').delete(attendanceController.deleteAttendance);
 
 router.route('/today').get(attendanceController.getTodayAttendance);
+router.route('/all').get(attendanceController.getAllAttendance);
 
 router.route('/:date').get(attendanceController.getSingleDateAttendance);
 router.route('/single/:id').get(attendanceController.getSingleAttendance);

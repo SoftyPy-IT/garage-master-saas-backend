@@ -7,31 +7,35 @@ import { TVehicle } from '../vehicle/vehicle.interface';
 import { SearchableFields } from './vehicle.const';
 import { getTenantModel } from '../../utils/getTenantModels';
 
-const createVehicleDetails = async (tenantDomain: string, payload: TVehicle) => {
-  const session = await mongoose.startSession();
+const createVehicleDetails = async (
+  tenantDomain: string,
+  payload: TVehicle,
+) => {
+  const { connection, Model: Vehicle } = await getTenantModel(
+    tenantDomain,
+    'Vehicle',
+  );
+  const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
+  const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
+  const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
+
+  const session = await connection.startSession();
+
   try {
-    const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-    const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
-    const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
-    const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
-
     const result = await session.withTransaction(async () => {
-      // Fetch existing records for customer, company, and showroom
-      const [existingCustomer, existingCompany, existingShowroom] = await Promise.all([
-        Customer.findById(payload.Id).session(session),
-        Company.findById(payload.Id).session(session),
-        ShowRoom.findById(payload.Id).session(session),
-      ]);
+      const [existingCustomer, existingCompany, existingShowroom] =
+        await Promise.all([
+          Customer.findById(payload.Id).session(session),
+          Company.findById(payload.Id).session(session),
+          ShowRoom.findById(payload.Id).session(session),
+        ]);
 
-      // Ensure that at least one of the entities is found
       if (!existingCustomer && !existingCompany && !existingShowroom) {
         throw new AppError(StatusCodes.BAD_REQUEST, 'You are not authorized.');
       }
 
-      // Sanitize the input payload
       const sanitizedData = sanitizePayload(payload);
 
-      // Prepare the vehicle data
       const vehicleData = new Vehicle({
         ...sanitizedData,
         customer: existingCustomer?._id || null,
@@ -49,10 +53,8 @@ const createVehicleDetails = async (tenantDomain: string, payload: TVehicle) => 
           null,
       });
 
-      // Save the vehicle data within the transaction
       const savedVehicle = await vehicleData.save({ session });
 
-      // Associate the saved vehicle with the correct entity based on user_type
       if (savedVehicle) {
         if (savedVehicle.user_type === 'customer' && existingCustomer) {
           await Customer.findByIdAndUpdate(
@@ -79,50 +81,209 @@ const createVehicleDetails = async (tenantDomain: string, payload: TVehicle) => 
     });
 
     return result;
-  } catch (error) {
-    throw error;
   } finally {
     await session.endSession();
   }
 };
 
+// const getAllVehiclesFromDB = async (
+//   tenantDomain: string,
+//   id: string,
+//   limit: number,
+//   page: number,
+//   searchTerm: string,
+// ) => {
+//   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
+
+//   let idMatchQuery: any = {};
+//   let searchQuery: any = {};
+//   idMatchQuery = {
+//     $or: [
+//       { 'customer._id': new mongoose.Types.ObjectId(id) },
+//       { 'company._id': new mongoose.Types.ObjectId(id) },
+//       { 'showRoom._id': new mongoose.Types.ObjectId(id) },
+//     ],
+//   };
+
+//   // If a search term is provided, apply regex filtering
+//   if (searchTerm) {
+//     const escapedFilteringData = searchTerm.replace(
+//       /[.*+?^${}()|[\]\\]/g,
+//       '\\$&',
+//     );
+
+//     const vehicleSearchQuery = SearchableFields.map((field) => ({
+//       [field]: { $regex: escapedFilteringData, $options: 'i' },
+//     }));
+
+//     searchQuery = {
+//       $or: [...vehicleSearchQuery],
+//     };
+//   }
+
+//   // Construct the aggregation pipeline
+//   const vehicles = await Vehicle.aggregate([
+//     {
+//       $lookup: {
+//         from: 'customers',
+//         localField: 'customer',
+//         foreignField: '_id',
+//         as: 'customer',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'companies',
+//         localField: 'company',
+//         foreignField: '_id',
+//         as: 'company',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'showrooms',
+//         localField: 'showRoom',
+//         foreignField: '_id',
+//         as: 'showRoom',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$customer',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$company',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$showRoom',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $match: {
+//         $and: [idMatchQuery, searchQuery],
+//       },
+//     },
+//     {
+//       $sort: { createdAt: -1 },
+//     },
+//     {
+//       $skip: (page - 1) * limit,
+//     },
+//     {
+//       $limit: limit,
+//     },
+//   ]);
+
+//   // Count total documents
+//   const totalData = await Vehicle.aggregate([
+//     {
+//       $lookup: {
+//         from: 'customers',
+//         localField: 'customer',
+//         foreignField: '_id',
+//         as: 'customer',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'companies',
+//         localField: 'company',
+//         foreignField: '_id',
+//         as: 'company',
+//       },
+//     },
+//     {
+//       $lookup: {
+//         from: 'showrooms',
+//         localField: 'showRoom',
+//         foreignField: '_id',
+//         as: 'showRoom',
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$customer',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$company',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $unwind: {
+//         path: '$showRoom',
+//         preserveNullAndEmptyArrays: true,
+//       },
+//     },
+//     {
+//       $match: {
+//         $and: [idMatchQuery, searchQuery],
+//       },
+//     },
+//     {
+//       $count: 'totalCount',
+//     },
+//   ]);
+
+//   const totalCount = totalData.length > 0 ? totalData[0].totalCount : 0;
+//   const totalPages = Math.ceil(totalCount / limit);
+
+//   return {
+//     vehicles,
+//     meta: {
+//       totalPages,
+//       currentPage: page,
+//     },
+//   };
+// };
+
 const getAllVehiclesFromDB = async (
   tenantDomain: string,
-  id: string,
-  limit: number,
-  page: number,
-  searchTerm: string,
+  id?: string,
+  limit = 10,
+  page = 1,
+  searchTerm = '',
 ) => {
-  
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
 
   let idMatchQuery: any = {};
-  let searchQuery: any = {}
-  idMatchQuery = {
-    $or: [
+  if (id) {
+    idMatchQuery.$or = [
       { 'customer._id': new mongoose.Types.ObjectId(id) },
       { 'company._id': new mongoose.Types.ObjectId(id) },
       { 'showRoom._id': new mongoose.Types.ObjectId(id) },
-    ],
-  };
+    ];
+  }
 
-  // If a search term is provided, apply regex filtering
+  // Search filter
+  let searchQuery: any = {};
   if (searchTerm) {
     const escapedFilteringData = searchTerm.replace(
       /[.*+?^${}()|[\]\\]/g,
       '\\$&',
     );
-
-    const vehicleSearchQuery = SearchableFields.map((field) => ({
+    searchQuery.$or = SearchableFields.map((field) => ({
       [field]: { $regex: escapedFilteringData, $options: 'i' },
     }));
-
-    searchQuery = {
-      $or: [...vehicleSearchQuery],
-    };
   }
 
-  // Construct the aggregation pipeline
+  // Build final match filter
+  let finalMatchQuery: any = {};
+  const filters: any[] = [];
+  if (Object.keys(idMatchQuery).length) filters.push(idMatchQuery);
+  if (Object.keys(searchQuery).length) filters.push(searchQuery);
+  if (filters.length) finalMatchQuery = { $and: filters };
+
   const vehicles = await Vehicle.aggregate([
     {
       $lookup: {
@@ -148,38 +309,13 @@ const getAllVehiclesFromDB = async (
         as: 'showRoom',
       },
     },
-    {
-      $unwind: {
-        path: '$customer',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$company',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$showRoom',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        $and: [idMatchQuery, searchQuery],
-      },
-    },
-    {
-      $sort: { createdAt: -1 },
-    },
-    {
-      $skip: (page - 1) * limit,
-    },
-    {
-      $limit: limit,
-    },
+    { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$company', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$showRoom', preserveNullAndEmptyArrays: true } },
+    ...(filters.length ? [{ $match: finalMatchQuery }] : []), // only match if filter exists
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
   ]);
 
   // Count total documents
@@ -208,32 +344,11 @@ const getAllVehiclesFromDB = async (
         as: 'showRoom',
       },
     },
-    {
-      $unwind: {
-        path: '$customer',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$company',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$showRoom',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $match: {
-        $and: [idMatchQuery, searchQuery],
-      },
-    },
-    {
-      $count: 'totalCount',
-    },
+    { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$company', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$showRoom', preserveNullAndEmptyArrays: true } },
+    ...(filters.length ? [{ $match: finalMatchQuery }] : []),
+    { $count: 'totalCount' },
   ]);
 
   const totalCount = totalData.length > 0 ? totalData[0].totalCount : 0;
@@ -248,13 +363,8 @@ const getAllVehiclesFromDB = async (
   };
 };
 
-
-
-
 const getSingleVehicleDetails = async (tenantDomain: string, id: string) => {
-  console.log(tenantDomain, id)
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-
   const singleVehicle = await Vehicle.findById(id);
 
   if (!singleVehicle) {
@@ -265,23 +375,24 @@ const getSingleVehicleDetails = async (tenantDomain: string, id: string) => {
 };
 
 const deleteVehicle = async (tenantDomain: string, id: string) => {
-  const session = await mongoose.startSession();
+  const { Model: Vehicle, connection } = await getTenantModel(
+    tenantDomain,
+    'Vehicle',
+  );
+  const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
+  const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
+  const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
+
+  const session = await connection.startSession();
   session.startTransaction();
 
   try {
-    const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
-    const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
-    const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
-    const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
-
-    // Find and delete the vehicle
     const vehicle = await Vehicle.findByIdAndDelete(id, { session });
 
     if (!vehicle) {
       throw new AppError(StatusCodes.NOT_FOUND, 'No vehicle available');
     }
 
-    // Remove reference from customer if exists
     if (vehicle.customer) {
       await Customer.findByIdAndUpdate(
         vehicle.customer,
@@ -290,7 +401,6 @@ const deleteVehicle = async (tenantDomain: string, id: string) => {
       );
     }
 
-    // Remove reference from company if exists
     if (vehicle.company) {
       await Company.findByIdAndUpdate(
         vehicle.company,
@@ -299,7 +409,6 @@ const deleteVehicle = async (tenantDomain: string, id: string) => {
       );
     }
 
-    // Remove reference from showroom if exists
     if (vehicle.showRoom) {
       await ShowRoom.findByIdAndUpdate(
         vehicle.showRoom,
@@ -319,9 +428,31 @@ const deleteVehicle = async (tenantDomain: string, id: string) => {
   }
 };
 
+const updateVehicleDetails = async (
+  tenantDomain: string,
+  id: string,
+  payload: Partial<TVehicle>,
+) => {
+  const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
+  const sanitizedData = sanitizePayload(payload);
+
+  const updatedVehicle = await Vehicle.findByIdAndUpdate(
+    id,
+    { $set: sanitizedData },
+    { new: true, runValidators: true },
+  );
+
+  if (!updatedVehicle) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'No vehicle found to update');
+  }
+
+  return updatedVehicle;
+};
+
 export const VehicleServices = {
   createVehicleDetails,
   getAllVehiclesFromDB,
   getSingleVehicleDetails,
   deleteVehicle,
+  updateVehicleDetails,
 };

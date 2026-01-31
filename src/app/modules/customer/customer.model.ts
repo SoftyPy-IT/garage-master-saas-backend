@@ -16,9 +16,9 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
     },
 
     note: {
-        type: Schema.ObjectId,
-        ref: 'Note',
-      },
+      type: Schema.ObjectId,
+      ref: 'Note',
+    },
     vehicles: [
       {
         type: Schema.ObjectId,
@@ -77,7 +77,6 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
     },
     customer_contact: {
       type: String,
-      required: [true, 'Customer contact number is required.'],
     },
     fullCustomerNum: {
       type: String,
@@ -85,14 +84,12 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
 
     driver_name: {
       type: String,
-      required: [true, 'Driver name is required'],
     },
     driver_country_code: {
       type: String,
     },
     driver_contact: {
       type: String,
-      required: [true, 'Driver contact number is required'],
     },
     customerOwnerName: {
       type: String,
@@ -105,6 +102,9 @@ export const customerSchema: Schema<TCustomer> = new Schema<TCustomer>(
     },
     reference_name: {
       type: String,
+    },
+    whatsappNumber: {
+      type: Number,
     },
     isRecycled: { type: Boolean, default: false },
     recycledAt: { type: Date, default: null },

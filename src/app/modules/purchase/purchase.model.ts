@@ -4,42 +4,36 @@ import { TPurchase } from './purchase.interface';
 export const purchaseSchema: Schema<TPurchase> = new Schema<TPurchase>(
   {
     date: {
-      type: String,
-      required: [true, 'Date is required'],
+      type: Date,
     },
     referenceNo: {
       type: String,
-      required: [true, 'Reference number is required'],
     },
     warehouse: {
-       type: Types.ObjectId,
+      type: Types.ObjectId,
       ref: 'Warehouse',
       required: true,
     },
+    
     attachDocument: {
       type: String,
       required: false,
     },
-    suppliers: {
-      type: Types.ObjectId,
-      ref: 'Supplier',
-      required: true,
-    },
+    suppliers: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }],
+    paidAmount: { type: Number, default: 0 },
+    dueAmount: { type: Number, default: 0 },
+
     shipping: {
       type: Number,
-      required: [true, 'Shipping method is required'],
     },
     note: {
       type: String,
     },
     paymentMethod: {
       type: String,
-      required: [true, 'Payment method is required'],
     },
-    purchasStatus: {
+    purchaseStatus: {
       type: String,
-      enum: ['Incomplete', 'Complete', 'Draft'],
-      default: 'Incomplete',
     },
 
     // 🔽 Newly added fields
@@ -96,12 +90,15 @@ export const purchaseSchema: Schema<TPurchase> = new Schema<TPurchase>(
         },
       },
     ],
-    
   },
   {
     timestamps: true,
-  }
+  },
 );
 
+purchaseSchema.pre('save', function (next) {
+  this.dueAmount = (this.grandTotal || 0) - (this.paidAmount || 0);
+  next();
+});
 
 export const Purchase = mongoose.model<TPurchase>('Purchase', purchaseSchema);

@@ -23,4 +23,9 @@ router.put(
   purchaseReturnControllers.updatePurchaseReturn
 );
 
+router.patch(
+  '/:id/approve',
+  purchaseReturnControllers.approvePurchaseReturn
+);
+
 export const purchaseReturnRoutes = router;

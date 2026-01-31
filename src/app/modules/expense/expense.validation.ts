@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { stringOrArrayOrNumber } from "../../utils/type";
+import { z } from 'zod';
+import { stringOrArrayOrNumber } from '../../utils/type';
 
 const expenseItemSchema = z.object({
-  name: z.string().min(1, "Item name is required"),
-  amount: z.number().min(0, "Amount must be non-negative"),
+  name: z.string().optional(),
+  amount: z.number().optional(),
 });
 
 export const createExpenseValidationSchema = z.object({
@@ -24,7 +24,6 @@ export const createExpenseCategorySchema = z.object({
   body: z.object({
     name: z.string().optional(),
     code: z.string().optional(),
-    
   }),
 });
 
@@ -32,6 +31,5 @@ export const updateExpenseCategorySchema = z.object({
   body: z.object({
     name: z.string().optional(),
     code: z.string().optional(),
-   
   }),
 });

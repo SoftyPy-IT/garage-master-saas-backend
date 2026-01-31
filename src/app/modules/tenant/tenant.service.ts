@@ -4,47 +4,41 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import AppError from '../../errors/AppError';
 import httpStatus from 'http-status';
 import { createSubscription } from '../subscription/subscription.service';
-import { connectToTenantDatabase } from '../../../server';
-import mongoose from 'mongoose';
 import { userSchema } from '../user/user.model';
 import { subscriptionSchema } from '../subscription/subscription.model';
 import { getTenantModel } from '../../utils/getTenantModels';
+import { DEFAULT_PAGES, DEFAULT_ROLES } from '../../utils/tenantSeedData';
+import { roleSchema } from '../role/role.model';
+import { pageSchema } from '../page/page.model';
+import { permissionSchema } from '../permission/permission.model';
+import mongoose from 'mongoose';
+
+
+
+
 
 export const createTenant = async (
   payload: ITenant,
   plan: 'Monthly' | 'HalfYearly' | 'Yearly',
 ) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { name, domain, user: userPayload } = payload;
 
     if (!domain || typeof domain !== 'string') {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'Domain is required and must be a string',
-      );
+      throw new AppError(httpStatus.BAD_REQUEST, 'Domain is required and must be a string');
     }
 
-    // Check if domain already exists
-    const existingTenant = await Tenant.findOne({ domain });
+    const existingTenant = await Tenant.findOne({ domain }).session(session);
     if (existingTenant) {
       throw new AppError(httpStatus.BAD_REQUEST, 'Domain already registered');
     }
 
-    // Generate tenant DB URI
     const dbName = domain.replace(/\./g, '_');
     const dbUri = `mongodb+srv://softypy_saas:saas_softypy33@cluster0.ywst3am.mongodb.net/${dbName}?retryWrites=true&w=majority&appName=Cluster0`;
 
-    // Connect to tenant DB
-    const connection = await connectToTenantDatabase(domain, dbUri);
-
-    // Register UserModel and SubscriptionModel to tenant DB
-    const UserModel = connection.model('User', userSchema);
-    const SubscriptionModel = connection.model(
-      'Subscription',
-      subscriptionSchema,
-    );
-
-    // Prepare subscription
     const subscription = createSubscription(
       plan,
       payload.subscription?.isPaid || false,
@@ -52,58 +46,88 @@ export const createTenant = async (
       payload.subscription?.amount || 0,
     );
 
-    // Create Tenant (in main DB)
-    const tenant = new Tenant({
+    // ✅ Create tenant in the main DB under a transaction
+    const tenant = await Tenant.create([{
       name,
       domain,
       businessType: payload.businessType,
       dbUri,
       subscription,
       isActive: true,
-    });
-    await tenant.save();
+    }], { session }).then(res => res[0]);
 
-    // Create Admin User (in tenant DB)
-    const fullName = `${userPayload.firstName} ${userPayload.lastName}`.trim();
-    const newUser = await UserModel.create({
-      name: fullName,
-      email: userPayload.email,
-      password: userPayload.password,
-      tenantDomain: domain,
-      tenantId: tenant._id,
-      tenantInfo: {
-        name: tenant.name,
-        domain: tenant.domain,
-        businessType: tenant.businessType,
-        dbUri: tenant.dbUri,
-        isActive: tenant.isActive,
-        subscription,
-      },
-      createdBy: 'self',
-      role: 'admin',
-    });
+    // ✅ Commit main DB transaction
+    await session.commitTransaction();
 
-    // Create Subscription (in tenant DB)
-    await SubscriptionModel.create({
-      ...subscription,
-      user: newUser._id,
-    });
+    // ✅ Now safely initialize tenant DB (outside transaction)
+    const tenantDb = mongoose.connection.useDb(dbName, { useCache: true });
 
-    // Optional: Create a dummy collection to trigger DB creation
-    const DummyModel = connection.model(
-      'Dummy',
-      new mongoose.Schema({ name: String }),
-    );
-    await DummyModel.create({ name: 'trigger' });
+    const UserModel = tenantDb.model('User', userSchema);
+    const RoleModel = tenantDb.model('Role', roleSchema);
+    const PageModel = tenantDb.model('Page', pageSchema);
+    const PermissionModel = tenantDb.model('Permission', permissionSchema);
+    const SubscriptionModel = tenantDb.model('Subscription', subscriptionSchema);
+
+    // Initialize collections only if empty
+    const hasPages = await PageModel.exists({});
+    if (!hasPages) {
+      const createdPages = await PageModel.insertMany(DEFAULT_PAGES);
+      const createdRoles = await RoleModel.insertMany(DEFAULT_ROLES);
+
+      const adminRole = createdRoles.find((role: any) => role.name === 'admin');
+      if (!adminRole) {
+        throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Admin role could not be created.');
+      }
+
+      const fullName = `${userPayload?.firstName} ${userPayload?.lastName}`.trim();
+      const newUser = await UserModel.create({
+        name: fullName,
+        email: userPayload.email,
+        password: userPayload.password,
+        tenantDomain: domain,
+        tenantId: tenant._id,
+        roleId: [adminRole._id],
+        tenantInfo: {
+          name: tenant.name,
+          domain: tenant.domain,
+          businessType: tenant.businessType,
+          dbUri: tenant.dbUri,
+          isActive: tenant.isActive,
+          subscription,
+        },
+        createdBy: 'self',
+        role: 'admin',
+      });
+
+      const permissions = createdPages.map((page) => ({
+        roleId: [adminRole._id],
+        pageId: [page._id],
+        create: true,
+        edit: true,
+        view: true,
+        delete: true,
+      }));
+      await PermissionModel.insertMany(permissions);
+
+      await SubscriptionModel.create({
+        ...subscription,
+        user: newUser._id,
+      });
+    }
 
     return tenant;
+
   } catch (error: any) {
-    throw new AppError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || 'Error creating tenant',
-    );
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    console.error('❌ Tenant creation failed:', error);
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, error.message || 'Error creating tenant');
+  } finally {
+    await session.endSession();
   }
 };
+
 
 const getAllTenant = async (query: Record<string, unknown>) => {
   const tenantQuery = new QueryBuilder(Tenant.find(), query)
@@ -189,7 +213,6 @@ const renewTenantSubscription = async (
 ) => {
   const tenant = await Tenant.findById(tenantId);
 
-  console.log(tenantId, plan);
 
   if (!tenant) {
     throw new AppError(httpStatus.NOT_FOUND, 'Tenant not found');

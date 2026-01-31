@@ -1,5 +1,4 @@
 // src/modules/stockTransaction/stockTransaction.controller.ts
-
 import { Request, Response, NextFunction } from 'express';
 import httpStatus from 'http-status';
 import sendResponse from '../../utils/sendResponse';
@@ -11,7 +10,8 @@ const createStockTransaction = async (
   next: NextFunction
 ) => {
   try {
-    const result = await stockTransactionServices.createStockTransaction(req.body);
+    const tenantDomain = req.query.tenantDomain as string;
+    const result = await stockTransactionServices.createStockTransaction(tenantDomain, req.body);
     sendResponse(res, {
       statusCode: httpStatus.CREATED,
       success: true,
@@ -24,12 +24,13 @@ const createStockTransaction = async (
 };
 
 const getAllStockTransactions = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const result = await stockTransactionServices.getAllStockTransactions();
+    const tenantDomain = req.query.tenantDomain as string;
+    const result = await stockTransactionServices.getAllStockTransactions(tenantDomain);
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
@@ -47,8 +48,9 @@ const getSingleStockTransaction = async (
   next: NextFunction
 ) => {
   try {
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await stockTransactionServices.getSingleStockTransaction(id);
+    const result = await stockTransactionServices.getSingleStockTransaction(tenantDomain, id);
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,

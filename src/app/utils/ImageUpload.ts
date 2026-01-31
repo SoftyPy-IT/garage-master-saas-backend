@@ -26,9 +26,6 @@ export const ImageUpload = (
         // Always try to delete the file
         fs.unlink(path, (err) => {
           if (err) {
-            console.log('Error deleting file:', err);
-          } else {
-            console.log('File deleted successfully.');
           }
         });
 

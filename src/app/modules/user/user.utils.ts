@@ -22,8 +22,6 @@ export const seedSuperAdmin = async () => {
       tenantDomain: 'superadmin', 
     });
 
-    console.log('✅ Super Admin created successfully!');
-  } else {
-    console.log('ℹ️ Super Admin already exists.');
-  }
+  
+  } 
 };

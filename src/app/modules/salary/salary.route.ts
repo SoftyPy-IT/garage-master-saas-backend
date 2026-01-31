@@ -17,5 +17,6 @@ router.route("/payment-status").get(salaryController.getSalariesWithPaymentStatu
 router.route("/:id/history").get(salaryController.getPaymentHistory)
 router.route("/:id/payment").post(salaryController.addPartialPayment)
 router.route("/statistics").get(salaryController.getSalaryStatistics)
+router.route("/salary-month").get(salaryController.getSalariesByMonth)
 
 export const SalaryRoutes = router

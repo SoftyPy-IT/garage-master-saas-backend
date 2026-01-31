@@ -15,21 +15,17 @@ const productSchema = z.object({
 // Create Purchase Validation Schema
 const createPurchase = z.object({
   body: z.object({
-    date: z.string({ required_error: 'Date is required' }),
-    referenceNo: z.string({ required_error: 'Reference number is required' }),
+    date: z.string().optional(),
+    referenceNo: z.string().optional(),
 
     attachDocument: z.string().optional(),
     suppliers: z.array(z.string({ required_error: 'Supplier ID is required' })),
     warehouse: z.array(
       z.string({ required_error: 'warehouse ID is required' }),
     ),
-    shipping: z.number({ required_error: 'Shipping method is required' }),
-    paymentMethod: z.string({ required_error: 'Payment method is required' }),
-    purchasStatus: z
-      .enum(['Incomplete', 'Complete', 'Draft'], {
-        required_error: 'Purchase status is required',
-      })
-      .default('Incomplete'),
+    shipping: z.number().optional(),
+    paymentMethod: z.string().optional(),
+    purchaseStatus: z.string().optional(),
     products: z
       .array(productSchema)
       .nonempty({ message: 'At least one product is required' }),
@@ -40,13 +36,13 @@ const createPurchase = z.object({
 const updatePurchase = z.object({
   body: z.object({
     date: z.string().optional(),
-    referance_no: z.string().optional(),
+    referenceNo: z.string().optional(),
     warehouse: z.array(z.string()).optional(),
     attachDocument: z.string().optional(),
     supplier: z.string().optional(),
     shipping: z.string().optional(),
     paymentMethod: z.string().optional(),
-    purchasStatus: z.enum(['Incomplete', 'Complete', 'Draft']).optional(),
+    purchaseStatus: z.string().optional(),
     products: z.array(productSchema).optional(),
   }),
 });

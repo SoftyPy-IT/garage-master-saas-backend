@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>quotation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet">
     <style>
         @page {
             margin: 15px 5px 15px 5px;
@@ -95,32 +96,42 @@
                 style="margin-bottom: 8px; margin-left: auto; margin-right: auto; text-align: center; border-bottom: 2px solid #351E98; padding-bottom: 8px;">
                 <div
                     style="display: flex; align-items: center; justify-content: space-between; width: 100%; ; margin-bottom: 8px;">
-
-
                     <div
                         style="display: flex; align-items: center; justify-content: space-between;  margin-bottom: 8px;">
-                        <% if (logoBase64) { %>
-                        <img style="width: 120px;" src="data:image/png;base64,<%= logoBase64 %>"
-                            alt="SofyPy Garages" />
-                        <% } else { %>
-                        <img style="width: 120px;" src="<%= imageUrl %>/images/logo.png" alt="SofyPy Garages"
-                            onerror="this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';" />
-                        <% } %>
-
+                        <img style="width: 100px; height: 100px; object-fit: contain;" src="<%= companyData.logo %>"
+                            alt="<%= companyData.companyName || 'Company Logo' %>">
                     </div>
-
-
                     <div>
-                        <small style="font-size: 36px; color: #4671A1;display: block;font-weight: 800;">Trust Auto
-                            Solution</small>
-                        <small style="margin-top: -20px;">Office: Ka-93/4/C, Kuril Bishawroad, Dhaka-1229</small>
+
+                        <% if (companyData?.companyNameBN) { %>
+                            <small
+                                style="font-size: 36px; color: #4671A1;display: block;font-weight: 800; font-family: 'Hind Siliguri', sans-serif">
+                                <%= companyData?.companyNameBN %>
+                            </small>
+                            <% } %>
+
+
+
+                                <% if (companyData?.companyName) { %>
+
+                                    <b style=" font-size: 18px; color: #333; display: block;">
+                                        (<%= companyData?.companyName %>)
+                                    </b>
+                                    <% } %>
+                                        <small style="margin-top: -20px;">
+                                            <%= companyData.address%>
+                                        </small>
                     </div>
                     <div style="text-align: left;">
-                        <small style="display: block;"><small style="font-weight: bold;">Mobile:</small> +88
-                            01821-216465</small>
+                        <small style="display: block;"><small style="font-weight: bold;">Mobile:</small>
+                            <%= companyData?.phone %>
+                        </small>
                         <small style="display: block;"><small style="font-weight: bold;">Email:</small>
-                            trustautosolution@gmail.com</small>
-                        <small style="display: block; font-weight: bold;">www.trustautosolution.com</small>
+                            <%= companyData?.email%>
+                        </small>
+                        <small style="display: block; font-weight: bold;">
+                            <%= companyData?.website %>
+                        </small>
                     </div>
                 </div>
             </div>
@@ -130,7 +141,8 @@
                 <div
                     style="display: flex; font-size: 12px; align-items: center; justify-content: space-between; border-bottom: 2px solid #351E98; padding-bottom: 4px;">
                     <span style="width: 200px;"><b>ID:</b>
-                        <%= quotation && quotation.job_no ? quotation.job_no : 'N/A' %></span>
+                        <%= quotation && quotation.job_no ? quotation.job_no : 'N/A' %>
+                    </span>
                     <b style="margin-right: 88px; text-transform: uppercase;">quotation</b>
                     <b>Date: <%= quotation && quotation.date ? quotation.date : 'N/A' %></b>
                 </div>
@@ -141,106 +153,132 @@
                         <div style="display: flex;flex-direction: column; width:140px;  row-gap: 3px;">
                             <b style="font-size: 10px;">Quotation No</b>
                             <% if (quotation?.customer?.customer_name) { %>
-                            <b style="font-size: 10px;">Customer Name</b>
-                            <% } %>
+                                <b style="font-size: 10px;">Customer Name</b>
+                                <% } %>
 
-                            <% if (quotation?.company?.company_name) { %>
-                            <b style="font-size: 10px;">Company Name</b>
-                            <% } %>
+                                    <% if (quotation?.company?.company_name) { %>
+                                        <b style="font-size: 10px;">Company Name</b>
+                                        <% } %>
 
-                            <% if (quotation?.showRoom?.showRoom_name) { %>
-                            <b style="font-size: 10px;">Showroom Name</b>
-                            <% } %>
-                            <% if (quotation?.customer?.company_name) { %>
-                            <b style="font-size: 10px;">Company Name</b>
-                            <% } %>
+                                            <% if (quotation?.showRoom?.showRoom_name) { %>
+                                                <b style="font-size: 10px;">Showroom Name</b>
+                                                <% } %>
+                                                    <% if (quotation?.customer?.company_name) { %>
+                                                        <b style="font-size: 10px;">Company Name</b>
+                                                        <% } %>
 
-                            <% if (quotation?.company?.vehicle_username) { %>
-                            <b style="font-size: 10px;">Vehicle User Name</b>
-                            <% } %>
+                                                            <% if (quotation?.company?.vehicle_username) { %>
+                                                                <b style="font-size: 10px;">Vehicle User Name</b>
+                                                                <% } %>
 
-                            <% if (quotation?.showRoom?.vehicle_username) { %>
-                            <b style="font-size: 10px;">Show Room Owner Name </b>
-                            <% } %>
-                            <% if (quotation?.customer?.fullCustomerNum) { %>
-                            <b style="font-size: 10px;">Phone</b>
-                            <% } %>
-                            <% if (quotation?.company?.fullCompanyNum) { %>
-                            <b style="font-size: 10px;">Phone</b>
-                            <% } %>
-                            <% if (quotation?.showRoom?.fullCompanyNum) { %>
-                            <b style="font-size: 10px;">Phone</b>
-                            <% } %>
-                            <% if (quotation?.customer?.customer_address) { %>
-                            <b style="font-size: 10px;">Address</b>
-                            <% } %>
-                            <% if (quotation?.company?.company_address) { %>
-                            <b style="font-size: 10px;">Address</b>
-                            <% } %>
-                            <% if (quotation?.showRoom?.showRoom_address) { %>
-                            <b style="font-size: 10px;">Address</b>
-                            <% } %>
+                                                                    <% if (quotation?.showRoom?.vehicle_username) { %>
+                                                                        <b style="font-size: 10px;">Show Room Owner Name
+                                                                        </b>
+                                                                        <% } %>
+                                                                            <% if (quotation?.customer?.fullCustomerNum)
+                                                                                { %>
+                                                                                <b style="font-size: 10px;">Phone</b>
+                                                                                <% } %>
+                                                                                    <% if
+                                                                                        (quotation?.company?.fullCompanyNum)
+                                                                                        { %>
+                                                                                        <b
+                                                                                            style="font-size: 10px;">Phone</b>
+                                                                                        <% } %>
+                                                                                            <% if
+                                                                                                (quotation?.showRoom?.fullCompanyNum)
+                                                                                                { %>
+                                                                                                <b
+                                                                                                    style="font-size: 10px;">Phone</b>
+                                                                                                <% } %>
+                                                                                                    <% if
+                                                                                                        (quotation?.customer?.customer_address)
+                                                                                                        { %>
+                                                                                                        <b
+                                                                                                            style="font-size: 10px;">Address</b>
+                                                                                                        <% } %>
+                                                                                                            <% if
+                                                                                                                (quotation?.company?.company_address)
+                                                                                                                { %>
+                                                                                                                <b
+                                                                                                                    style="font-size: 10px;">Address</b>
+                                                                                                                <% } %>
+                                                                                                                    <% if
+                                                                                                                        (quotation?.showRoom?.showRoom_address)
+                                                                                                                        {
+                                                                                                                        %>
+                                                                                                                        <b
+                                                                                                                            style="font-size: 10px;">Address</b>
+                                                                                                                        <% }
+                                                                                                                            %>
 
 
                         </div>
                         <div style="display: flex;flex-direction: column; row-gap: 3px;">
                             <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation && quotation.quotation_no ? quotation.quotation_no : 'N/A' %></small>
+                                <%= quotation && quotation.quotation_no ? quotation.quotation_no : 'N/A' %>
+                            </small>
                             <small style="font-size: 10px;"><span class="dot">:</span>
                                 <% if (quotation.customer) { %>
-                                <%=quotation.customer.customer_name %>
-                                <% } else if (quotation.company) { %>
-                                <%= quotation.company.company_name %>
-                                <% } else if (quotation.showRoom) { %>
-                                <%= quotation.showRoom.showRoom_name %>
-                                <% } %>
+                                    <%=quotation.customer.customer_name %>
+                                        <% } else if (quotation.company) { %>
+                                            <%= quotation.company.company_name %>
+                                                <% } else if (quotation.showRoom) { %>
+                                                    <%= quotation.showRoom.showRoom_name %>
+                                                        <% } %>
 
                             </small>
-                            <% if ((quotation.customer && quotation.customer.company_name) || 
-                            (quotation.company && quotation.company.vehicle_username) || 
-                            (quotation.showRoom && quotation.showRoom.vehicle_username)) { %>
-                            <small style="font-size: 10px;">
-                                <span class="dot">:</span>
-                                <% if (quotation.customer && quotation.customer.company_name) { %>
-                                <%= quotation.customer.company_name %>
-                                <% } else if (quotation.company && quotation.company.vehicle_username) { %>
-                                <%= quotation.company.vehicle_username %>
-                                <% } else if (quotation.showRoom && quotation.showRoom.vehicle_username) { %>
-                                <%= quotation.showRoom.vehicle_username %>
+                            <% if ((quotation.customer && quotation.customer.company_name) || (quotation.company &&
+                                quotation.company.vehicle_username) || (quotation.showRoom &&
+                                quotation.showRoom.vehicle_username)) { %>
+                                <small style="font-size: 10px;">
+                                    <span class="dot">:</span>
+                                    <% if (quotation.customer && quotation.customer.company_name) { %>
+                                        <%= quotation.customer.company_name %>
+                                            <% } else if (quotation.company && quotation.company.vehicle_username) { %>
+                                                <%= quotation.company.vehicle_username %>
+                                                    <% } else if (quotation.showRoom &&
+                                                        quotation.showRoom.vehicle_username) { %>
+                                                        <%= quotation.showRoom.vehicle_username %>
+                                                            <% } %>
+                                </small>
                                 <% } %>
-                            </small>
-                            <% } %>
 
 
-                            <% if ((quotation.customer && quotation.customer.fullCustomerNum) || 
-                            (quotation.company && quotation.company.fullCompanyNum) || 
-                            (quotation.showRoom && quotation.showRoom.fullCompanyNum)) { %>
-                            <small style="font-size: 10px;">
-                                <span class="dot">:</span>
-                                <% if (quotation.customer && quotation.customer.fullCustomerNum) { %>
-                                <%= quotation.customer.fullCustomerNum %>
-                                <% } else if (quotation.company && quotation.company.fullCompanyNum) { %>
-                                <%= quotation.company.fullCompanyNum %>
-                                <% } else if (quotation.showRoom && quotation.showRoom.fullCompanyNum) { %>
-                                <%= quotation.showRoom.fullCompanyNum %>
-                                <% } %>
-                            </small>
-                            <% } %>
+                                    <% if ((quotation.customer && quotation.customer.fullCustomerNum) ||
+                                        (quotation.company && quotation.company.fullCompanyNum) || (quotation.showRoom
+                                        && quotation.showRoom.fullCompanyNum)) { %>
+                                        <small style="font-size: 10px;">
+                                            <span class="dot">:</span>
+                                            <% if (quotation.customer && quotation.customer.fullCustomerNum) { %>
+                                                <%= quotation.customer.fullCustomerNum %>
+                                                    <% } else if (quotation.company && quotation.company.fullCompanyNum)
+                                                        { %>
+                                                        <%= quotation.company.fullCompanyNum %>
+                                                            <% } else if (quotation.showRoom &&
+                                                                quotation.showRoom.fullCompanyNum) { %>
+                                                                <%= quotation.showRoom.fullCompanyNum %>
+                                                                    <% } %>
+                                        </small>
+                                        <% } %>
 
-                            <% if ((quotation.customer && quotation.customer.customer_address) || 
-                            (quotation.company && quotation.company.company_address) || 
-                            (quotation.showRoom && quotation.showRoom.showRoom_address)) { %>
-                            <small style="font-size: 10px;">
-                                <span class="dot">:</span>
-                                <% if (quotation.customer && quotation.customer.customer_address) { %>
-                                <%= quotation.customer.customer_address %>
-                                <% } else if (quotation.company && quotation.company.company_address) { %>
-                                <%= quotation.company.company_address %>
-                                <% } else if (quotation.showRoom && quotation.showRoom.showRoom_address) { %>
-                                <%= quotation.showRoom.showRoom_address %>
-                                <% } %>
-                            </small>
-                            <% } %>
+                                            <% if ((quotation.customer && quotation.customer.customer_address) ||
+                                                (quotation.company && quotation.company.company_address) ||
+                                                (quotation.showRoom && quotation.showRoom.showRoom_address)) { %>
+                                                <small style="font-size: 10px;">
+                                                    <span class="dot">:</span>
+                                                    <% if (quotation.customer && quotation.customer.customer_address) {
+                                                        %>
+                                                        <%= quotation.customer.customer_address %>
+                                                            <% } else if (quotation.company &&
+                                                                quotation.company.company_address) { %>
+                                                                <%= quotation.company.company_address %>
+                                                                    <% } else if (quotation.showRoom &&
+                                                                        quotation.showRoom.showRoom_address) { %>
+                                                                        <%= quotation.showRoom.showRoom_address %>
+                                                                            <% } %>
+                                                </small>
+                                                <% } %>
 
                         </div>
                     </div>
@@ -257,17 +295,26 @@
                         </div>
                         <div style="display: flex; column-gap: 10px; flex-direction: column;  row-gap: 3px;">
                             <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation.vehicle && quotation.vehicle.car_registration_no ? quotation.vehicle.car_registration_no : 'N/A' %></small>
-                            <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation.vehicle && quotation.vehicle.chassis_no ? quotation.vehicle.chassis_no : 'N/A' %>
+                                <%= quotation.vehicle && quotation.vehicle.carReg_no ? quotation.vehicle.carReg_no
+                                    : 'N/A' %>
+                                    <%= quotation.vehicle && quotation.vehicle.car_registration_no ?
+                                        quotation.vehicle.car_registration_no : 'N/A' %>
                             </small>
                             <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation.vehicle && quotation.vehicle.engine_no ? quotation.vehicle.engine_no : 'N/A' %></small>
-                            <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation.vehicle && quotation.vehicle.vehicle_name ? quotation.vehicle.vehicle_name : 'N/A' %>
+                                <%= quotation.vehicle && quotation.vehicle.chassis_no ? quotation.vehicle.chassis_no
+                                    : 'N/A' %>
                             </small>
                             <small style="font-size: 10px;"><span class="dot">:</span>
-                                <%= quotation.vehicle && quotation?.vehicle?.mileageHistory && quotation.vehicle.mileageHistory.length > 0 ? quotation.vehicle.mileageHistory[0].mileage : 'N/A' %></small>
+                                <%= quotation.vehicle && quotation.vehicle.engine_no ? quotation.vehicle.engine_no
+                                    : 'N/A' %>
+                            </small>
+                            <small style="font-size: 10px;"><span class="dot">:</span>
+                                <%= quotation.vehicle && quotation.vehicle.vehicle_name ? quotation.vehicle.vehicle_name
+                                    : 'N/A' %>
+                            </small>
+                            <small style="font-size: 10px;"><span class="dot">:</span>
+                                <%= quotation?.mileage %>
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -293,41 +340,43 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <% if (quotation && quotation.service_input_data && quotation.service_input_data.length > 0) { %>
-                    <% quotation.service_input_data.forEach((item, index) => { %>
-                    <tr>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= index + 1 %>
-                        </td>
-                        <td class="serviceCell"
-                            style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.description ? item.description : 'N/A' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.quantity ? item.quantity : 'N/A' %> <%= item.unit ? item.unit : '' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.rate ? item.rate : 'N/A' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
-                        </td>
-                    </tr>
-                    <% }); %>
-                    <% } else { %>
-                    <tr>
-                        <td colspan="5"
-                            style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
-                            No data available
-                        </td>
-                    </tr>
-                    <% } %>
+                    <% if (quotation && quotation.service_input_data && quotation.service_input_data.length> 0) { %>
+                        <% quotation.service_input_data.forEach((item, index)=> { %>
+                            <tr>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= index + 1 %>
+                                </td>
+                                <td class="serviceCell"
+                                    style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.description ? item.description : 'N/A' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.quantity ? item.quantity : 'N/A' %>
+                                        <%= item.unit ? item.unit : '' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.rate ? item.rate : 'N/A' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.total ? formatToIndianCurrency(item.total) : 'N/A' %>
+                                </td>
+                            </tr>
+                            <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="5"
+                                            style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
+                                            No data available
+                                        </td>
+                                    </tr>
+                                    <% } %>
                 </tbody>
             </table>
             <div
                 style="display: flex; align-items: center; justify-content: flex-end; font-size: 12px; margin-top: 8px;">
                 <span>Total Services Amount:</span>
-                <b style="margin-left: 12px;"> <%= formatToIndianCurrency(quotation.service_total) %> tk
+                <b style="margin-left: 12px;">
+                    <%= formatToIndianCurrency(quotation.service_total) %> tk
                 </b>
             </div>
 
@@ -350,34 +399,35 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <% if (quotation && quotation.input_data && quotation.input_data.length > 0) { %>
-                    <% quotation.input_data.forEach((item, index) => { %>
-                    <tr>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= index + 1 %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.description ? item.description : 'N/A' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.quantity ? item.quantity : 'N/A' %> <%= item.unit ? item.unit : '' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.rate ? item.rate : 'N/A' %>
-                        </td>
-                        <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
-                            <%= item.total ? formatToIndianCurrency( item.total) : 'N/A' %>
-                        </td>
-                    </tr>
-                    <% }); %>
-                    <% } else { %>
-                    <tr>
-                        <td colspan="5"
-                            style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
-                            No data available
-                        </td>
-                    </tr>
-                    <% } %>
+                    <% if (quotation && quotation.input_data && quotation.input_data.length> 0) { %>
+                        <% quotation.input_data.forEach((item, index)=> { %>
+                            <tr>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= index + 1 %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.description ? item.description : 'N/A' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.quantity ? item.quantity : 'N/A' %>
+                                        <%= item.unit ? item.unit : '' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.rate ? item.rate : 'N/A' %>
+                                </td>
+                                <td style="text-align: center; font-size: 14px;  border: 1px solid #c0c2c1;padding:5px">
+                                    <%= item.total ? formatToIndianCurrency( item.total) : 'N/A' %>
+                                </td>
+                            </tr>
+                            <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="5"
+                                            style="text-align: center; font-size: 14px; font-weight: 700; border: 1px solid #c0c2c1;">
+                                            No data available
+                                        </td>
+                                    </tr>
+                                    <% } %>
                 </tbody>
             </table>
             <div
@@ -394,24 +444,24 @@
                     <div style="display: flex;flex-direction: column;">
                         <b style="font-size: 12px;">Sub Total</b>
 
-                        <% if (quotation && quotation.discount && quotation.discount !== 0) { %>
-                        <b style="font-size: 12px;">Discount</b>
-                        <% } %>
+                        <% if (quotation && quotation.discount && quotation.discount !==0) { %>
+                            <b style="font-size: 12px;">Discount</b>
+                            <% } %>
 
-                        <% if (quotation && quotation.vat && quotation.vat !== 0) { %>
-                        <b style="font-size: 12px;">VAT</b>
-                        <% } %>
-                        <% if (quotation && quotation.tax && quotation.tax !== 0) { %>
-                        <b style="font-size: 12px;">Tax</b>
-                        <% } %>
-                        <b style="font-size: 12px;">Grand Total</b>
-                        <% if (quotation && quotation.advance && quotation.advance !== 0) { %>
-                        <b style="font-size: 12px;">Advance</b>
-                        <% } %>
+                                <% if (quotation && quotation.vat && quotation.vat !==0) { %>
+                                    <b style="font-size: 12px;">VAT</b>
+                                    <% } %>
+                                        <% if (quotation && quotation.tax && quotation.tax !==0) { %>
+                                            <b style="font-size: 12px;">Tax</b>
+                                            <% } %>
+                                                <b style="font-size: 12px;">Grand Total</b>
+                                                <% if (quotation && quotation.advance && quotation.advance !==0) { %>
+                                                    <b style="font-size: 12px;">Advance</b>
+                                                    <% } %>
 
-                        <% if (quotation && quotation.due && quotation.due !== 0) { %>
-                        <b style="font-size: 12px;">Due</b>
-                        <% } %>
+                                                        <% if (quotation && quotation.due && quotation.due !==0) { %>
+                                                            <b style="font-size: 12px;">Due</b>
+                                                            <% } %>
 
                     </div>
 
@@ -420,28 +470,31 @@
                     <div style="display: flex; flex-direction: column;">
                         <small>: <%= formatToIndianCurrency(quotation.parts_total + quotation.service_total) %> tk
                         </small>
-                        <% if (quotation && quotation.discount && quotation.discount !== 0) { %>
-                        <small>: <%= formatToIndianCurrency(quotation.discount) %> tk </small>
-                        <% } %>
+                        <% if (quotation && quotation.discount && quotation.discount !==0) { %>
+                            <small>: <%= formatToIndianCurrency(quotation.discount) %> tk </small>
+                            <% } %>
 
-                        <% if (quotation && quotation.vat && quotation.vat !== 0) { %>
-                        <small>: <%= quotation.vat %>%</small>
-                        <% } %>
-                        <% if (quotation && quotation.tax && quotation.tax !== 0) { %>
-                        <small>: <%= quotation.tax %>%</small>
-                        <% } %>
+                                <% if (quotation && quotation.vat && quotation.vat !==0) { %>
+                                    <small>: <%= quotation.vat %>%</small>
+                                    <% } %>
+                                        <% if (quotation && quotation.tax && quotation.tax !==0) { %>
+                                            <small>: <%= quotation.tax %>%</small>
+                                            <% } %>
 
-                        <small>:
-                            <%= quotation.net_total !== undefined ? formatToIndianCurrency(quotation.net_total) : 0 %>
-                            tk
-                        </small>
+                                                <small>:
+                                                    <%= quotation.net_total !==undefined ?
+                                                        formatToIndianCurrency(quotation.net_total) : 0 %>
+                                                        tk
+                                                </small>
 
-                        <% if (quotation && quotation.advance && quotation.advance !== 0) { %>
-                        <small>: <%= formatToIndianCurrency(quotation.advance) %> tk </small>
-                        <% } %>
-                        <% if (quotation && quotation.due && quotation.due !==0) { %>
-                        <small>: <%= formatToIndianCurrency(quotation.due) %> tk </small>
-                        <% } %>
+                                                <% if (quotation && quotation.advance && quotation.advance !==0) { %>
+                                                    <small>: <%= formatToIndianCurrency(quotation.advance) %> tk
+                                                    </small>
+                                                    <% } %>
+                                                        <% if (quotation && quotation.due && quotation.due !==0) { %>
+                                                            <small>: <%= formatToIndianCurrency(quotation.due) %> tk
+                                                            </small>
+                                                            <% } %>
 
 
 
@@ -452,7 +505,25 @@
             </div>
 
             <div style="margin-top: 20px; font-size: 12px;">
-                <b>In words:</b> <span style="font-size: 12px"><%= quotation.net_total_in_words %> </span>
+                <b>In words:</b> <span style="font-size: 12px">
+                    <%= quotation.net_total_in_words %>
+                </span>
+            </div>
+
+
+
+        </div>
+        <div
+            style="display: flex; justify-content: space-between; margin-top: 64px; margin-bottom: 20px; font-size: 12px;">
+            <div style="text-align: center;">
+                <div style="border-top: 1px solid black; padding-top: 4px; margin: 0 auto; width: 192px;">
+                    Client Signature
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <div style="border-top: 1px solid black; padding-top: 4px; margin: 0 auto; width: 192px;">
+                    Authorized Signature
+                </div>
             </div>
         </div>
     </div>

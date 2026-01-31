@@ -10,7 +10,7 @@ router.get('/:id', stockControllers.getSingleStock);
 router.delete('/:id', stockControllers.deleteStock);
 router.put('/:id',stockControllers.updateStock,
 );
-router.post('/transfer', stockControllers.transferStock);
+// router.post('/transfer', stockControllers.transferStock);
 
 
 export const stockRoutes = router;

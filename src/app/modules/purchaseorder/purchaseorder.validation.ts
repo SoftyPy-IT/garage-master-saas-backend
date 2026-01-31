@@ -31,7 +31,7 @@ const createPurchaseOrder = z.object({
     referenceNo: z.number({ required_error: 'Reference number is required' }),
     suppliers: z.array(z.string({ required_error: 'Supplier ID is required' })),
     warehouse: z.string({ required_error: 'Warehouse is required' }),
-    status: z.enum(['Pending', 'Approved', 'Cancelled', 'Shipped','Received']).optional(),
+    status: z.enum(['Pending', 'Cancelled', 'Shipped','Received']).optional(),
     products: z
       .array(productSchema)
       .nonempty({ message: 'At least one product is required' }),

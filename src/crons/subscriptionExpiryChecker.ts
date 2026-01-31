@@ -1,9 +1,7 @@
 import cron from "node-cron"
 import { SubscriptionModel } from "../app/modules/subscription/subscription.model"
 
-// প্রতিদিন রাত ১টায় চেক করবে (0 1 * * * = every day at 1 AM)
 cron.schedule("0 1 * * *", async () => {
-  console.log("🔄 Running subscription expiry checker...")
 
   const now = new Date()
 
@@ -28,15 +26,10 @@ cron.schedule("0 1 * * *", async () => {
           },
         },
       )
-
-      console.log(`✅ Subscription Expiry Cron: ${result.modifiedCount} subscription(s) marked as expired`)
-
-      // Log expired users for admin notification
       expiredSubscriptions.forEach((sub) => {
-        console.log(`📧 User ${sub.user} subscription expired - Plan: ${sub.plan}`)
+        
       })
     } else {
-      console.log("✅ No expired subscriptions found")
     }
 
     // Also check for subscriptions expiring in 3 days (for reminder)
@@ -49,14 +42,11 @@ cron.schedule("0 1 * * *", async () => {
     }).populate("user", "name email")
 
     if (expiringSubscriptions.length > 0) {
-      console.log(`⚠️ ${expiringSubscriptions.length} subscription(s) expiring in 3 days:`)
+    
       expiringSubscriptions.forEach((sub) => {
-        console.log(`📅 User: ${(sub.user as any).name} - Plan: ${sub.plan} - Expires: ${sub.endDate}`)
+        
       })
     }
   } catch (error) {
-    console.error("❌ Error in subscription expiry cron job:", error)
   }
 })
-
-console.log("⏰ Subscription expiry cron job initialized")

@@ -38,9 +38,7 @@ function backupMongo(): void {
   });
 
   child.on('exit', (code: number | null, signal: string | null) => {
-    if (code !== null) console.log('Process exited with code:', code);
-    else if (signal !== null) console.log('Process killed with signal:', signal);
-    else console.log('Backup is successful ✅');
+
   });
 }
 

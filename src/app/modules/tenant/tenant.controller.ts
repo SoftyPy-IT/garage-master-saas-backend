@@ -118,7 +118,7 @@ const renewSubscription = async (
       throw new AppError(httpStatus.BAD_REQUEST, 'Tenant ID is required');
     }
 
-    
+
     if (plan && !['Monthly', 'HalfYearly', 'Yearly'].includes(plan)) {
       throw new AppError(
         httpStatus.BAD_REQUEST,

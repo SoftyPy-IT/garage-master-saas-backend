@@ -1,4 +1,3 @@
 export interface ICompanyBrand {
-  name: string;
-  logo?: string;
+  logo: string;
 }

@@ -1,37 +1,62 @@
-import express from 'express';
+
+import { Router } from 'express';
 import { PermissionController } from './permission.controller';
-import { auth } from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
+import { deleteMultiplePermissionsSchema, permissionRequestSchema } from './permission.validation';
+const router = Router();
 
-const router = express.Router();
 
-// Check permission
 router.post(
-  '/check',
-//   validateRequest(PermissionValidation.checkPermissionZodSchema),
-  auth('admin', 'manager'),
-  PermissionController.checkPermission
+  '/batch-create',
+  PermissionController.createMultiplePermissions,
 );
 
-// Get user permissions
+router.post(
+  '/user/:userId/batch-delete',
+  validateRequest(deleteMultiplePermissionsSchema),
+  PermissionController.deleteMultipleUserPermissions
+);
+router.delete(
+  '/user/:userId/:id',
+  PermissionController.deleteUserPermission
+);
+
+
+router.post(
+  '/:userId',
+  validateRequest(permissionRequestSchema),
+  PermissionController.createUserPermission
+);
+
+router.get(
+  '/my-permissions',
+  PermissionController.getMyPermissions
+);
+router.get(
+  '/user-permissions',
+  PermissionController.getAllPermissions
+);
+
 router.get(
   '/user/:userId',
-  auth('admin', 'manager'),
+
   PermissionController.getUserPermissions
 );
 
-// Get current user's permissions
 router.get(
-  '/my-permissions',
-  auth(),
-  PermissionController.getMyPermissions
+  '/single/:id',
+  PermissionController.getSinglePermission
 );
 
-// Update role permissions
-router.put(
-  '/role/:roleId',
-//   validateRequest(PermissionValidation.updateRolePermissionsZodSchema),
-  auth('admin'),
-  PermissionController.updateRolePermissions
+router.delete('/:id', PermissionController.deleteMultipleUserPermissions)
+router.patch(
+  '/batch-update',
+  PermissionController.updateMultiplePermissions,
 );
 
-export const PermissionRoutes = router;
+
+
+
+
+
+export const permissionRouters = router;

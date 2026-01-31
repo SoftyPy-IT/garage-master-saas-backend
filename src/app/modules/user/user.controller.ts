@@ -1,3 +1,4 @@
+// src/modules/user/user.controller.ts
 import httpStatus from 'http-status';
 import { UserServices } from './user.service';
 import catchAsync from '../../utils/catchAsync';
@@ -8,14 +9,15 @@ const createUser = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: 'User is created successfully this is new',
+    message: 'User is created successfully',
     data: result,
   });
 });
 
 const getAllUser = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const result = await UserServices.getAllUser(tenantDomain);
+
+  const result = await UserServices.getAllUser(tenantDomain, req.query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -37,6 +39,7 @@ const deleteUser = catchAsync(async (req, res) => {
     data: result,
   });
 });
+
 const updateUser = catchAsync(async (req, res) => {
   const { id } = req.params;
   const tenantDomain = req.query.tenantDomain as string;
@@ -52,11 +55,89 @@ const updateUser = catchAsync(async (req, res) => {
   });
 });
 
+const assignRoleToUser = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { userId } = req.params;
+  const { roleId } = req.body;
+
+  const result = await UserServices.assignRoleToUser(
+    tenantDomain,
+    userId,
+    roleId,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Role assigned to user successfully',
+    data: result,
+  });
+});
+
+const getUserPermissions = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { userId } = req.params;
+
+  const result = await UserServices.getUserPermissions(tenantDomain, userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User permissions retrieved successfully',
+    data: result,
+  });
+});
+
+const moveToRecycleBin = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.moveToRecycleBin(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User moved to recycle bin successfully',
+    data: result,
+  });
+});
+
+const restoreUser = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.restoreUser(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User restored successfully',
+    data: result,
+  });
+});
+
+const permanentDeleteUser = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const { id } = req.params;
+
+  const result = await UserServices.permanentDeleteUser(tenantDomain, id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User permanently deleted successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   createUser,
   getAllUser,
   deleteUser,
   updateUser,
+  assignRoleToUser,
+  getUserPermissions,
+  moveToRecycleBin,
+  restoreUser,
+  permanentDeleteUser,
 };
-
-

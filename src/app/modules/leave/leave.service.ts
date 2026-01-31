@@ -89,7 +89,6 @@ const updateLeaveRequest = async (
     if (!Types.ObjectId.isValid(leaveRequestId)) {
       throw new Error('Invalid leaveRequestId format');
     }
-    console.log(leaveRequestId, payload)
 
     const { Model: LeaveRequest } = await getTenantModel(
       tenantDomain,

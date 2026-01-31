@@ -17,9 +17,7 @@ const deleteFile = (path: string) => {
   fs.unlink(path, (err) => {
     if (err) {
       console.error(`Failed to delete file at ${path}:`, err);
-    } else {
-      console.log('File is deleted.');
-    }
+    } 
   });
 };
 

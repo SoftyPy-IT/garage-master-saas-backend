@@ -22,4 +22,5 @@ export interface TShowRoom {
   reference_name: string;
   isRecycled: boolean;
   recycledAt: Date;
+  whatsappNumber: number;
 }

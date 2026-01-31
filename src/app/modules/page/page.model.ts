@@ -1,7 +1,8 @@
-import { Schema, model } from 'mongoose';
-import { IPage, IPageMethods, IPageModel } from './page.interface';
 
-const pageSchema = new Schema<IPage, IPageModel, IPageMethods>(
+import { Schema, model } from 'mongoose';
+import { IPage } from './page.interface';
+
+export const pageSchema = new Schema<IPage>(
   {
     name: {
       type: String,
@@ -11,8 +12,6 @@ const pageSchema = new Schema<IPage, IPageModel, IPageMethods>(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
-      trim: true,
     },
     path: {
       type: String,
@@ -20,14 +19,13 @@ const pageSchema = new Schema<IPage, IPageModel, IPageMethods>(
       unique: true,
       trim: true,
     },
-    description: {
+    route: {
       type: String,
+      required: [true, 'Route is required'],
       trim: true,
     },
     status: {
       type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
     },
   },
   {
@@ -35,11 +33,6 @@ const pageSchema = new Schema<IPage, IPageModel, IPageMethods>(
   }
 );
 
-// Check if page exists by path
-pageSchema.statics.isPageExistsByPath = async function (path: string) {
-  return await this.findOne({ path });
-};
-
-const Page = model<IPage, IPageModel>('Page', pageSchema);
+const Page = model<IPage>('Page', pageSchema);
 
 export default Page;

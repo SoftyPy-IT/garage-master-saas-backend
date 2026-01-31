@@ -23,25 +23,6 @@ const getAllCompanyBrands = catchAsync(async (req, res) => {
   });
 });
 
-const getSingleCompanyBrand = catchAsync(async (req, res) => {
-  const result = await companyBrandServices.getSingleCompanyBrand(req.params.id);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'CompanyBrand retrieved successfully',
-    data: result,
-  });
-});
-
-const updateCompanyBrand = catchAsync(async (req, res) => {
-  const result = await companyBrandServices.updateCompanyBrand(req.params.id, req.body);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'CompanyBrand updated successfully',
-    data: result,
-  });
-});
 
 const deleteCompanyBrand = catchAsync(async (req, res) => {
   const result = await companyBrandServices.deleteCompanyBrand(req.params.id);
@@ -56,7 +37,5 @@ const deleteCompanyBrand = catchAsync(async (req, res) => {
 export const companyBrandControllers = {
   createCompanyBrand,
   getAllCompanyBrands,
-  getSingleCompanyBrand,
-  updateCompanyBrand,
   deleteCompanyBrand,
 };

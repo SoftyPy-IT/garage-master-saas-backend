@@ -79,7 +79,6 @@ export const moneyReceiptSchema: Schema<TMoneyReceipt> = new Schema<TMoneyReceip
     account_number: {
       type: String,
     },
-
     payment_date: {
       type: String,
     },
@@ -100,7 +99,6 @@ export const moneyReceiptSchema: Schema<TMoneyReceipt> = new Schema<TMoneyReceip
     },
     remaining: {
       type: Number,
-      // required: [true, 'Remaining is required'],
     },
     remaining_in_words: {
       type: String,

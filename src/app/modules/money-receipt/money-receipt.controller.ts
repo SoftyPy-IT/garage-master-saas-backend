@@ -82,6 +82,9 @@ const updateMoneyReceipt = catchAsync(async (req, res) => {
 const generateMoneyPdf: RequestHandler = catchAsync(async (req, res) => {
   const { moneyReceiptId } = req.params;
  const tenantDomain = req.query.tenantDomain as string;
+      const companyData = req.query.companyProfileData
+    ? decodeURIComponent(req.query.companyProfileData as string)
+    : '{}';
   const baseUrl = (
     process.env.NEXT_PUBLIC_IMAGE_BASE_URL ||
     'https://api.trustautosolution.com'
@@ -92,6 +95,7 @@ const generateMoneyPdf: RequestHandler = catchAsync(async (req, res) => {
       tenantDomain,
       moneyReceiptId,
       baseUrl,
+      companyData
     );
 
     res.setHeader('Content-Type', 'application/pdf');

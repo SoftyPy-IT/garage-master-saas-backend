@@ -9,8 +9,6 @@ const incomeItemSchema = z.object({
 export const createIncomeValidationSchema = z.object({
   body: z.object({
     date: z.string().optional(),
-    invoice_id: stringOrArrayOrNumber.optional(),
-    invoiceEarning: z.number().optional(),
     income_items: z.array(incomeItemSchema).optional(),
     payment_method: stringOrArrayOrNumber.optional(),
     accountNumber: stringOrArrayOrNumber.optional(),

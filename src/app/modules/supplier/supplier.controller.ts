@@ -4,6 +4,7 @@ import httpStatus from 'http-status';
 
 import sendResponse from '../../utils/sendResponse';
 import { supplierServices } from './supplier.service';
+import catchAsync from '../../utils/catchAsync';
 
 export const createSupplier = async (
   req: Request,
@@ -11,9 +12,11 @@ export const createSupplier = async (
   next: NextFunction,
 ) => {
   try {
-  const { tenantDomain } = req.body;
-    const newSupplier = await supplierServices.createSupplier(tenantDomain,req.body);
-
+    const { tenantDomain } = req.body;
+    const newSupplier = await supplierServices.createSupplier(
+      tenantDomain,
+      req.body,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.CREATED,
@@ -33,13 +36,13 @@ export const getAllSupplier = async (
   next: NextFunction,
 ) => {
   try {
-     const tenantDomain =
-    (req.headers['x-tenant-domain'] as string) ||
-    (req.query.tenantDomain as string) ||
-    req.headers.host ||
-    '';
-      //  const tenantDomain = req.headers.host || '';
-    const suppliers = await supplierServices.getAllSupplier(tenantDomain,req.query);
+    const tenantDomain = req.query.tenantDomain as string 
+    console.log('tenant domain', tenantDomain)
+
+    const suppliers = await supplierServices.getAllSupplier(
+      tenantDomain,
+      req.query,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -59,9 +62,9 @@ export const getSingleSupplier = async (
   next: NextFunction,
 ) => {
   try {
-       const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const supplier = await supplierServices.getSingleSupplier(tenantDomain,id);
+    const supplier = await supplierServices.getSingleSupplier(tenantDomain, id);
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -81,9 +84,12 @@ export const getSupplierProfile = async (
   next: NextFunction,
 ) => {
   try {
-       const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await supplierServices.getSupplierWithBillPayments(tenantDomain,id);
+    const result = await supplierServices.getSupplierWithBillPayments(
+      tenantDomain,
+      id,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -102,10 +108,14 @@ export const updateSupplier = async (
   next: NextFunction,
 ) => {
   try {
-       const { tenantDomain } = req.body;
+    const { tenantDomain } = req.body;
     const { id } = req.params;
 
-    const updatedSupplier = await supplierServices.updateSupplier(tenantDomain,id, req.body);
+    const updatedSupplier = await supplierServices.updateSupplier(
+      tenantDomain,
+      id,
+      req.body,
+    );
     return sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
@@ -118,15 +128,18 @@ export const updateSupplier = async (
   }
 };
 
-export const permanenatlyDeleteSupplier = async (
+export const permanentlyDeleteSupplier = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-       const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await supplierServices.permanenatlyDeleteSupplier(tenantDomain,id);
+    const result = await supplierServices.permanentlyDeleteSupplier(
+      tenantDomain,
+      id,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -136,7 +149,7 @@ export const permanenatlyDeleteSupplier = async (
     });
   } catch (error: any) {
     console.error(
-      'Error in permanenatlyDeleteSupplier controller:',
+      'Error in permanentDeleteSupplier controller:',
       error.message,
     );
     next(error);
@@ -149,9 +162,12 @@ export const moveToRecycledbinSupplier = async (
   next: NextFunction,
 ) => {
   try {
-       const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await supplierServices.moveToRecycledbinSupplier(tenantDomain,id);
+    const result = await supplierServices.moveToRecycledbinSupplier(
+      tenantDomain,
+      id,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -174,9 +190,12 @@ export const restoreFromRecycledSupplier = async (
   next: NextFunction,
 ) => {
   try {
-       const tenantDomain = req.query.tenantDomain as string;
+    const tenantDomain = req.query.tenantDomain as string;
     const { id } = req.params;
-    const result = await supplierServices.restoreFromRecycledSupplier(tenantDomain,id);
+    const result = await supplierServices.restoreFromRecycledSupplier(
+      tenantDomain,
+      id,
+    );
 
     return sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -192,13 +211,76 @@ export const restoreFromRecycledSupplier = async (
     next(error);
   }
 };
+
+export const recordSupplierPayment = catchAsync(async (req, res, next) => {
+  try {
+    const tenantDomain = req.query.tenantDomain as string;
+    
+
+
+    const result = await supplierServices.recordSupplierPayment(
+      tenantDomain,
+      req.body
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Supplier payment recorded successfully',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export const getSupplierPayments = catchAsync(async (req, res, next) => {
+  try {
+    const tenantDomain = req.query.tenantDomain as string;
+    const { supplierId } = req.params;
+    
+    const result = await supplierServices.getSupplierPayments(
+      tenantDomain,
+      supplierId
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Supplier payments retrieved successfully',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export const recalcSupplierTotals = catchAsync(async (req, res, next) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const supplierId = req.params.supplierId;
+
+  const result = await supplierServices.reCalcSupplierTotals(tenantDomain, supplierId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Supplier totals recalculated successfully',
+    data: result,
+  });
+});
+
+
+  
 export const supplierController = {
   getAllSupplier,
   getSingleSupplier,
   updateSupplier,
   createSupplier,
-  permanenatlyDeleteSupplier,
+  permanentlyDeleteSupplier,
   moveToRecycledbinSupplier,
   restoreFromRecycledSupplier,
   getSupplierProfile,
+  recordSupplierPayment,
+  getSupplierPayments,
+  recalcSupplierTotals
 };

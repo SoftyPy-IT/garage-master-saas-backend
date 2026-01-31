@@ -25,18 +25,15 @@ export type TProduct = {
   stock_alert: number;
   product_quantity: number;
   suppliers: ObjectId;
+  warranties: ObjectId;
   warehouse: ObjectId;
   productCost: number;
   isDeleted: boolean;
   shipping: number;
-
-  // Inventory Management Fields
   initialStock: number;
   reorderLevel: number;
   lastPurchaseDate?: string;
   lastSoldDate?: string;
-
-  // Expiry-related Fields
   expiryDateType: 'fixed' | 'variable' | 'none';
   expiryDate?: string;
   manufacturingDate?: string;

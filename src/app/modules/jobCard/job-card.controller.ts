@@ -61,7 +61,6 @@ const tenantDomain = req.query.tenantDomain as string;
 });
 const getSingleJobCardDetailsWithJobNo = catchAsync(async (req, res) => {
   const jobNo = req.query.jobNo as string;
-  console.log('for job',jobNo)
 const tenantDomain = req.query.tenantDomain as string;
   const result = await JobCardServices.getSingleJobCardDetailsWithJobNo(tenantDomain,jobNo);
 
@@ -102,7 +101,7 @@ const permanantlyDeleteJobcard = catchAsync(async (req, res) => {
   const { id } = req.params;
 const tenantDomain = req.query.tenantDomain as string;
 
-  const card = await JobCardServices.deleteJobCard(tenantDomain ,id);
+  const card = await JobCardServices.permanatlyDeleteJobCard(tenantDomain ,id);
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -152,7 +151,10 @@ const tenantDomain = req.query.tenantDomain as string;
 const generateJobCardPdf: RequestHandler = catchAsync(async (req, res) => {
   const { jobcardId } = req.params;
 const tenantDomain = req.query.tenantDomain as string;
-
+const companyData = req.query.companyProfileData 
+    ? decodeURIComponent(req.query.companyProfileData as string)
+    : '{}';
+    
   const baseUrl = (
     process.env.NEXT_PUBLIC_IMAGE_BASE_URL ||
     'https://api.trustautosolution.com'
@@ -163,6 +165,7 @@ const tenantDomain = req.query.tenantDomain as string;
       tenantDomain,
       jobcardId,
       baseUrl,
+      companyData 
     );
 
     res.setHeader('Content-Type', 'application/pdf');

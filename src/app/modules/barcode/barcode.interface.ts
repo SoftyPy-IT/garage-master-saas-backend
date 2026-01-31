@@ -15,7 +15,3 @@ export interface IBarcode extends Document {
   updatedAt: Date;
 }
 
-export interface IBarcodeModel extends Model<IBarcode> {
-  // eslint-disable-next-line no-unused-vars
-  isBarcodeExist(name: string): Promise<boolean>;
-}

@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 
 export interface TPurchaseOrderProduct {
   productId: Types.ObjectId;
@@ -17,8 +17,9 @@ export interface TPurchaseOrderProduct {
 export interface TPurchaseOrder {
   orderDate: string;
   expectedDeliveryDate?: string;
+  receiveDate?: string;
   referenceNo: number;
-  suppliers: Types.ObjectId;
+  suppliers: ObjectId;
   warehouse: Types.ObjectId;
   status: 'Pending' | 'Approved' | 'Cancelled' | 'Shipped' | 'Received';
   products: TPurchaseOrderProduct[];

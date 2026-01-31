@@ -126,17 +126,21 @@ const deleteQuotation = catchAsync(async (req, res) => {
 
 const generateQuotationPdf: RequestHandler = catchAsync(async (req, res) => {
   const { quotationId } = req.params;
- const tenantDomain = req.query.tenantDomain as string;
+  const tenantDomain = req.query.tenantDomain as string;
+  const companyData = req.query.companyProfileData
+    ? decodeURIComponent(req.query.companyProfileData as string)
+    : '{}';
   const baseUrl = (
     process.env.NEXT_PUBLIC_IMAGE_BASE_URL ||
-    'https://api.trustautosolution.com'
+    'https://saasapi.trustautosolution.com/api/v1'
   ).replace(/\/$/, '');
 
   try {
     const pdfBuffer = await QuotationServices.generateQuotationPdf(
-      tenantDomain, 
+      tenantDomain,
       quotationId,
       baseUrl,
+      companyData,
     );
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -203,26 +207,7 @@ const restoreFromRecyclebinQuotation = catchAsync(async (req, res) => {
   });
 });
 
-const moveAllToRecycledBinMoneyReceipts = catchAsync(async (req, res) => {
-  const result = await QuotationServices.moveAllToRecycledBin();
 
-  sendResponse(res, {
-    statusCode: StatusCodes.OK,
-    success: true,
-    message: `${result.modifiedCount} quotaton moved to the recycle bin successfully.`,
-    data: null,
-  });
-});
-const restoreAllFromRecycledBinMoneyReceipts = catchAsync(async (req, res) => {
-  const result = await QuotationServices.restoreAllFromRecycledBin();
-
-  sendResponse(res, {
-    statusCode: StatusCodes.OK,
-    success: true,
-    message: `${result.modifiedCount} quotaion restored successfully.`,
-    data: null,
-  });
-});
 export const quotationController = {
   createQuotation,
   getAllQuotations,
@@ -235,6 +220,4 @@ export const quotationController = {
   restoreFromRecyclebinQuotation,
   permanantlyDeleteQuotation,
   moveToRecyclebinQuotation,
-  restoreAllFromRecycledBinMoneyReceipts,
-  moveAllToRecycledBinMoneyReceipts,
 };

@@ -25,15 +25,12 @@ export const employeeSchema: Schema<TEmployee> = new Schema<TEmployee>(
     ],
     employeeId: {
       type: String,
-      required: [true, 'Employee id is required.'],
     },
     full_name: {
       type: String,
-      required: [true, 'Full name is required.'],
     },
     date_of_birth: {
       type: String,
-      required: [true, 'Date of birth is required.'],
     },
     nid_number: {
       type: Number,
@@ -46,7 +43,6 @@ export const employeeSchema: Schema<TEmployee> = new Schema<TEmployee>(
     },
     phone_number: {
       type: String,
-      required: [true, 'Phone number is required.'],
     },
     full_phone_number: {
       type: String,
@@ -56,20 +52,16 @@ export const employeeSchema: Schema<TEmployee> = new Schema<TEmployee>(
     },
     gender: {
       type: String,
-      required: [true, 'Gender is required.'],
     },
     join_date: {
       type: String,
-      required: [true, 'Join date is required.'],
     },
 
     designation: {
       type: String,
-      required: [true, 'Designation is required.'],
     },
     status: {
       type: String,
-      required: [true, 'Status is required.'],
     },
     password: {
       type: String,
@@ -216,11 +208,11 @@ employeeSchema.pre('findOneAndUpdate', function (next) {
   next();
 });
 
-employeeSchema.set('toJSON', {
-  transform: function (_doc, ret) {
-    delete ret.password;
-    delete ret.confirm_password;
-    return ret;
-  },
-});
+// employeeSchema.set('toJSON', {
+//   transform: function (_doc, ret) {
+//     delete ret.password;
+//     delete ret.confirm_password;
+//     return ret;
+//   },
+// });
 export const Employee = mongoose.model<TEmployee>('Employee', employeeSchema);

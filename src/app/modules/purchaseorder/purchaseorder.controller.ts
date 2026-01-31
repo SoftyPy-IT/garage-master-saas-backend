@@ -57,10 +57,9 @@ const getSinglePurchaseOrder = async (
 ) => {
   try {
     const { id } = req.params;
-    console.log('id', id)
+
     const tenantDomain = req.query.tenantDomain as string;
-    console.log('tenant domain', tenantDomain)
-    console.log('single purchase', tenantDomain);
+
     const result = await purchaseOrderServices.getSinglePurchaseOrder(
       tenantDomain,
       id,

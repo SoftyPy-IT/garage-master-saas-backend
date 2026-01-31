@@ -298,7 +298,7 @@ const permanantlyDeleteCompany = async (tenantDomain: string, id: string) => {
 };
 
 const moveToRecyledbinCompany = async (tenantDomain: string, id: string) => {
-  console.log(tenantDomain, id )
+
   const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
 
   const existingCompany = await Company.findById(id);

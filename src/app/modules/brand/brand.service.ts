@@ -29,8 +29,8 @@ export const getAllBrand = async (
 
   const brandQuery = new QueryBuilder(Brand.find(), query)
     .search(brandSearch)
-    .filter()
-    .sort()
+    // .filter()
+    // .sort()
     .paginate()
     .fields();
 
@@ -47,7 +47,6 @@ export const getSinigleBrand = async (
   tenantDomain: string,
   id: string,
 ) => {
-  console.log('single brand tenant', tenantDomain)
   const { Model: Brand } = await getTenantModel(
     tenantDomain,
     'Brand',

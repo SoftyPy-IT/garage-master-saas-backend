@@ -1,14 +1,17 @@
-import { ObjectId } from "mongoose";
+import { Types } from 'mongoose';
 
 export interface IStockTransfer {
-  product: ObjectId;
-  fromWarehouse: ObjectId;
-  toWarehouse: ObjectId;
+  product: Types.ObjectId;
+  fromWarehouse: Types.ObjectId;
+  toWarehouse: Types.ObjectId;
   quantity: number;
   transferId: string;
-  batchNumber?: string;
+  batchNumber: string;
   expiryDate?: Date;
   note?: string;
+  transferredBy: string;
+  date: Date;
+  status: 'completed' | 'pending' | 'transit';
   createdAt?: Date;
-    status?: 'completed' | 'pending' | 'transit'; 
+  updatedAt?: Date;
 }

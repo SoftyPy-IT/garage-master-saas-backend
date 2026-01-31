@@ -77,22 +77,52 @@ const getSingleAttendance = catchAsync(async (req, res) => {
     data: result,
   });
 });
-const deleteAttendance = catchAsync(async (req, res) => {
+
+export const deleteAttendance = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  const date = req.query.date as string;
-
-  const result = await AttendanceServices.deleteAttendanceFromDB(tenantDomain, {
-    date,
+  const id = req.query.id as string;
+  const deleted = await AttendanceServices.deleteAttendanceFromDB(tenantDomain, id);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Attendance deleted successfully',
+    data: deleted,
   });
+});
 
-  console.log('From controller:', result);
+
+const getAllAttendance = catchAsync(async (req, res) => {
+  const tenantDomain = req.query.tenantDomain as string;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const page = parseInt(req.query.page as string) || 1;
+  const searchTerm = req.query.searchTerm as string;
+  const startDate = req.query.startDate as string;
+  const endDate = req.query.endDate as string;
+  const month = req.query.month as string;
+  const year = req.query.year as string;
+  const status = req.query.status as string;
+
+  const result = await AttendanceServices.getAllAttendance(
+    tenantDomain,
+    limit,
+    page,
+    searchTerm,
+    startDate,
+    endDate,
+    month,
+    year,
+    status
+  );
+
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Attendance deleted successful!',
+    message: "All attendance records retrieved successfully!",
     data: result,
   });
 });
+
+
 
 export const attendanceController = {
   createAttendance,
@@ -101,4 +131,5 @@ export const attendanceController = {
   getSingleDateAttendance,
   deleteAttendance,
   getSingleAttendance,
+  getAllAttendance
 };

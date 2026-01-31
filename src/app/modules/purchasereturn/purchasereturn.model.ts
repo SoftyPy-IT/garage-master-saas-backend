@@ -4,46 +4,39 @@ import { TPurchaseReturn } from './purchasereturn.interface';
 export const purchaseReturnSchema = new Schema<TPurchaseReturn>(
   {
     returnDate: {
-      type: String,
+      type: Date,
       required: true,
     },
-    // purchaseId: {
-    //   type: Types.ObjectId,
-    //   ref: 'Purchase',
-    //   required: true,
-    // },
+
     referenceNo: {
       type: String,
-      required: true,
     },
-    // supplier: {
-    //   type: Types.ObjectId,
-    //   ref: 'Supplier',
-    //   required: true,
-    // },
-    supplierName: {
-      type: String,
-    },
+
+    suppliers: [
+      { type: Schema.Types.ObjectId, ref: 'Supplier', required: true },
+    ],
+
     warehouse: {
-      type: String,
-      required: true,
+      type: Types.ObjectId,
+      ref: 'Warehouse',
     },
     returnReason: {
       type: String,
-      required: true,
     },
     returnNote: {
       type: String,
     },
-    purchaseInvoiceNo: {
+    status: {
       type: String,
+      enum: ['pending', 'completed', 'cancelled'],
+      default: 'pending',
     },
     items: [
       {
         productId: {
           type: Types.ObjectId,
           ref: 'Product',
-          required: true,
+
         },
         productCode: {
           type: String,
@@ -78,10 +71,12 @@ export const purchaseReturnSchema = new Schema<TPurchaseReturn>(
       type: Number,
       required: true,
     },
-    status: {
-      type: String,
-      enum: ['pending', 'completed', 'cancelled'],
-      default: 'pending',
+    approvedBy: {
+      type: Types.ObjectId,
+      ref: 'User',
+    },
+    approvedDate: {
+      type: Date,
     },
   },
   { timestamps: true },
@@ -90,9 +85,12 @@ export const purchaseReturnSchema = new Schema<TPurchaseReturn>(
 purchaseReturnSchema.pre('save', function (next) {
   this.totalReturnAmount = this.items.reduce(
     (sum, item) => sum + item.totalAmount,
-    0
+    0,
   );
   next();
 });
 
-export const PurchaseReturn = model<TPurchaseReturn>('PurchaseReturn', purchaseReturnSchema);
+export const PurchaseReturn = model<TPurchaseReturn>(
+  'PurchaseReturn',
+  purchaseReturnSchema,
+);

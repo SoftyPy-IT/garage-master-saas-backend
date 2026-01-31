@@ -15,7 +15,6 @@ const createCustomerDetails = async (
   tenantDomain: string,
   payload: { customer: TCustomer; vehicle: TVehicle },
 ) => {
-  console.log(tenantDomain)
   const { Model: Customer, connection: customerConnection } =
     await getTenantModel(tenantDomain, 'Customer');
 
@@ -214,7 +213,6 @@ const updateCustomer = async (
     vehicle: Partial<TVehicle>;
   },
 ) => {
-
   const { customer, vehicle } = payload;
   const { Model: Customer, connection: customerConnection } =
     await getTenantModel(tenantDomain, 'Customer');
@@ -332,8 +330,10 @@ const deleteCustomer = async (id: string) => {
   }
 };
 const permanantlyDeleteCustomer = async (tenantDomain: string, id: string) => {
-  console.log(tenantDomain, id)
-  const { Model: Customer, connection } = await getTenantModel(tenantDomain, 'Customer');
+  const { Model: Customer, connection } = await getTenantModel(
+    tenantDomain,
+    'Customer',
+  );
   const { Model: Vehicle } = await getTenantModel(tenantDomain, 'Vehicle');
 
   const session = await connection.startSession();
@@ -349,7 +349,9 @@ const permanantlyDeleteCustomer = async (tenantDomain: string, id: string) => {
       Id: existingCustomer.customerId,
     }).session(session);
 
-    const deletedCustomer = await Customer.findByIdAndDelete(existingCustomer._id).session(session);
+    const deletedCustomer = await Customer.findByIdAndDelete(
+      existingCustomer._id,
+    ).session(session);
 
     if (!deletedCustomer || !vehicle) {
       throw new AppError(StatusCodes.NOT_FOUND, 'No customer available');
@@ -377,7 +379,7 @@ const moveToRecycledCustomer = async (tenantDomain: string, id: string) => {
   const updatedCustomer = await Customer.findByIdAndUpdate(
     existingCustomer._id,
     { isRecycled: true, recycledAt: new Date() },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   );
 
   if (!updatedCustomer) {
@@ -387,7 +389,10 @@ const moveToRecycledCustomer = async (tenantDomain: string, id: string) => {
   return updatedCustomer;
 };
 
-const restoreFromRecycledCustomer = async (tenantDomain: string, id: string) => {
+const restoreFromRecycledCustomer = async (
+  tenantDomain: string,
+  id: string,
+) => {
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
 
   const recycledCustomer = await Customer.findById(id);
@@ -398,19 +403,18 @@ const restoreFromRecycledCustomer = async (tenantDomain: string, id: string) => 
   const restoredCustomer = await Customer.findByIdAndUpdate(
     recycledCustomer._id,
     { isRecycled: false, recycledAt: null },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   );
 
   if (!restoredCustomer) {
     throw new AppError(
       StatusCodes.NOT_FOUND,
-      'No customer available for restoration.'
+      'No customer available for restoration.',
     );
   }
 
   return restoredCustomer;
 };
-
 
 const moveAllToRecycledBin = async () => {
   const result = await Customer.updateMany(

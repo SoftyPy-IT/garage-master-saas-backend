@@ -19,10 +19,7 @@ const createExpense = async (
       delete payload.data;
     }
 
-    const result = await expenseServices.createExpense(
-      tenantDomain,
-      payload,
-    );
+    const result = await expenseServices.createExpense(tenantDomain, payload);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
@@ -64,12 +61,12 @@ const getSingleExpense = async (
     const { id } = req.params;
     const tenantDomain = req.query.tenantDomain as string;
 
-    const result = await expenseServices.getSinigleExpense(tenantDomain, id);
+    const result = await expenseServices.getSingleExpense(tenantDomain, id);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: 'Expense is retrieved succesfully',
+      message: 'Expense is retrieved successfully',
       data: result,
     });
   } catch (err) {
@@ -104,6 +101,12 @@ const updateExpense = async (
   next: NextFunction,
 ) => {
   try {
+    const payload = req.body;
+    if (payload.data) {
+      Object.assign(payload, JSON.parse(payload.data));
+      delete payload.data;
+    }
+
     const tenantDomain = req.query.tenantDomain as string;
 
     const { id } = req.params;

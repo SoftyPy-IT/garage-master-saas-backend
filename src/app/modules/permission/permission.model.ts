@@ -1,19 +1,20 @@
 import { Schema, model } from 'mongoose';
-import { IPermissionDocument, IPermissionModel } from './permission.interface';
+import { IPermission } from './permission.interface';
 
-
-const permissionSchema = new Schema<IPermissionDocument, IPermissionModel>(
+export const permissionSchema = new Schema<IPermission>(
   {
-    roleId: {
+    userId: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    roleId: [{
       type: Schema.Types.ObjectId,
       ref: 'Role',
-      required: [true, 'Role ID is required'],
-    },
-    pageId: {
+    }],
+    pageId: [{
       type: Schema.Types.ObjectId,
       ref: 'Page',
-      required: [true, 'Page ID is required'],
-    },
+    }],
     create: {
       type: Boolean,
       default: false,
@@ -33,49 +34,11 @@ const permissionSchema = new Schema<IPermissionDocument, IPermissionModel>(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
   }
 );
 
-// Create a compound index for roleId and pageId to ensure uniqueness
-permissionSchema.index({ roleId: 1, pageId: 1 }, { unique: true });
+// permissionSchema.index({ userId: 1, pageId: 1 });
+// permissionSchema.index({ roleId: 1 });
+// permissionSchema.index({ createdAt: -1 });
 
-// Static method to find permission by page and role
-permissionSchema.statics.findByPageAndRole = async function (
-  pageId: string,
-  roleId: string
-): Promise<IPermissionDocument | null> {
-  return this.findOne({ pageId, roleId });
-};
-
-// Static method to find all permissions for a role
-permissionSchema.statics.findByRole = async function (
-  roleId: string
-): Promise<IPermissionDocument[]> {
-  return this.find({ roleId }).populate('pageId');
-};
-
-// Static method to delete all permissions for a role
-permissionSchema.statics.deleteByRole = async function (roleId: string): Promise<void> {
-  await this.deleteMany({ roleId });
-};
-
-// Virtual to populate page information
-permissionSchema.virtual('page', {
-  ref: 'Page',
-  localField: 'pageId',
-  foreignField: '_id',
-  justOne: true,
-});
-
-// Virtual to populate role information
-permissionSchema.virtual('role', {
-  ref: 'Role',
-  localField: 'roleId',
-  foreignField: '_id',
-  justOne: true,
-});
-
-const Permission = model<IPermissionDocument, IPermissionModel>('Permission', permissionSchema);
-
-export default Permission;
+export const Permission = model<IPermission>('Permission', permissionSchema);

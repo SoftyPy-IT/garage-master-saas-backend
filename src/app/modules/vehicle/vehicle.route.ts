@@ -16,6 +16,7 @@ router
 router
   .route('/:id')
   .get(vehicleController.getSingleVehicle)
-  .delete(vehicleController.deleteVehicle);
+  .delete(vehicleController.deleteVehicle)
+  .patch(vehicleController.updateVehicle);
 
 export const VehicleRoutes = router;

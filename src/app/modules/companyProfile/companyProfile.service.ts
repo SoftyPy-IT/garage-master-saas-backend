@@ -56,8 +56,6 @@ const updateCompanyProfile = async (
     'CompanyProfile'
   );
 
-  console.log(payload)
-
   if (!id) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Company profile ID is required for update');
   }

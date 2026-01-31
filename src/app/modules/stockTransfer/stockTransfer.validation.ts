@@ -1,16 +1,31 @@
 import { z } from 'zod';
 
-export const StockTransferItemSchema = z.object({
-  productId: z.string({ required_error: 'Product is required' }),
-  quantity: z.number().min(1, 'Quantity must be at least 1'),
-  note: z.string().optional(),
+export const createStockTransactionZodSchema = z.object({
+  body: z.object({
+    warehouse: z.string({
+      required_error: 'Warehouse is required',
+    }),
+
+    batchNumber: z.string().optional(),
+    type: z.enum(['in', 'out'], {
+      required_error: 'Transaction type is required',
+    }),
+    referenceType: z.string({
+      required_error: 'Reference type is required',
+    }),
+    referenceId: z.string({
+      required_error: 'Reference ID is required',
+    }),
+    sellingPrice: z.number().optional(),
+    date: z.date().optional().default(new Date()),
+  }),
 });
 
-export const StockTransferSchema = z.object({
-  date: z.string({ required_error: 'Date is required' }),
-  referenceNo: z.string().min(1, 'Reference No is required'),
-  fromLocation: z.string().min(1, 'From location is required'),
-  toLocation: z.string(),
-  transferredBy: z.string().min(1, 'Transferred By is required'),
-  items: z.array(StockTransferItemSchema).min(1, 'At least one product must be added'),
+export const updateStockTransactionZodSchema = z.object({
+  body: z.object({
+    quantity: z.number().positive().optional(),
+    sellingPrice: z.number().optional(),
+    note: z.string().optional(),
+  }),
 });
+

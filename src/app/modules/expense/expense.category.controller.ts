@@ -38,9 +38,10 @@ const getExpenseCategoryById: RequestHandler = catchAsync(async (req, res) => {
 });
 
 
+
 const createExpenseCategory: RequestHandler = catchAsync(async (req, res) => {
   const tenantDomain = req.query.tenantDomain as string;
-  console.log(tenantDomain);
+
   const result = await expenseCategoryService.createExpenseCategory(
     tenantDomain,
     req,

@@ -24,7 +24,7 @@ router
   .delete(jobCardController.restorfromRecyclebinJobCard);
 router
   .route('/recycle-bin/delete-permanantly/:id')
-  .delete(jobCardController.restorfromRecyclebinJobCard);
+  .delete(jobCardController.permanantlyDeleteJobcard);
 
 router.get('/jobcard/:jobcardId', jobCardController.generateJobCardPdf);
 

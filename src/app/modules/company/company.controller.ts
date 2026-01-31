@@ -62,7 +62,6 @@ const getSingleCompanyDetails = catchAsync(async (req, res) => {
 const updateCompany = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { tenantDomain } = req.body;
-  console.log('company tenant domain ', tenantDomain);
   const service = await CompanyServices.updateCompany(
     tenantDomain,
     id,

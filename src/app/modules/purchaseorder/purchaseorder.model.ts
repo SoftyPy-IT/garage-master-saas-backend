@@ -14,26 +14,32 @@ const purchaseOrderProductSchema = new Schema(
     subtotal: { type: Number },
     batchNumber: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 export const purchaseOrderSchema = new Schema<TPurchaseOrder>(
   {
     orderDate: { type: String, required: true },
     expectedDeliveryDate: { type: String },
+    receiveDate: { type: String },
     referenceNo: { type: Number, required: true },
-    suppliers: { type: Schema.Types.ObjectId, ref: 'Supplier', required: true },
-    warehouse: { type: Schema.Types.ObjectId, ref: 'Warehouse', required: true },
+    suppliers: [
+      { type: Schema.Types.ObjectId, ref: 'Supplier', required: true },
+    ],
+    warehouse: {
+      type: Schema.Types.ObjectId,
+      ref: 'Warehouse',
+      required: true,
+    },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Cancelled', 'Shipped','Received'],
+      enum: ['Pending', 'Approved', 'Cancelled', 'Shipped', 'Received'],
       default: 'Pending',
     },
     products: {
       type: [purchaseOrderProductSchema],
       required: true,
     },
-    
     shipping: { type: Number },
     grandTotal: { type: Number },
     paymentMethod: { type: String },
@@ -45,10 +51,10 @@ export const purchaseOrderSchema = new Schema<TPurchaseOrder>(
     attachDocument: { type: String },
     note: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const PurchaseOrder = mongoose.model<TPurchaseOrder>(
   'PurchaseOrder',
-  purchaseOrderSchema
+  purchaseOrderSchema,
 );

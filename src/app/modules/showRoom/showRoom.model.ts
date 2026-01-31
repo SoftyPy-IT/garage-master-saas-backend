@@ -92,6 +92,9 @@ export  const showRoomSchema: Schema<TShowRoom> = new Schema<TShowRoom>(
     reference_name: {
       type: String,
     },
+        whatsappNumber: {
+      type: Number,
+    },
     isRecycled: { type: Boolean, default: false },
     recycledAt: { type: Date, default: null },
   },

@@ -26,5 +26,6 @@ export interface TCustomer {
   reference_name: string;
   isRecycled: boolean;
   recycledAt: Date;
-  note:ObjectId
+  note:ObjectId;
+  whatsappNumber:number;
 }

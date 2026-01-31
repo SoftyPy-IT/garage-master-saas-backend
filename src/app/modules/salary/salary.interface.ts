@@ -19,6 +19,7 @@ export interface TSalary {
   bonus: number
   total_overtime: number
   overtime_amount: number
+  overtime_rate: number
   salary_amount: number
   previous_due: number
   cut_salary: number

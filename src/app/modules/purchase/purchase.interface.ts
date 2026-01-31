@@ -1,13 +1,15 @@
 import { ObjectId } from 'mongoose';
 
 export interface TPurchase {
-  date: string;
+  date: Date;
   referenceNo: string;
   warehouse: ObjectId;
   attachDocument: string;
   suppliers: ObjectId;
   shipping: number;
-  purchasStatus: 'Incomplete' | 'Complete' | 'Draft';
+  purchaseStatus: string;
+  paidAmount: number,
+  dueAmount: number,
   note: string;
   paymentMethod: string;
   totalAmount: number;
@@ -24,5 +26,7 @@ export interface TPurchase {
     tax: number | string;
     quantity: number | string;
     serialNumber?: string;
+    batchNumber?: string;
+    expiryDate?: Date | null;
   }[];
 }

@@ -23,24 +23,8 @@ const getAllCompanyBrands = async (query: Record<string, unknown>) => {
   return { meta, data };
 };
 
-const getSingleCompanyBrand = async (id: string) => {
-  const result = await CompanyBrand.findById(id);
-  if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, 'CompanyBrand not found');
-  }
-  return result;
-};
 
-const updateCompanyBrand = async (id: string, payload: Partial<ICompanyBrand>) => {
-  const result = await CompanyBrand.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
-  });
-  if (!result) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Failed to update companyBrand');
-  }
-  return result;
-};
+
 
 const deleteCompanyBrand = async (id: string) => {
   const result = await CompanyBrand.findByIdAndDelete(id);
@@ -53,7 +37,5 @@ const deleteCompanyBrand = async (id: string) => {
 export const companyBrandServices = {
   createCompanyBrand,
   getAllCompanyBrands,
-  getSingleCompanyBrand,
-  updateCompanyBrand,
   deleteCompanyBrand,
 };

@@ -60,7 +60,7 @@ const getSinglePurchase = async (
     const { id } = req.params;
     const tenantDomain = req.query.tenantDomain as string;
 
-    const result = await purchaseServices.getSiniglePurchase(tenantDomain, id);
+    const result = await purchaseServices.getSinglePurchase(tenantDomain, id);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,
