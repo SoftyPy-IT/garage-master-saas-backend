@@ -1,70 +1,35 @@
 import { Request, Response, NextFunction } from 'express';
-import httpStatus from 'http-status';
 import sendResponse from '../../utils/sendResponse';
-import { reportServices } from './report.service';
+import { StatusCodes } from 'http-status-codes';
+import { getFinancialReportOrdered } from './report.service';
 
-const getMonthlyIncomeReport = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+const getReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantDomain = req.query.tenantDomain as string;
-    const result = await reportServices.getMonthlyIncomeReport(tenantDomain);
+    const yearsQuery = req.query.years as string;
+
+    let years: number[] = [];
+    if (yearsQuery) {
+      years = yearsQuery.split(',').map((y) => parseInt(y));
+    } else {
+      years = [new Date().getFullYear()];
+    }
+
+    const reports = [];
+    for (let y of years) {
+      const report = await getFinancialReportOrdered(tenantDomain, y);
+      reports.push(report);
+    }
 
     sendResponse(res, {
-      statusCode: httpStatus.OK,
+      statusCode: StatusCodes.OK,
       success: true,
-      message: 'Monthly income report retrieved successfully',
-      data: result,
+      message: 'Invoice → Income → Expense monthly & yearly report generated',
+      data: reports,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
-const getYearlyIncomeReport = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const tenantDomain = req.query.tenantDomain as string;
-    const result = await reportServices.getYearlyIncomeReport(tenantDomain);
-
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: 'Yearly income report retrieved successfully',
-      data: result,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getTotalIncomeReport = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const tenantDomain = req.query.tenantDomain as string;
-    const result = await reportServices.getTotalIncomeReport(tenantDomain);
-
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: 'Total income report retrieved successfully',
-      data: result,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const reportControllers = {
-  getMonthlyIncomeReport,
-  getYearlyIncomeReport,
-  getTotalIncomeReport,
-};
+export const ReportController = { getReport };

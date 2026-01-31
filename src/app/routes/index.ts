@@ -236,6 +236,7 @@ const moduleRoutes = [
     path: '/reports',
     route: reportRoutes,
   },
+
   {
     path: '/meta',
     route: metaroute,

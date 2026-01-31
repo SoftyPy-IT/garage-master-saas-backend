@@ -202,7 +202,7 @@ const generateQuotationPdf: RequestHandler = catchAsync(async (req, res) => {
     : '{}';
   const baseUrl = (
     process.env.NEXT_PUBLIC_IMAGE_BASE_URL ||
-    'https://api.trustautosolution.com'
+    'https://saasapi.trustautosolution.com'
   ).replace(/\/$/, '');
 
   try {

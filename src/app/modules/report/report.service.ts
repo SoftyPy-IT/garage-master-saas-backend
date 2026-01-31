@@ -1,89 +1,92 @@
 import { getTenantModel } from '../../utils/getTenantModels';
+import { MONTHS } from './report.utils';
 
-const getMonthlyIncomeReport = async (tenantDomain: string) => {
-  const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
-
-  // Aggregation to group income by year + month
-  const result = await Income.aggregate([
+// Monthly aggregation
+const monthlyAggregate = async (
+  Model: any,
+  amountField: string,
+  year: number,
+) => {
+  return Model.aggregate([
     {
       $addFields: {
-        parsedDate: { $toDate: '$date' },
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
       },
     },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$parsedDate' },
-          month: { $month: '$parsedDate' },
-        },
-        totalIncome: { $sum: '$totalAmount' },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: { '_id.year': 1, '_id.month': 1 },
-    },
+    { $match: { year } },
+    { $group: { _id: '$month', total: { $sum: `$${amountField}` } } },
   ]);
-
-  return result.map((r: any) => ({
-    year: r._id.year,
-    month: r._id.month,
-    totalIncome: r.totalIncome,
-    count: r.count,
-  }));
 };
 
-const getYearlyIncomeReport = async (tenantDomain: string) => {
+// Yearly aggregation
+const yearlyAggregate = async (
+  Model: any,
+  amountField: string,
+  year: number,
+) => {
+  return Model.aggregate([
+    { $addFields: { year: { $year: '$createdAt' } } },
+    { $match: { year } },
+    { $group: { _id: null, total: { $sum: `$${amountField}` } } },
+  ]).then((res) => res[0]?.total || 0);
+};
+
+// -------------------------
+// MAIN REPORT SERVICE
+// -------------------------
+export const getFinancialReportOrdered = async (
+  tenantDomain: string,
+  year: number,
+) => {
+  const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
+  const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
 
-  const result = await Income.aggregate([
-    {
-      $addFields: {
-        parsedDate: { $toDate: '$date' },
-      },
-    },
-    {
-      $group: {
-        _id: { year: { $year: '$parsedDate' } },
-        totalIncome: { $sum: '$totalAmount' },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $sort: { '_id.year': 1 },
-    },
-  ]);
+  // ----------------
+  // 1️⃣ Invoice
+  // ----------------
+  const invoiceMonthlyAgg = await monthlyAggregate(Invoice, 'net_total', year);
+  const invoiceYearly = await yearlyAggregate(Invoice, 'net_total', year);
 
-  return result.map((r: any) => ({
-    year: r._id.year,
-    totalIncome: r.totalIncome,
-    count: r.count,
-  }));
-};
+  const invoiceMonthly = MONTHS.map((month, index) => {
+    const m = index + 1;
+    const total = invoiceMonthlyAgg.find((i) => i._id === m)?.total || 0;
+    return { month: MONTHS[index], total };
+  });
 
-const getTotalIncomeReport = async (tenantDomain: string) => {
-  const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
+  // ----------------
+  // 2️⃣ Income
+  // ----------------
+  const incomeMonthlyAgg = await monthlyAggregate(Income, 'totalAmount', year);
+  const incomeYearly = await yearlyAggregate(Income, 'totalAmount', year);
 
-  const result = await Income.aggregate([
-    {
-      $group: {
-        _id: null,
-        totalIncome: { $sum: '$totalAmount' },
-        totalCount: { $sum: 1 },
-      },
-    },
-  ]);
+  const incomeMonthly = MONTHS.map((month, index) => {
+    const m = index + 1;
+    const total = incomeMonthlyAgg.find((i) => i._id === m)?.total || 0;
+    return { month: MONTHS[index], total };
+  });
 
-  return result.length > 0
-    ? {
-        totalIncome: result[0].totalIncome,
-        totalCount: result[0].totalCount,
-      }
-    : { totalIncome: 0, totalCount: 0 };
-};
+  // ----------------
+  // 3️⃣ Expense
+  // ----------------
+  const expenseMonthlyAgg = await monthlyAggregate(
+    Expense,
+    'totalAmount',
+    year,
+  );
+  const expenseYearly = await yearlyAggregate(Expense, 'totalAmount', year);
 
-export const reportServices = {
-  getMonthlyIncomeReport,
-  getYearlyIncomeReport,
-  getTotalIncomeReport,
+  const expenseMonthly = MONTHS.map((month, index) => {
+    const m = index + 1;
+    const total = expenseMonthlyAgg.find((i) => i._id === m)?.total || 0;
+    return { month: MONTHS[index], total };
+  });
+
+  return {
+    year,
+    invoice: { monthly: invoiceMonthly, yearly: invoiceYearly },
+    income: { monthly: incomeMonthly, yearly: incomeYearly },
+    expense: { monthly: expenseMonthly, yearly: expenseYearly },
+  };
 };

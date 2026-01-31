@@ -115,7 +115,7 @@ const getAllCustomer = async (
     {
       path: 'vehicles',
       model: Vehicle,
-      select: 'fullRegNum car_registration_no',
+      select: 'fullRegNum car_registration_no carReg_no',
     },
     {
       path: 'quotations',
