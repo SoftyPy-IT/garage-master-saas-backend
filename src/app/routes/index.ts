@@ -46,7 +46,6 @@ import { warrantyRoutes } from '../modules/warranties/warranties.route';
 import { PageRoutes } from '../modules/page/page.route';
 import { permissionRouters } from '../modules/permission/permission.route';
 import { warehouseStockRoutes } from '../modules/warehouseStock/warehouseStock.route';
-import { reportRoutes } from '../modules/report/report.route';
 
 const router = Router();
 
@@ -232,11 +231,6 @@ const moduleRoutes = [
     path: '/warehouse-stocks',
     route: warehouseStockRoutes,
   },
-  {
-    path: '/reports',
-    route: reportRoutes,
-  },
-
   {
     path: '/meta',
     route: metaroute,
