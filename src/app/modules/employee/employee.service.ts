@@ -6,29 +6,84 @@ import { TEmployee } from './employee.interface';
 import { generateEmployeeId } from './employee.utils';
 import mongoose from 'mongoose';
 import { getTenantModel } from '../../utils/getTenantModels';
+import { redisClient } from '../../utils/redis';
+
+const CACHE_TTL = 300;
+
+const generateEmployeeCacheKey = (
+  tenantDomain: string,
+  functionName: string,
+  ...params: any[]
+): string => {
+  const paramString = params.map((p) => JSON.stringify(p)).join(':');
+  return `employee:${tenantDomain}:${functionName}:${Buffer.from(paramString).toString('base64')}`;
+};
+
+// Helper function to invalidate employee cache
+const invalidateEmployeeCache = async (
+  tenantDomain: string,
+  employeeId?: string,
+): Promise<void> => {
+  const patterns = [
+    `employee:${tenantDomain}:getAllEmployeesFromDB:*`,
+    `employee:${tenantDomain}:getSingleEmployeeDetails:*`,
+  ];
+
+  // If specific employee ID is provided, also invalidate its cache
+  if (employeeId) {
+    patterns.push(
+      `employee:${tenantDomain}:getSingleEmployeeDetails:${employeeId}`,
+    );
+  }
+
+  for (const pattern of patterns) {
+    await redisClient.delPattern(pattern);
+  }
+};
 
 const getAllEmployeesFromDB = async (
   tenantDomain: string,
   limit: number,
   page: number,
   searchTerm: string,
+  status?: string,
 ) => {
+  const cacheKey = generateEmployeeCacheKey(
+    tenantDomain,
+    'getAllEmployeesFromDB',
+    limit,
+    page,
+    searchTerm,
+    status, // ✅ INCLUDE IN CACHE KEY
+  );
+
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    console.error('Redis cache read error:', error);
+  }
+
   const { Model: Employee } = await getTenantModel(tenantDomain, 'Employee');
 
-  // Ensure limit and page have safe defaults
   limit = Number(limit) > 0 ? Number(limit) : 10;
   page = Number(page) > 0 ? Number(page) : 1;
 
-  let searchQuery = {};
+  const matchQuery: any = {};
 
+  /* ---------- SEARCH FILTER ---------- */
   if (searchTerm) {
-    const escapedFilteringData = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    const employeeSearchQuery = SearchableFields.map((field) => ({
-      [field]: { $regex: escapedFilteringData, $options: 'i' },
+    const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    matchQuery.$or = SearchableFields.map((field) => ({
+      [field]: { $regex: escaped, $options: 'i' },
     }));
+  }
 
-    searchQuery = { $or: [...employeeSearchQuery] };
+  /* ---------- STATUS FILTER (FIX) ---------- */
+  if (status) {
+    matchQuery.status = status;
   }
 
   const employees = await Employee.aggregate([
@@ -48,12 +103,11 @@ const getAllEmployeesFromDB = async (
         as: 'salary',
       },
     },
-    { $match: searchQuery },
+    { $match: matchQuery }, // ✅ NOW FILTERS BY STATUS
     { $sort: { createdAt: -1 } },
     { $skip: (page - 1) * limit },
     { $limit: limit },
 
-    // 🔹 Calculate employee-wise overtime summary
     {
       $addFields: {
         overtimeSummary: {
@@ -62,37 +116,47 @@ const getAllEmployeesFromDB = async (
               $setUnion: [
                 {
                   $map: {
-                    input: "$attendance",
-                    as: "att",
+                    input: '$attendance',
+                    as: 'att',
                     in: {
-                      year: { $year: { $toDate: "$$att.createdAt" } },
-                      month: { $month: { $toDate: "$$att.createdAt" } },
+                      year: { $year: { $toDate: '$$att.createdAt' } },
+                      month: { $month: { $toDate: '$$att.createdAt' } },
                     },
                   },
                 },
               ],
             },
-            as: "ym",
+            as: 'ym',
             in: {
-              year: "$$ym.year",
-              month: "$$ym.month",
+              year: '$$ym.year',
+              month: '$$ym.month',
               totalOvertime: {
                 $sum: {
                   $map: {
                     input: {
                       $filter: {
-                        input: "$attendance",
-                        as: "att2",
+                        input: '$attendance',
+                        as: 'att2',
                         cond: {
                           $and: [
-                            { $eq: [{ $year: { $toDate: "$$att2.createdAt" } }, "$$ym.year"] },
-                            { $eq: [{ $month: { $toDate: "$$att2.createdAt" } }, "$$ym.month"] },
+                            {
+                              $eq: [
+                                { $year: { $toDate: '$$att2.createdAt' } },
+                                '$$ym.year',
+                              ],
+                            },
+                            {
+                              $eq: [
+                                { $month: { $toDate: '$$att2.createdAt' } },
+                                '$$ym.month',
+                              ],
+                            },
                           ],
                         },
                       },
                     },
-                    as: "filteredAtt",
-                    in: "$$filteredAtt.overtime",
+                    as: 'filteredAtt',
+                    in: '$$filteredAtt.overtime',
                   },
                 },
               },
@@ -103,30 +167,47 @@ const getAllEmployeesFromDB = async (
     },
   ]);
 
-  const totalData = await Employee.countDocuments(searchQuery);
+  const totalData = await Employee.countDocuments(matchQuery);
   const totalPages = Math.ceil(totalData / limit);
 
-  // 🔹 Convert month numbers → names in Node.js layer
   const monthNames = [
-    "", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    '',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   const formattedEmployees = employees.map((emp) => ({
     ...emp,
-    overtimeSummary: emp.overtimeSummary.map((o:any) => ({
+    overtimeSummary: emp.overtimeSummary.map((o: any) => ({
       month: monthNames[o.month],
       year: o.year,
       totalOvertime: `${o.totalOvertime}`,
     })),
   }));
 
-  return {
+  const result = {
     employees: formattedEmployees,
     meta: { totalPages },
   };
-};
 
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(result), CACHE_TTL);
+  } catch (error) {
+    console.error('Redis cache write error:', error);
+  }
+
+  return result;
+};
 
 const createEmployeeIntoDB = async (
   tenantDomain: string,
@@ -142,10 +223,29 @@ const createEmployeeIntoDB = async (
   });
 
   await employee.save();
+
+  // Invalidate cache after creating new employee
+  await invalidateEmployeeCache(tenantDomain);
+
   return null;
 };
 
 const getSingleEmployeeDetails = async (tenantDomain: string, id: string) => {
+  const cacheKey = generateEmployeeCacheKey(
+    tenantDomain,
+    'getSingleEmployeeDetails',
+    id,
+  );
+
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    console.error('Redis cache read error:', error);
+  }
+
   await getTenantModel(tenantDomain, 'Attendance');
   await getTenantModel(tenantDomain, 'Salary');
 
@@ -157,6 +257,12 @@ const getSingleEmployeeDetails = async (tenantDomain: string, id: string) => {
 
   if (!singleEmployee) {
     throw new AppError(StatusCodes.NOT_FOUND, 'No employee found');
+  }
+
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(singleEmployee), CACHE_TTL);
+  } catch (error) {
+    console.error('Redis cache write error:', error);
   }
 
   return singleEmployee;
@@ -180,6 +286,9 @@ export const updateEmployeeIntoDB = async (
     throw new AppError(StatusCodes.NOT_FOUND, 'No employee found');
   }
 
+  // Invalidate cache for this specific employee and all employee lists
+  await invalidateEmployeeCache(tenantDomain, id);
+
   return updateEmployee;
 };
 
@@ -190,6 +299,8 @@ export const deleteEmployee = async (tenantDomain: string, id: string) => {
   if (!employee) {
     throw new AppError(StatusCodes.NOT_FOUND, 'No employee available');
   }
+
+  await invalidateEmployeeCache(tenantDomain, id);
 
   return null;
 };
@@ -232,6 +343,10 @@ export const permanentlyDeleteEmployee = async (
     }
 
     await session.commitTransaction();
+
+    // Invalidate cache after permanent deletion
+    await invalidateEmployeeCache(tenantDomain, id);
+
     return employeeResult;
   } catch (error) {
     await session.abortTransaction();
@@ -262,6 +377,9 @@ export const moveToRecycledEmployee = async (
     throw new AppError(StatusCodes.NOT_FOUND, 'No employee available');
   }
 
+  // Invalidate cache after moving to recycled
+  await invalidateEmployeeCache(tenantDomain, id);
+
   return customer;
 };
 
@@ -288,6 +406,7 @@ export const restoreFromRecycledEmployee = async (
       'No employee available for restoration.',
     );
   }
+  await invalidateEmployeeCache(tenantDomain, id);
 
   return restoredCustomer;
 };
@@ -305,6 +424,9 @@ export const moveAllToRecycledBin = async (tenantDomain: string) => {
     },
     { runValidators: true },
   );
+
+  // Invalidate all employee cache after bulk operation
+  await invalidateEmployeeCache(tenantDomain);
 
   return result;
 };
@@ -325,8 +447,11 @@ export const restoreAllFromRecycledBin = async (tenantDomain: string) => {
     { runValidators: true },
   );
 
+  await invalidateEmployeeCache(tenantDomain);
+
   return result;
 };
+
 export const EmployeeServices = {
   createEmployeeIntoDB,
   getAllEmployeesFromDB,
@@ -338,4 +463,5 @@ export const EmployeeServices = {
   restoreFromRecycledEmployee,
   moveAllToRecycledBin,
   restoreAllFromRecycledBin,
+  invalidateEmployeeCache,
 };

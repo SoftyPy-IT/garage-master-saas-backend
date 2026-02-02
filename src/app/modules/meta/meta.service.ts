@@ -1,18 +1,50 @@
-import { Expense } from './../expense/expense.model';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { formatToBDComma } from '../../utils/formateComma';
 import { getTenantModel } from '../../utils/getTenantModels';
+import { redisClient } from '../../utils/redis';
 import { CompanyType, CustomerType, ShowRoomType } from './meta.interface';
 import { buildSearchQuery } from './meta.search';
 import dayjs from 'dayjs';
 
-const formatToBDComma = (number: number) => {
-  return number.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+const CACHE_TTL = 300;
+
+const generateCacheKey = (
+  tenantDomain: string,
+  functionName: string,
+  query: Record<string, unknown>,
+): string => {
+  const queryString = JSON.stringify(query);
+  return `meta:${tenantDomain}:${functionName}:${Buffer.from(queryString).toString('base64')}`;
+};
+
+// Helper function to invalidate related cache keys
+const invalidateMetaCache = async (tenantDomain: string): Promise<void> => {
+  const patterns = [
+    `meta:${tenantDomain}:getAllCustomer:*`,
+    `meta:${tenantDomain}:getAllMetaFromDB:*`,
+    `meta:${tenantDomain}:calculateAccountingSummary:*`,
+  ];
+
+  for (const pattern of patterns) {
+    await redisClient.delPattern(pattern);
+  }
 };
 
 const getAllCustomer = async (
   tenantDomain: string,
   query: Record<string, unknown>,
 ) => {
+  const cacheKey = generateCacheKey(tenantDomain, 'getAllCustomer', query);
+
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    console.error('Redis cache read error:', error);
+  }
+
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
@@ -242,7 +274,7 @@ const getAllCustomer = async (
 
   const paginatedData = sortedData.slice(skip, skip + limit);
 
-  return {
+  const result = {
     meta: {
       page,
       limit,
@@ -251,12 +283,35 @@ const getAllCustomer = async (
     },
     data: paginatedData,
   };
+
+  // Cache the result
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(result), CACHE_TTL);
+  } catch (error) {
+    console.error('Redis cache write error:', error);
+  }
+
+  return result;
 };
 
 const getAllMetaFromDB = async (
   tenantDomain: string,
   query: Record<string, unknown>,
 ) => {
+  // Generate cache key
+  const cacheKey = generateCacheKey(tenantDomain, 'getAllMetaFromDB', query);
+
+  // Try to get from cache first
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    console.error('Redis cache read error:', error);
+    // Continue with database query if cache fails
+  }
+
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
   const { Model: Company } = await getTenantModel(tenantDomain, 'Company');
   const { Model: ShowRoom } = await getTenantModel(tenantDomain, 'ShowRoom');
@@ -265,24 +320,23 @@ const getAllMetaFromDB = async (
   const { Model: Invoice } = await getTenantModel(tenantDomain, 'Invoice');
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
-  const { Model: LeaveRequest } = await getTenantModel(
-    tenantDomain,
-    'LeaveRequest',
-  );
+  const { Model: Product } = await getTenantModel(tenantDomain, 'Product');
   const { Model: User } = await getTenantModel(tenantDomain, 'User');
 
-  const allCustomer = await Customer.find({ isRecycled: false });
-  const allCompany = await Company.find({ isRecycled: false });
-  const allShowRoom = await ShowRoom.find({ isRecycled: false });
+  const allCustomer = await Customer.find({ isRecycled: false }).lean();
+
+  const allProduct = await Product.find().lean();
+  const allCompany = await Company.find({ isRecycled: false }).lean();
+  const allShowRoom = await ShowRoom.find({ isRecycled: false }).lean();
   const totalEntities =
     allCustomer.length + allCompany.length + allShowRoom.length;
 
-  const totalJobCard = await JobCard.find({ isRecycled: false });
-  const totalQuotation = await Quotation.find({ isRecycled: false });
-  const totalInvoice = await Invoice.find({ isRecycled: false });
-  const totalIncome = await Income.find();
-  const totalExpense = await Expense.find();
-  const tenantInfo = await User.find();
+  const totalJobCard = await JobCard.find({ isRecycled: false }).lean();
+  const totalQuotation = await Quotation.find({ isRecycled: false }).lean();
+  const totalInvoice = await Invoice.find({ isRecycled: false }).lean();
+  const totalIncome = await Income.find().lean();
+  const totalExpense = await Expense.find().lean();
+  const tenantInfo = await User.find().lean();
   const subscription = tenantInfo[0]?.tenantInfo?.subscription;
 
   let subscriptionDetails = null;
@@ -394,11 +448,12 @@ const getAllMetaFromDB = async (
     totalOtherExpense,
   };
 
-  return {
+  const result = {
     statusSummary: {
       running: statusSummary['running'] || 0,
       completed: statusSummary['completed'] || 0,
     },
+    totalProduct: allProduct.length,
     totalCustomers: allCustomer.length,
     totalCompanies: allCompany.length,
     totalShowRooms: allShowRoom.length,
@@ -413,12 +468,39 @@ const getAllMetaFromDB = async (
     incomes,
     expense,
   };
+
+  // Cache the result with shorter TTL since this data changes more frequently
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(result), 60); // 1 minute TTL
+  } catch (error) {
+    console.error('Redis cache write error:', error);
+  }
+
+  return result;
 };
 
-export const calculateAccountingSummary = async (
+const calculateAccountingSummary = async (
   tenantDomain: string,
   query: Record<string, unknown>,
 ) => {
+  // Generate cache key
+  const cacheKey = generateCacheKey(
+    tenantDomain,
+    'calculateAccountingSummary',
+    query,
+  );
+
+  // Try to get from cache first
+  try {
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    console.error('Redis cache read error:', error);
+    // Continue with database query if cache fails
+  }
+
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
   const { Model: Expense } = await getTenantModel(tenantDomain, 'Expense');
   const { Model: Salary } = await getTenantModel(tenantDomain, 'Salary');
@@ -528,7 +610,7 @@ export const calculateAccountingSummary = async (
   const calcNetTotalExpense = (expense: any, salary: any, donation: number) =>
     (expense.totalAmount || 0) + (salary.total_payment || 0) + donation;
 
-  return {
+  const result = {
     income: {
       monthly: monthlyIncome,
       yearly: yearlyIncome,
@@ -579,10 +661,20 @@ export const calculateAccountingSummary = async (
       total: calcNetTotalExpense(totalExpense, totalSalary, totalDonation),
     },
   };
+
+  // Cache the result with shorter TTL for accounting data
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(result), 120); // 2 minutes TTL
+  } catch (error) {
+    console.error('Redis cache write error:', error);
+  }
+
+  return result;
 };
 
 export const metServices = {
   getAllCustomer,
   getAllMetaFromDB,
   calculateAccountingSummary,
+  invalidateMetaCache,
 };

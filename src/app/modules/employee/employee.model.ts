@@ -119,13 +119,6 @@ export const employeeSchema: Schema<TEmployee> = new Schema<TEmployee>(
 );
 
 employeeSchema.pre('save', function (next) {
-  // if (!this.password && !this.confirm_password) {
-  //   return next(new Error('Please enter both password and confirm password'));
-  // }
-  // if (this.password !== this.confirm_password) {
-  //   return next(new Error('Passwords do not match'));
-  // }
-
   if (!this.isModified('password')) {
     return next();
   }
@@ -138,7 +131,6 @@ employeeSchema.pre('save', function (next) {
         return next(err);
       }
       this.password = hash;
-      // this.confirm_password = '';
       next();
     },
   );
@@ -168,7 +160,6 @@ employeeSchema.pre('save', function (next) {
   next();
 });
 
-// Pre-update middleware
 employeeSchema.pre('findOneAndUpdate', function (next) {
   const update = this.getUpdate() as Partial<
     TEmployee & { $set: Partial<TEmployee> }
@@ -208,11 +199,4 @@ employeeSchema.pre('findOneAndUpdate', function (next) {
   next();
 });
 
-// employeeSchema.set('toJSON', {
-//   transform: function (_doc, ret) {
-//     delete ret.password;
-//     delete ret.confirm_password;
-//     return ret;
-//   },
-// });
 export const Employee = mongoose.model<TEmployee>('Employee', employeeSchema);
