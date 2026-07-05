@@ -26,6 +26,13 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Profile', category: 'User Management', path: '/dashboard/profile', route: '/dashboard/profile', status: 'active' },
   { name: 'Update Profile', category: 'User Management', path: '/dashboard/profile-update', route: '/dashboard/profile-update', status: 'active' },
   { name: 'All User', category: 'User Management', path: '/dashboard/all-user', route: '/dashboard/all-user', status: 'active' },
+  { name: 'All Tenant List', category: 'User Management', path: '/dashboard/all-tenant-list', route: '/dashboard/all-tenant-list', status: 'active' },
+  { name: 'All User List', category: 'User Management', path: '/dashboard/all-user-list', route: '/dashboard/all-user-list', status: 'active' },
+  { name: 'Contact Customer', category: 'User Management', path: '/dashboard/contact-customer', route: '/dashboard/contact-customer', status: 'active' },
+  { name: 'Recycle Bin User', category: 'User Management', path: '/dashboard/recycle-bin-user-list', route: '/dashboard/recycle-bin-user-list', status: 'active' },
+  { name: 'Role', category: 'User Management', path: '/dashboard/role', route: '/dashboard/role', status: 'active' },
+  { name: 'Add Role', category: 'User Management', path: '/dashboard/add-role', route: '/dashboard/add-role', status: 'active' },
+  { name: 'Update Role', category: 'User Management', path: '/dashboard/update-role', route: '/dashboard/update-role', status: 'active' },
 
   // Job Card
   { name: 'Create Job Card', category: 'Job Card', path: '/dashboard/create-job-card', route: '/dashboard/create-job-card', status: 'active' },
@@ -40,7 +47,6 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Update Customer', category: 'Customer', path: '/dashboard/update-customer', route: '/dashboard/update-customer', status: 'active' },
   { name: 'Customer Profile', category: 'Customer', path: '/dashboard/customer-profile', route: '/dashboard/customer-profile', status: 'active' },
   { name: 'All Customer', category: 'Customer', path: '/dashboard/all-customer', route: '/dashboard/all-customer', status: 'active' },
-  { name: 'Contact Customer', category: 'Customer', path: '/dashboard/contact-customer', route: '/dashboard/contact-customer', status: 'active' },
   { name: 'Recycle Bin Customer', category: 'Customer', path: '/dashboard/recycle-bin-customer-list', route: '/dashboard/recycle-bin-customer-list', status: 'active' },
 
   // Invoice
@@ -56,6 +62,7 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Update Quotation', category: 'Quotation', path: '/dashboard/update-quotation', route: '/dashboard/update-quotation', status: 'active' },
   { name: 'Quotation View', category: 'Quotation', path: '/dashboard/quotation-view', route: '/dashboard/quotation-view', status: 'active' },
   { name: 'Recycle Bin Quotation', category: 'Quotation', path: '/dashboard/recycle-bin-quotation-list', route: '/dashboard/recycle-bin-quotation-list', status: 'active' },
+  { name: 'Pending Quotation', category: 'Quotation', path: '/dashboard/pending-quotation', route: '/dashboard/pending-quotation', status: 'active' },
 
   // Money Receipt
   { name: 'Create Money Receipt', category: 'Money Receipt', path: '/dashboard/money-receive-create', route: '/dashboard/money-receive-create', status: 'active' },
@@ -77,6 +84,8 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Employee Overtime', category: 'Employee', path: '/dashboard/employee-overtime', route: '/dashboard/employee-overtime', status: 'active' },
   { name: 'Create Overtime', category: 'Employee', path: '/dashboard/create-overtime', route: '/dashboard/create-overtime', status: 'active' },
   { name: 'Recycle Bin Employee', category: 'Employee', path: '/dashboard/recycle-bin-employee-list', route: '/dashboard/recycle-bin-employee-list', status: 'active' },
+  { name: 'Add Salary', category: 'Employee', path: '/dashboard/add-salary', route: '/dashboard/add-salary', status: 'active' },
+  { name: 'Salary List', category: 'Employee', path: '/dashboard/salary-list', route: '/dashboard/salary-list', status: 'active' },
 
   // Supplier
   { name: 'Supplier List', category: 'Supplier', path: '/dashboard/supplier-list', route: '/dashboard/supplier-list', status: 'active' },
@@ -125,6 +134,7 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Purchase Return', category: 'Inventory', path: '/dashboard/purchase-return-add', route: '/dashboard/purchase-return-add', status: 'active' },
   { name: 'Purchase Return List', category: 'Inventory', path: '/dashboard/purchase-return', route: '/dashboard/purchase-return', status: 'active' },
   { name: 'Update Purchase Return', category: 'Inventory', path: '/dashboard/update-purchase-return', route: '/dashboard/update-purchase-return', status: 'active' },
+  { name: 'Warehouse Stock', category: 'Inventory', path: '/dashboard/warehouse-stock', route: '/dashboard/warehouse-stock', status: 'active' },
 
   // Purchase
   { name: 'Purchase List', category: 'Purchase', path: '/dashboard/purchase-list', route: '/dashboard/purchase-list', status: 'active' },
@@ -176,6 +186,10 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   { name: 'Low Stock Report', category: 'Reports', path: '/dashboard/low-stock-report', route: '/dashboard/low-stock-report', status: 'active' },
   { name: 'Product Stock Report', category: 'Reports', path: '/dashboard/product-stock-report', route: '/dashboard/product-stock-report', status: 'active' },
   { name: 'Daily Stock Movement Report', category: 'Reports', path: '/dashboard/daily-stock-movement', route: '/dashboard/daily-stock-movement', status: 'active' },
+  { name: 'Income Report', category: 'Reports', path: '/dashboard/income-report', route: '/dashboard/income-report', status: 'active' },
+  { name: 'Expense Report', category: 'Reports', path: '/dashboard/expense-report', route: '/dashboard/expense-report', status: 'active' },
+  { name: 'Invoice Report', category: 'Reports', path: '/dashboard/invoice-report', route: '/dashboard/invoice-report', status: 'active' },
+  { name: 'Donation Report', category: 'Reports', path: '/dashboard/donation-report', route: '/dashboard/donation-report', status: 'active' },
 
   // Super Admin / Tenant Management
   { name: 'All Tenant List', category: 'Super Admin', path: '/dashboard/all-tenant-list', route: '/dashboard/all-tenant-list', status: 'active' },
@@ -186,6 +200,12 @@ export const DEFAULT_PAGES: IDefaultPage[] = [
   // Backup & Restore
   { name: 'Backup', category: 'System', path: '/dashboard/backup', route: '/dashboard/backup', status: 'active' },
   { name: 'Restore', category: 'System', path: '/dashboard/restore', route: '/dashboard/restore', status: 'active' },
+
+  // Vehicles
+  { name: 'Vehicles', category: 'Vehicles', path: '/dashboard/vehicles', route: '/dashboard/vehicles', status: 'active' },
+
+  // Calendar
+  { name: 'Calendar', category: 'System', path: '/dashboard/calender', route: '/dashboard/calender', status: 'active' },
 ];
 
 // default role 
