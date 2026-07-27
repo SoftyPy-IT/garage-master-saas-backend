@@ -28,6 +28,12 @@ router
   .route('/restore/:id')
   .patch(quotationController.restoreFromRecyclebinQuotation);
 router
+  .route('/pending/:id')
+  .patch(quotationController.moveToPendingQuotation);
+router
+  .route('/restore-pending/:id')
+  .patch(quotationController.restoreFromPendingQuotation);
+router
   .route('/delete-permanantly/:id')
   .delete(quotationController.permanantlyDeleteQuotation);
 

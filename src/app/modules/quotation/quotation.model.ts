@@ -120,6 +120,8 @@ export const quotationSchema: Schema<TQuotation> = new Schema<TQuotation>(
     },
     isRecycled: { type: Boolean, default: false },
     recycledAt: { type: Date, default: null },
+    isPending: { type: Boolean, default: false },
+    pendingAt: { type: Date, default: null },
   },
   {
     timestamps: true,

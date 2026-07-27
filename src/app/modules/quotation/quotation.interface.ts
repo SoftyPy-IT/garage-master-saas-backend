@@ -53,4 +53,6 @@ tax:number;
   isRecycled: boolean;
     mileage:number;
   recycledAt: Date;
+  isPending: boolean;
+  pendingAt: Date;
 }

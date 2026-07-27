@@ -537,6 +537,7 @@ const getAllQuotationsFromDB = async (
   searchTerm: string,
   isRecycled?: string,
   status?: string,
+  isPending?: string,
 ) => {
   const Quotation = (await getTenantModel(tenantDomain, 'Quotation')).Model;
 
@@ -596,6 +597,13 @@ const getAllQuotationsFromDB = async (
 
   if (isRecycled !== undefined) {
     searchQuery.isRecycled = isRecycled === 'true';
+  }
+  if (isPending !== undefined) {
+    if (isPending === 'true') {
+      searchQuery.isPending = true;
+    } else {
+      searchQuery.$nor = [...(searchQuery.$nor || []), { isPending: true }];
+    }
   }
   if (status) {
     searchQuery.status = status;
@@ -1005,6 +1013,61 @@ const restoreFromRecyclebinQuotation = async (
   return restoredQuotation;
 };
 
+const moveToPendingQuotation = async (tenantDomain: string, id: string) => {
+  const Quotation = (await getTenantModel(tenantDomain, 'Quotation')).Model;
+
+  const existingQuotation = await Quotation.findById(id);
+  if (!existingQuotation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Quotation not available.');
+  }
+
+  if (existingQuotation.isRecycled) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      'Recycled quotation cannot be moved to pending.',
+    );
+  }
+
+  const pendingQuotation = await Quotation.findByIdAndUpdate(
+    existingQuotation._id,
+    { isPending: true, pendingAt: new Date() },
+    { new: true, runValidators: true },
+  );
+
+  if (!pendingQuotation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'No quotation available.');
+  }
+
+  return pendingQuotation;
+};
+
+const restoreFromPendingQuotation = async (
+  tenantDomain: string,
+  id: string,
+) => {
+  const Quotation = (await getTenantModel(tenantDomain, 'Quotation')).Model;
+
+  const existingQuotation = await Quotation.findById(id);
+  if (!existingQuotation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Quotation not available.');
+  }
+
+  const restoredQuotation = await Quotation.findByIdAndUpdate(
+    existingQuotation._id,
+    { isPending: false, pendingAt: null },
+    { new: true, runValidators: true },
+  );
+
+  if (!restoredQuotation) {
+    throw new AppError(
+      StatusCodes.NOT_FOUND,
+      'Failed to restore the quotation.',
+    );
+  }
+
+  return restoredQuotation;
+};
+
 export const QuotationServices = {
   createQuotationDetails,
   getAllQuotationsFromDB,
@@ -1016,5 +1079,7 @@ export const QuotationServices = {
   generateQuotationPdf,
   moveToRecyclebinQuotation,
   restoreFromRecyclebinQuotation,
+  moveToPendingQuotation,
+  restoreFromPendingQuotation,
   permanentlyDeleteQuotation,
 };

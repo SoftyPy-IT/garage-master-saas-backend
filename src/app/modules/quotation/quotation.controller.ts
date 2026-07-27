@@ -26,6 +26,7 @@ const getAllQuotations = catchAsync(async (req, res) => {
   const isRecycled = req.query.isRecycled as string;
   const searchTerm = req.query.searchTerm as string;
   const status = req.query.status as string | undefined;
+  const isPending = req.query.isPending as string | undefined;
   const tenantDomain = req.query.tenantDomain as string;
 
   const result = await QuotationServices.getAllQuotationsFromDB(
@@ -36,6 +37,7 @@ const getAllQuotations = catchAsync(async (req, res) => {
     searchTerm,
     isRecycled,
     status,
+    isPending,
   );
 
   sendResponse(res, {
@@ -207,6 +209,38 @@ const restoreFromRecyclebinQuotation = catchAsync(async (req, res) => {
   });
 });
 
+const moveToPendingQuotation = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const tenantDomain = req.query.tenantDomain as string;
+
+  const quotation = await QuotationServices.moveToPendingQuotation(
+    tenantDomain,
+    id,
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Quotation moved to pending successfully!',
+    data: quotation,
+  });
+});
+
+const restoreFromPendingQuotation = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const tenantDomain = req.query.tenantDomain as string;
+
+  const quotation = await QuotationServices.restoreFromPendingQuotation(
+    tenantDomain,
+    id,
+  );
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Quotation restored from pending successfully!',
+    data: quotation,
+  });
+});
+
 
 export const quotationController = {
   createQuotation,
@@ -220,4 +254,6 @@ export const quotationController = {
   restoreFromRecyclebinQuotation,
   permanantlyDeleteQuotation,
   moveToRecyclebinQuotation,
+  moveToPendingQuotation,
+  restoreFromPendingQuotation,
 };
