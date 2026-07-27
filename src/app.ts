@@ -1,6 +1,5 @@
 // src/app.ts
 import express, { Application, Request, Response } from 'express';
-import cors from 'cors';
 import notFound from './app/middlewares/notFound';
 import router from './app/routes';
 import globalErrorHandler from './app/middlewares/globalErrorhandler';
@@ -15,7 +14,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { redisClient } from './app/utils/redis';
-import { dynamicCors } from './app/middlewares/domainCors';
+import { dynamicCors, clearDomainCache } from './app/middlewares/domainCors';
 
 const app: Application = express();
 app.use(helmet());
@@ -78,7 +77,7 @@ app.use(dynamicCors());
 //   })
 // );
 
-app.options('*', cors());
+// dynamicCors handles OPTIONS preflight (do not add app.options('*', cors()) — breaks credentials)
 
 app.set('view engine', 'ejs');
 app.use(express.static(path.join('public')));
@@ -161,7 +160,14 @@ app.get('/api/v1/backup-logs', (req, res) => {
 app.use(globalErrorHandler);
 app.use(notFound);
 
-redisClient.connect().catch(console.error);
+redisClient
+  .connect()
+  .then(() => {
+    if (config.NODE_ENV === 'development') {
+      return clearDomainCache();
+    }
+  })
+  .catch(console.error);
 
 process.on('SIGINT', async () => {
   await redisClient.disconnect();
