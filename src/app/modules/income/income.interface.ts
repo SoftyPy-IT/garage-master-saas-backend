@@ -7,7 +7,11 @@ export interface IIncomeItem {
 
 export interface IIncome extends Document {
   date: string;
+  invoice_id?: ObjectId;
   income_items: IIncomeItem[];
+  serviceIncomeAmount?: number;
+  partsIncomeAmount?: number;
+  totalInvoiceIncome?: number;
   payment_method: string;
   accountNumber?: string;
   transactionNumber?: string;

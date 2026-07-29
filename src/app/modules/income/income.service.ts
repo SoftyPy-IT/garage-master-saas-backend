@@ -22,20 +22,25 @@ const createIncome = async (tenantDomain: string, payload: any) => {
         )
       : [];
 
+    const serviceIncomeAmount = Number(payload.serviceIncomeAmount) || 0;
+    const partsIncomeAmount = Number(payload.partsIncomeAmount) || 0;
+    const totalInvoiceIncome = serviceIncomeAmount + partsIncomeAmount;
+
     // Calculate totalOtherIncome from income_items
     const totalOtherIncome = validIncomeItems.reduce(
       (sum: number, item: any) => sum + Number(item.amount),
       0,
     );
- 
 
-    // Calculate totalAmount
-    const totalAmount = totalOtherIncome ;
+    const totalAmount = totalInvoiceIncome + totalOtherIncome;
 
     // Create new income record
     const newIncome = await Income.create({
       ...payload,
       income_items: validIncomeItems.length > 0 ? validIncomeItems : undefined,
+      serviceIncomeAmount,
+      partsIncomeAmount,
+      totalInvoiceIncome,
       totalOtherIncome,
       totalAmount,
     });
@@ -87,18 +92,24 @@ const updateIncome = async (
         )
       : [];
 
-    // Calculate totals
+    const serviceIncomeAmount = Number(payload.serviceIncomeAmount) || 0;
+    const partsIncomeAmount = Number(payload.partsIncomeAmount) || 0;
+    const totalInvoiceIncome = serviceIncomeAmount + partsIncomeAmount;
+
     const totalOtherIncome = validIncomeItems.reduce(
       (sum: number, item: any) => sum + Number(item.amount),
       0,
     );
 
-    const totalAmount = totalOtherIncome;
+    const totalAmount = totalInvoiceIncome + totalOtherIncome;
 
     // Build updated payload
     const updatedPayload = {
       ...payload,
       income_items: validIncomeItems.length > 0 ? validIncomeItems : undefined,
+      serviceIncomeAmount,
+      partsIncomeAmount,
+      totalInvoiceIncome,
       totalOtherIncome,
       totalAmount,
     };
