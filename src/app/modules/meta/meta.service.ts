@@ -427,18 +427,17 @@ const getAllMetaFromDB = async (
   tenantDomain: string,
   query: Record<string, unknown>,
 ) => {
-  // Generate cache key
+
   const cacheKey = generateCacheKey(tenantDomain, 'getAllMetaFromDB', query);
 
-  // Try to get from cache first
   try {
     const cachedData = await redisClient.get(cacheKey);
     if (cachedData) {
       return JSON.parse(cachedData);
     }
   } catch (error) {
-    console.error('Redis cache read error:', error);
-    // Continue with database query if cache fails
+
+
   }
 
   const { Model: Customer } = await getTenantModel(tenantDomain, 'Customer');
@@ -527,29 +526,58 @@ const getAllMetaFromDB = async (
     totalOtherExpense += amounts.totalOtherExpense;
   }
 
+
   // Quotation status summary
-  const statusCounts = await Quotation.aggregate([
+  // Quotation summary
+  const quotationSummary = await Quotation.aggregate([
     {
       $match: {
-        status: { $in: ['running', 'completed'] },
         isRecycled: false,
       },
     },
     {
       $group: {
-        _id: '$status',
-        count: { $sum: 1 },
+        _id: null,
+
+        running: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$status', 'running'] },
+                  { $eq: ['$isPending', false] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+
+        completed: {
+          $sum: {
+            $cond: [
+              { $eq: ['$status', 'completed'] },
+              1,
+              0,
+            ],
+          },
+        },
       },
     },
   ]);
 
-  const statusSummary = statusCounts.reduce(
-    (acc: Record<string, number>, { _id, count }) => {
-      acc[_id] = count;
-      return acc;
-    },
-    {},
-  );
+  const statusSummary = quotationSummary[0] || {
+    running: 0,
+    completed: 0,
+  };
+
+  const totalQuotationCount =
+    statusSummary.running + statusSummary.completed;
+
+
+
+
 
   const incomes = {
     totalIncomeAmount,
@@ -565,10 +593,11 @@ const getAllMetaFromDB = async (
     totalOtherExpense,
   };
 
+
   const result = {
     statusSummary: {
-      running: statusSummary['running'] || 0,
-      completed: statusSummary['completed'] || 0,
+      running: statusSummary.running,
+      completed: statusSummary.completed,
     },
     totalProduct,
     totalCustomers: allCustomer.length,
@@ -577,6 +606,7 @@ const getAllMetaFromDB = async (
     totalEntities: totalEntities,
     totalJobCard: totalJobCard.length,
     totalQuotation: totalQuotation.length,
+
     totalInvoice: totalInvoice.length,
     totalAmount: formattedTotalAmount,
     totalAdvance: formattedTotalAdvance,
