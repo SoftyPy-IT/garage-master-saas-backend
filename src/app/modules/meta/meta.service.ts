@@ -6,7 +6,7 @@ import { CompanyType, CustomerType, ShowRoomType } from './meta.interface';
 import { buildSearchQuery } from './meta.search';
 import dayjs from 'dayjs';
 
-const CACHE_TTL = 300;
+const CACHE_TTL = 5;
 
 const MONTH_NAMES = [
   'January',
@@ -572,13 +572,6 @@ const getAllMetaFromDB = async (
     completed: 0,
   };
 
-  const totalQuotationCount =
-    statusSummary.running + statusSummary.completed;
-
-
-
-
-
   const incomes = {
     totalIncomeAmount,
     totalInvoiceIncome,
@@ -618,7 +611,7 @@ const getAllMetaFromDB = async (
 
   // Cache the result with shorter TTL since this data changes more frequently
   try {
-    await redisClient.set(cacheKey, JSON.stringify(result), 60); // 1 minute TTL
+    await redisClient.set(cacheKey, JSON.stringify(result), 1);
   } catch (error) {
     console.error('Redis cache write error:', error);
   }
@@ -645,7 +638,6 @@ const calculateAccountingSummary = async (
     }
   } catch (error) {
     console.error('Redis cache read error:', error);
-    // Continue with database query if cache fails
   }
 
   const { Model: Income } = await getTenantModel(tenantDomain, 'Income');
