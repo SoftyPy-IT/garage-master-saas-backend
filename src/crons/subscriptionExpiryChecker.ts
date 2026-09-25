@@ -6,14 +6,13 @@ cron.schedule("0 1 * * *", async () => {
   const now = new Date()
 
   try {
-    // Find subscriptions that have expired but are still marked as active
     const expiredSubscriptions = await SubscriptionModel.find({
       endDate: { $lt: now },
       isActive: true,
     })
 
     if (expiredSubscriptions.length > 0) {
-      // Update expired subscriptions
+
       const result = await SubscriptionModel.updateMany(
         {
           endDate: { $lt: now },
@@ -27,7 +26,7 @@ cron.schedule("0 1 * * *", async () => {
         },
       )
       expiredSubscriptions.forEach((sub) => {
-        
+
       })
     } else {
     }
@@ -42,9 +41,9 @@ cron.schedule("0 1 * * *", async () => {
     }).populate("user", "name email")
 
     if (expiringSubscriptions.length > 0) {
-    
+
       expiringSubscriptions.forEach((sub) => {
-        
+
       })
     }
   } catch (error) {
