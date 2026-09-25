@@ -1,0 +1,11 @@
+[
+  {
+    "status": "failed",
+    "error": "Command failed: mongodump --db=trust-auto-solutions --archive=/home/ibrahim-sikder/project/personal/saas/softypy-saas-backend/public/trust-auto-solutions.gzip --gzip\n/bin/sh: 1: mongodump: not found\n",
+    "code": null,
+    "signal": null,
+    "backupStartTime": "2026-08-18T18:00:00.406Z",
+    "backupEndTime": "2026-08-18T18:00:00.438Z",
+    "archivePath": "/home/ibrahim-sikder/project/personal/saas/softypy-saas-backend/public/trust-auto-solutions.gzip"
+  }
+]
