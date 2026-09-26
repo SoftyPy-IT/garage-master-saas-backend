@@ -25,7 +25,7 @@ const createLeaveRequest = async (
     console.error('Error creating leave request:', error.message);
     throw new Error(
       error.message ||
-        'An unexpected error occurred while creating the leave request',
+      'An unexpected error occurred while creating the leave request',
     );
   }
 };
@@ -122,7 +122,7 @@ const updateLeaveRequest = async (
     console.error('Error updating leave request:', error.message);
     throw new Error(
       error.message ||
-        'An unexpected error occurred while updating the leave request',
+      'An unexpected error occurred while updating the leave request',
     );
   }
 };
@@ -132,24 +132,22 @@ const deleteLeaveRequest = async (
   leaveRequestId: string,
 ) => {
   try {
-    // Validate ObjectId format
+
     if (!Types.ObjectId.isValid(leaveRequestId)) {
       throw new Error('Invalid leaveRequestId format');
     }
 
-    // Get tenant-specific LeaveRequest model
     const { Model: LeaveRequest } = await getTenantModel(
       tenantDomain,
       'LeaveRequest',
     );
 
-    // Check if the leave request exists
+
     const leaveRequestExists = await LeaveRequest.findById(leaveRequestId);
     if (!leaveRequestExists) {
       throw new Error('Leave request not found');
     }
 
-    // Delete the leave request
     const result = await LeaveRequest.deleteOne({ _id: leaveRequestId });
 
     return result;
@@ -157,7 +155,7 @@ const deleteLeaveRequest = async (
     console.error('Error deleting leave request:', error.message);
     throw new Error(
       error.message ||
-        'An unexpected error occurred while deleting the leave request',
+      'An unexpected error occurred while deleting the leave request',
     );
   }
 };

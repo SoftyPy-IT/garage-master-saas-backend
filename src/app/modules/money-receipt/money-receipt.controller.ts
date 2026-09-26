@@ -81,8 +81,8 @@ const updateMoneyReceipt = catchAsync(async (req, res) => {
 
 const generateMoneyPdf: RequestHandler = catchAsync(async (req, res) => {
   const { moneyReceiptId } = req.params;
- const tenantDomain = req.query.tenantDomain as string;
-      const companyData = req.query.companyProfileData
+  const tenantDomain = req.query.tenantDomain as string;
+  const companyData = req.query.companyProfileData
     ? decodeURIComponent(req.query.companyProfileData as string)
     : '{}';
   const baseUrl = (

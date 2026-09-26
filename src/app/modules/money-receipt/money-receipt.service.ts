@@ -650,6 +650,7 @@ export const generateMoneyPdf = async (
     'MoneyReceipt',
   );
   const companyProfile = JSON.parse(companyData || '{}');
+  console.log('LIVE companyProfile:', companyProfile); // temporarily add
   const money = await MoneyReceipt.findById(id).populate('vehicle');
   if (!money) {
     throw new Error('Money receipt not found');
@@ -683,6 +684,7 @@ export const generateMoneyPdf = async (
       },
     );
   });
+
 
   try {
     const browser = await puppeteer.launch({
