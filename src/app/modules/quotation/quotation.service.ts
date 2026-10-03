@@ -742,15 +742,31 @@ const generateQuotationPdf = async (
   if (!quotation) {
     throw new Error('quotation not found');
   }
-
   let logoBase64 = '';
+
   try {
-    const logoUrl = `${imageUrl}/images/logo.png`;
-    const logoResponse = await fetch(logoUrl);
-    const logoBuffer = await logoResponse.arrayBuffer();
-    logoBase64 = Buffer.from(logoBuffer).toString('base64');
+    if (companyProfile?.logo) {
+      const logoResponse = await fetch(companyProfile.logo);
+
+      if (!logoResponse.ok) {
+        throw new Error(
+          `Logo request failed: ${logoResponse.status} ${logoResponse.statusText}`,
+        );
+      }
+
+      const contentType =
+        logoResponse.headers.get('content-type') || 'image/png';
+
+      const logoBuffer = await logoResponse.arrayBuffer();
+
+      logoBase64 = `data:${contentType};base64,${Buffer.from(
+        logoBuffer,
+      ).toString('base64')}`;
+
+      console.log('Logo loaded successfully');
+    }
   } catch (error) {
-    console.warn('Failed to load logo:', error);
+    console.warn('Failed to load company logo:', error);
   }
 
   const filePath = join(__dirname, '../../templates/quotation.ejs');

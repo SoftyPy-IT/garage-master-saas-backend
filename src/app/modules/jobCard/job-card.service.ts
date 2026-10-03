@@ -735,6 +735,33 @@ const generateJobCardPdf = async (
     }),
   );
 
+  let logoBase64 = '';
+
+  try {
+    if (companyProfile?.logo) {
+      const logoResponse = await fetch(companyProfile.logo);
+
+      if (!logoResponse.ok) {
+        throw new Error(
+          `Logo request failed: ${logoResponse.status} ${logoResponse.statusText}`,
+        );
+      }
+
+      const contentType =
+        logoResponse.headers.get('content-type') || 'image/png';
+
+      const logoBuffer = await logoResponse.arrayBuffer();
+
+      logoBase64 = `data:${contentType};base64,${Buffer.from(
+        logoBuffer,
+      ).toString('base64')}`;
+
+      console.log('Logo loaded successfully');
+    }
+  } catch (error) {
+    console.warn('Failed to load company logo:', error);
+  }
+
   const filePath = join(__dirname, '../../templates/jobcard.ejs');
 
   const html = await new Promise<string>((resolve, reject) => {
@@ -743,7 +770,7 @@ const generateJobCardPdf = async (
       {
         jobcard,
         imageUrl,
-        logoBase64: imageBase64Array[0],
+        logoBase64,
         carImageBase64: imageBase64Array[1],
         companyData: companyProfile,
       },
