@@ -693,7 +693,7 @@ export const generateMoneyPdf = async (
     //   headless: true,
     // });
     const browser = await puppeteer.launch({
-      executablePath: process.env.CHROME_BIN,
+      executablePath: process.env.CHROME_BIN || '/usr/bin/chromium-browser',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
