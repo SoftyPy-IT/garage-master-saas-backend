@@ -33,39 +33,126 @@ export const loginUser = async (payload: any) => {
   }
 
   // Not superadmin → find user in all tenants
-  const tenants = await Tenant.find({ isActive: true });
-  for (const tenant of tenants) {
-    if (!tenant.subscription?.isPaid || !tenant.subscription?.isActive) continue;
-    if (new Date() > new Date(tenant.subscription.endDate)) continue;
+  // const tenants = await Tenant.find({ isActive: true });
 
-    const tenantConn = await connectToTenantDatabase(tenant._id.toString(), tenant.dbUri);
+  // console.log('tenants', tenants);
+  // for (const tenant of tenants) {
+  //   if (!tenant.subscription?.isPaid || !tenant.subscription?.isActive) continue;
+  //   if (new Date() > new Date(tenant.subscription.endDate)) continue;
+
+  //   const tenantConn = await connectToTenantDatabase(tenant._id.toString(), tenant.dbUri);
+  //   const TenantUser = tenantConn.model("User", userSchema);
+  //   const tenantUser = await TenantUser.findOne({ name }).select("+password");
+
+  //   if (tenantUser && !tenantUser.isDeleted) {
+  //     const match = await bcrypt.compare(password, tenantUser.password);
+  //     if (!match) throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match");
+
+  //     const jwtPayload = {
+  //       userId: tenantUser._id.toString(),
+  //       role: tenantUser.role,
+  //       name: tenantUser.name,
+  //       tenantId: tenant._id.toString(),
+  //       domain: tenantUser.tenantDomain,
+  //     };
+
+  //     const accessToken = createAccessToken(jwtPayload);
+  //     const refreshToken = createRefreshToken(jwtPayload);
+
+  //     return {
+  //       accessToken,
+  //       refreshToken,
+  //       user: { userId: tenantUser._id, name: tenantUser.name, role: tenantUser.role, tenantId: tenant._id, domain: tenant.domain },
+  //     };
+  //   }
+  // }
+
+  // throw new AppError(httpStatus.NOT_FOUND, "User not found");
+
+
+
+  // Not superadmin → find user in all tenants
+  const tenants = await Tenant.find({ isActive: true });
+
+  for (const tenant of tenants) {
+    const tenantConn = await connectToTenantDatabase(
+      tenant._id.toString(),
+      tenant.dbUri
+    );
+
     const TenantUser = tenantConn.model("User", userSchema);
+
     const tenantUser = await TenantUser.findOne({ name }).select("+password");
 
-    if (tenantUser && !tenantUser.isDeleted) {
-      const match = await bcrypt.compare(password, tenantUser.password);
-      if (!match) throw new AppError(httpStatus.FORBIDDEN, "Password doesn't match");
+    if (!tenantUser || tenantUser.isDeleted) continue;
 
-      const jwtPayload = {
-        userId: tenantUser._id.toString(),
-        role: tenantUser.role,
-        name: tenantUser.name,
-        tenantId: tenant._id.toString(),
-        domain: tenantUser.tenantDomain,
-      };
+    // 1. Verify password first
+    const match = await bcrypt.compare(password, tenantUser.password);
 
-      const accessToken = createAccessToken(jwtPayload);
-      const refreshToken = createRefreshToken(jwtPayload);
-
-      return {
-        accessToken,
-        refreshToken,
-        user: { userId: tenantUser._id, name: tenantUser.name, role: tenantUser.role, tenantId: tenant._id, domain: tenant.domain },
-      };
+    if (!match) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Password doesn't match!"
+      );
     }
+
+    // 2. Check subscription status
+    const subscription = tenant.subscription;
+
+    if (!subscription?.isPaid) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Your subscription payment is pending. Please complete your payment."
+      );
+    }
+
+    if (!subscription?.isActive) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Your subscription is inactive. Please contact the administrator."
+      );
+    }
+
+    if (
+      !subscription?.endDate ||
+      new Date() >= new Date(subscription.endDate)
+    ) {
+      throw new AppError(
+        httpStatus.FORBIDDEN,
+        "Your subscription has expired. Please renew your subscription to continue."
+      );
+    }
+
+    // 3. Generate tokens
+    const jwtPayload = {
+      userId: tenantUser._id.toString(),
+      role: tenantUser.role,
+      name: tenantUser.name,
+      tenantId: tenant._id.toString(),
+      domain: tenantUser.tenantDomain,
+    };
+
+    const accessToken = createAccessToken(jwtPayload);
+    const refreshToken = createRefreshToken(jwtPayload);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        userId: tenantUser._id,
+        name: tenantUser.name,
+        role: tenantUser.role,
+        tenantId: tenant._id,
+        domain: tenant.domain,
+      },
+    };
   }
 
-  throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  throw new AppError(
+    httpStatus.NOT_FOUND,
+    "User not found. Please check your username and password."
+  );
+
 };
 
 

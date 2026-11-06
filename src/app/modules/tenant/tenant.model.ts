@@ -1,4 +1,3 @@
-// src/models/schemas/tenant.model.ts
 import mongoose, { Schema } from 'mongoose';
 import { ITenant } from './tenant.interface';
 import { subscriptionSchema } from '../subscription/subscription.model';

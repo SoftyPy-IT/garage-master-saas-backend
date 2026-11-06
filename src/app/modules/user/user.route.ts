@@ -19,7 +19,7 @@ router.post(
 
 router.get(
   '/',
-  auth('admin', 'superadmin', 'manager'),
+  // auth('admin', 'superadmin', 'manager'),
   UserController.getAllUser,
 );
 

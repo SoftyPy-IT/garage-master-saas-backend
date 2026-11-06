@@ -816,3 +816,6 @@ ISC — see `package.json`.
 ---
 
 **Garage Master** · Multi-tenant garage management SaaS · Built for scale, isolation, and real workshop operations.
+
+## password generate
+node --input-type=module -e "import bcrypt from 'bcrypt'; console.log(await bcrypt.hash('worlduto', 10))"

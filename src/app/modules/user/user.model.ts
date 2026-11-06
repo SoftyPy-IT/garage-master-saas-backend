@@ -20,7 +20,7 @@ export const userSchema = new Schema<TUser>(
     },
     password: {
       type: String,
-      select: false,
+      // select: false,
     },
     tenantDomain: {
       type: String,

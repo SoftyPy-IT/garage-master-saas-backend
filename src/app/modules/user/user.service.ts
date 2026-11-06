@@ -92,6 +92,7 @@ const getAllUser = async (tenantDomain: string, query: any) => {
     tenantDomain || 'default',
     'Page',
   );
+  
   const { Model: Role } = await getTenantModel(
     tenantDomain || 'default',
     'Role',

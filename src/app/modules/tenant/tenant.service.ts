@@ -36,8 +36,9 @@ export const createTenant = async (
       throw new AppError(httpStatus.BAD_REQUEST, 'Domain already registered');
     }
 
+
     const dbName = domain.replace(/\./g, '_');
-    const dbUri = `mongodb+srv://softypy_saas:saas_softypy33@cluster0.ywst3am.mongodb.net/${dbName}?retryWrites=true&w=majority&appName=Cluster0`;
+    const dbUri = `mongodb+srv://garage_MasteR-SAaS:7lX2FG3pSGxkKg4B@cluster0.ywst3am.mongodb.net/${dbName}?retryWrites=true&w=majority&appName=Cluster0`;
 
     const subscription = createSubscription(
       plan,
@@ -56,10 +57,10 @@ export const createTenant = async (
       isActive: true,
     }], { session }).then(res => res[0]);
 
-    // ✅ Commit main DB transaction
+    //  Commit main DB transaction
     await session.commitTransaction();
 
-    // ✅ Now safely initialize tenant DB (outside transaction)
+    //  Now safely initialize tenant DB (outside transaction)
     const tenantDb = mongoose.connection.useDb(dbName, { useCache: true });
 
     const UserModel = tenantDb.model('User', userSchema);

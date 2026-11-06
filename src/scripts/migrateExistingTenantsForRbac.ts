@@ -9,11 +9,12 @@ import { DEFAULT_PAGES, DEFAULT_ROLES } from '../app/utils/tenantSeedData';
 import chalk from 'chalk';
 
 const CENTRAL_DB_URI =
-  'mongodb+srv://softypy_saas:saas_softypy33@cluster0.ywst3am.mongodb.net/saas-application?retryWrites=true&w=majority&appName=Cluster0';
+  'mongodb+srv://garage_MasteR-SAaS:7lX2FG3pSGxkKg4B@cluster0.ywst3am.mongodb.net/saas-application?retryWrites=true&w=majority&appName=Cluster0';
 
 async function migrateTenants() {
   try {
     await mongoose.connect(CENTRAL_DB_URI);
+
 
     const tenants: ITenant[] = await Tenant.find({ isActive: true });
     if (tenants.length === 0) {
